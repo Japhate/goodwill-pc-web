@@ -6,26 +6,20 @@ import { format, parseISO, isValid } from "date-fns";
 // Fallback slides if no slides are in the database
 const FALLBACK_SLIDES = [
   {
-    image_url: "/images/hero/welcome-church.png",
+    image_url: "/images/hero/goodwill-presbyterian-church-hero.png",
     alt_text: "Welcome to Goodwill Presbyterian Church",
     link_url: "",
     link_label: "",
   },
   {
-    image_url: "/images/hero/zoom-bible-study.png",
+    image_url: "/images/hero/zoom-meeting-hero.png",
     alt_text: "Join us every Wednesday at 6:30 PM for Zoom Bible Study",
-    link_url: "",
-    link_label: "",
+    link_url: "https://us06web.zoom.us/j/82013337566?pwd=mULnQC1Zjg5GWkoTTKGvx3PyAFaCeZ.1",
+    link_label: "Join Zoom",
   },
   {
-    image_url: "/images/hero/pentecost-sunday.png",
+    image_url: "/images/hero/pentecost-sunday-hero.png",
     alt_text: "Pentecost Sunday",
-    link_url: "",
-    link_label: "",
-  },
-  {
-    image_url: "/images/hero/welcome-church.png",
-    alt_text: "Welcome to Goodwill Presbyterian Church",
     link_url: "",
     link_label: "",
   },
@@ -34,7 +28,7 @@ const FALLBACK_SLIDES = [
 const SLIDE_INTERVAL = 10000;
 
 // Bible Study: every Wednesday at 6:30 PM, ends at 7:00 PM
-const BIBLE_STUDY_ZOOM = "https://us02web.zoom.us/j/82827270338?pwd=9JhQLcH0WjX6Xvy7LqvNtZUE3UBr9C.1";
+const BIBLE_STUDY_ZOOM = "https://us06web.zoom.us/j/82013337566?pwd=mULnQC1Zjg5GWkoTTKGvx3PyAFaCeZ.1";
 const BIBLE_STUDY_START_HOUR = 18; // 6:30 PM
 const BIBLE_STUDY_START_MIN = 30;
 const BIBLE_STUDY_END_HOUR = 19;   // 7:00 PM
@@ -214,17 +208,17 @@ export default function HeroSlideshow({ liveEvents, announcements = [] }) {
     <section ref={sectionRef} className="relative w-full bg-white">
       {/* Slides */}
       {slides.length > 0 && (
-        <div className="relative w-full h-[calc(100vh-5rem)] min-h-[420px] max-h-[760px] overflow-hidden">
+        <div className="relative w-full h-[clamp(420px,40vw,760px)] overflow-hidden bg-black">
           {slides.map((slide, i) => (
             <div
               key={i}
-              className="w-full transition-opacity duration-700"
+              className="relative h-full w-full transition-opacity duration-700"
               style={{ display: i === current ? 'block' : 'none' }}
             >
               <img
                 src={slide.image_url}
                 alt={slide.alt_text || "Slide"}
-                className="h-full w-full object-contain block bg-black"
+                className="h-full w-full object-cover block"
                 draggable={false}
               />
               {/* Link overlay button */}

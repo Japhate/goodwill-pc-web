@@ -1,4 +1,5 @@
 const LOCAL_API = import.meta.env.VITE_LOCAL_API_URL || '';
+const LOCAL_STORAGE_KEY = 'goodwill-local-data-v5';
 
 const seedData = {
   HeroSlide: [
@@ -6,7 +7,7 @@ const seedData = {
       id: 'hero-1',
       order: 1,
       is_active: true,
-      image_url: '/images/hero/welcome-church.png',
+      image_url: '/images/hero/goodwill-presbyterian-church-hero.png',
       alt_text: 'Welcome to Goodwill Presbyterian Church',
       link_url: '',
       link_label: '',
@@ -15,26 +16,17 @@ const seedData = {
       id: 'hero-2',
       order: 2,
       is_active: true,
-      image_url: '/images/hero/zoom-bible-study.png',
+      image_url: '/images/hero/zoom-meeting-hero.png',
       alt_text: 'Join us every Wednesday at 6:30 PM for Zoom Bible Study',
-      link_url: '',
-      link_label: '',
+      link_url: 'https://us06web.zoom.us/j/82013337566?pwd=mULnQC1Zjg5GWkoTTKGvx3PyAFaCeZ.1',
+      link_label: 'Join Zoom',
     },
     {
       id: 'hero-3',
       order: 3,
       is_active: true,
-      image_url: '/images/hero/pentecost-sunday.png',
+      image_url: '/images/hero/pentecost-sunday-hero.png',
       alt_text: 'Pentecost Sunday',
-      link_url: '',
-      link_label: '',
-    },
-    {
-      id: 'hero-4',
-      order: 4,
-      is_active: true,
-      image_url: '/images/hero/welcome-church.png',
-      alt_text: 'Welcome to Goodwill Presbyterian Church',
       link_url: '',
       link_label: '',
     },
@@ -118,15 +110,15 @@ const memoryData = structuredClone(seedData);
 
 function getStore() {
   if (typeof window === 'undefined') return memoryData;
-  const raw = window.localStorage.getItem('goodwill-local-data');
+  const raw = window.localStorage.getItem(LOCAL_STORAGE_KEY);
   if (!raw) {
-    window.localStorage.setItem('goodwill-local-data', JSON.stringify(seedData));
+    window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(seedData));
     return structuredClone(seedData);
   }
   try {
     return { ...structuredClone(seedData), ...JSON.parse(raw) };
   } catch {
-    window.localStorage.setItem('goodwill-local-data', JSON.stringify(seedData));
+    window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(seedData));
     return structuredClone(seedData);
   }
 }
@@ -136,7 +128,7 @@ function setStore(data) {
     Object.assign(memoryData, data);
     return;
   }
-  window.localStorage.setItem('goodwill-local-data', JSON.stringify(data));
+  window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
 }
 
 function sortItems(items, sort) {
