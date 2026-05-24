@@ -224,7 +224,7 @@ export default function HeroSlideshow({ liveEvents, announcements = [] }) {
               <img
                 src={slide.image_url}
                 alt={slide.alt_text || "Slide"}
-                className="h-full w-full object-cover block"
+                className="h-full w-full object-contain block bg-black"
                 draggable={false}
               />
               {/* Link overlay button */}
