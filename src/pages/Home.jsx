@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { Clock, MapPin, Calendar, Users, Heart, BookOpen, ChevronDown, ArrowRight, Share2, Youtube as YoutubeIcon, Megaphone, Send, Download, Phone, Mail, ChevronLeft, ChevronRight, Radio, User, Circle, Video, Play, Pause, X, Map, Navigation } from "lucide-react";
+import { Clock, MapPin, Calendar, Users, Heart, BookOpen, ChevronDown, ArrowRight, Share2, Youtube as YoutubeIcon, Megaphone, Send, Download, Phone, Mail, ChevronLeft, ChevronRight, User, Circle, Video, Play, Pause, X, Map, Navigation } from "lucide-react";
 import HeroSlideshow from "@/components/home/HeroSlideshow";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -44,24 +44,6 @@ export default function Home() {
   const [bannerClosed, setBannerClosed] = useState(false);
   const [activeBanners, setActiveBanners] = useState([]);
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
-  const [announcementDismissed, setAnnouncementDismissed] = useState(false);
-  const [churchBannerMessageIndex, setChurchBannerMessageIndex] = useState(0);
-  const [isLiveServiceBannerTime, setIsLiveServiceBannerTime] = useState(false);
-  const churchBannerMessages = useMemo(() => [
-    {
-      icon: BookOpen,
-      text: "Join us every Wednesday at 6:30 PM for our weekly Bible Study",
-    },
-    {
-      icon: Radio,
-      text: "Our Live Service starts at 10:30 AM every Sunday.",
-    },
-  ], []);
-  const liveServiceBannerMessage = useMemo(() => ({
-    icon: Radio,
-    text: "Our Live service is happening now.",
-  }), []);
-  const displayedChurchBannerMessages = isLiveServiceBannerTime ? [liveServiceBannerMessage] : churchBannerMessages;
 
   // Scripture verses that rotate
   const scriptureVerses = [
@@ -245,7 +227,6 @@ export default function Home() {
   useEffect(() => {
     const bannerState = localStorage.getItem('homeBannerClosed');
     setBannerClosed(bannerState === 'true');
-    setAnnouncementDismissed(false);
   }, []);
 
   // Reset banner closed state when active banners change
@@ -266,37 +247,6 @@ export default function Home() {
 
     return () => clearInterval(interval);
   }, [activeBanners.length, bannerClosed]);
-
-  useEffect(() => {
-    if (announcementDismissed || displayedChurchBannerMessages.length <= 1) return;
-
-    const interval = setInterval(() => {
-      setChurchBannerMessageIndex((prev) => (prev + 1) % displayedChurchBannerMessages.length);
-    }, 20000);
-
-    return () => clearInterval(interval);
-  }, [announcementDismissed, displayedChurchBannerMessages.length]);
-
-  useEffect(() => {
-    const updateLiveServiceBannerTime = () => {
-      const now = new Date();
-      const minutes = now.getHours() * 60 + now.getMinutes();
-      setIsLiveServiceBannerTime(
-        now.getDay() === 0 &&
-        minutes >= (10 * 60 + 30) &&
-        minutes < (12 * 60)
-      );
-    };
-
-    updateLiveServiceBannerTime();
-    const interval = setInterval(updateLiveServiceBannerTime, 30000);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
-    setChurchBannerMessageIndex(0);
-  }, [isLiveServiceBannerTime]);
 
   // Rotate verses every 10 seconds
   useEffect(() => {
@@ -1002,63 +952,8 @@ export default function Home() {
         <div className="absolute bottom-[30%] left-[8%] w-40 h-40 bg-gradient-to-br from-amber-200/10 to-yellow-100/10 rounded-full blur-3xl"></div>
       </div>
 
-      {/* Bible Study Banner */}
-      {!announcementDismissed && (
-        <section
-          className="relative z-10 min-h-[48px] overflow-hidden text-white shadow-lg"
-          style={{
-            marginTop: (!bannerClosed && activeBanners.length > 0) || liveEvents.length > 0 ? '32px' : '0px',
-            background: isLiveServiceBannerTime
-              ? 'linear-gradient(135deg, #991b1b 0%, #dc2626 55%, #ef4444 100%)'
-              : 'linear-gradient(135deg, #3D2519 0%, #5C3A24 45%, #9A722F 100%)',
-          }}
-        >
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_50%,rgba(251,191,36,0.28),transparent_28%),radial-gradient(circle_at_80%_50%,rgba(255,255,255,0.14),transparent_24%)]" />
-          <div className="relative min-h-[48px] overflow-hidden">
-            <div className="absolute inset-y-0 left-0 right-14 flex items-center overflow-hidden">
-              {(() => {
-                const activeMessage = displayedChurchBannerMessages[churchBannerMessageIndex] || displayedChurchBannerMessages[0];
-                const BannerIcon = activeMessage.icon;
-                return (
-                  <div
-                    key={`${isLiveServiceBannerTime ? 'live' : 'normal'}-${churchBannerMessageIndex}`}
-                    className="animate-marquee absolute right-0 whitespace-nowrap text-sm font-normal tracking-wide text-amber-50 md:text-base"
-                  >
-                    <span className="inline-flex items-center gap-3">
-                      <BannerIcon className="h-5 w-5 text-amber-200" />
-                      {activeMessage.text}
-                    </span>
-                  </div>
-                );
-              })()}
-            </div>
-            <div
-              className={`pointer-events-none absolute right-0 top-0 z-20 h-full w-14 ${
-                isLiveServiceBannerTime
-                  ? 'bg-red-700'
-                  : 'bg-[#5C3A24]'
-              }`}
-            />
-            <button
-              type="button"
-              onClick={() => {
-                setAnnouncementDismissed(true);
-              }}
-              className={`absolute right-0 top-0 z-30 flex h-full w-14 items-center justify-center text-amber-50/85 transition-colors hover:text-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-amber-200 ${
-                isLiveServiceBannerTime
-                  ? 'bg-red-700 hover:bg-red-700'
-                  : 'bg-[#5C3A24] hover:bg-[#6A442A]'
-              }`}
-              aria-label="Close Bible Study banner"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        </section>
-      )}
-
       {/* Hero Slideshow Section */}
-      <div style={{ marginTop: announcementDismissed && ((!bannerClosed && activeBanners.length > 0) || liveEvents.length > 0) ? '32px' : '0px' }}>
+      <div>
         <HeroSlideshow liveEvents={liveEvents} announcements={announcements} />
       </div>
 

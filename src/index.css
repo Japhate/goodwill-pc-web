@@ -156,4 +156,49 @@ button:focus-visible {
   body {
     @apply bg-background text-foreground;
   }
+
+  html,
+  body,
+  #root {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  img,
+  video,
+  canvas {
+    max-width: 100%;
+  }
+}
+
+.homepage-ticker {
+  overflow: hidden;
+}
+
+.homepage-ticker__track {
+  display: flex;
+  width: max-content;
+  align-items: center;
+  animation: homepage-ticker-scroll 46s linear infinite;
+}
+
+.homepage-ticker__message {
+  width: 100vw;
+  justify-content: center;
+  padding-inline: 0.75rem;
+  line-height: 1.15;
+}
+
+.homepage-ticker:hover .homepage-ticker__track {
+  animation-play-state: paused;
+}
+
+@keyframes homepage-ticker-scroll {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-100%);
+  }
 }

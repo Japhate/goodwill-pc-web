@@ -27,6 +27,14 @@ const FALLBACK_SLIDES = [
 
 const SLIDE_INTERVAL = 10000;
 
+const HOMEPAGE_BANNER_MESSAGES = [
+  "Our Live Service happens every Sunday at 10:30 am.",
+  "Join us every Wednesday at 6:30 pm for our weekly Bible Study on Zoom.",
+];
+
+const LIVE_SERVICE_BANNER_MESSAGE = "Our Live service is happening now, click the Live button to join.";
+const LIVE_BIBLE_STUDY_BANNER_MESSAGE = "Our Zoom Bible Study is happening now. Click the Zoom button to join us.";
+
 // Bible Study: every Wednesday at 6:30 PM, ends at 7:00 PM
 const BIBLE_STUDY_ZOOM = "https://us06web.zoom.us/j/82013337566?pwd=mULnQC1Zjg5GWkoTTKGvx3PyAFaCeZ.1";
 const BIBLE_STUDY_START_HOUR = 18; // 6:30 PM
@@ -158,8 +166,21 @@ function ZoomCountdownOverlay() {
 export default function HeroSlideshow({ liveEvents, announcements = [] }) {
   const [slides, setSlides] = useState(FALLBACK_SLIDES);
   const [current, setCurrent] = useState(0);
+  const [isTickerClosed, setIsTickerClosed] = useState(false);
+  const [now, setNow] = useState(new Date());
   const timerRef = useRef(null);
   const sectionRef = useRef(null);
+
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  const isLiveServiceBannerTime = now.getDay() === 0 && currentMinutes >= 10 * 60 + 30 && currentMinutes < 12 * 60;
+  const isLiveBibleStudyTime = now.getDay() === 3 && currentMinutes >= 18 * 60 + 30 && currentMinutes < 19 * 60;
+  const isLiveBanner = isLiveServiceBannerTime || isLiveBibleStudyTime;
+
+  const bannerMessages = useMemo(() => {
+    if (isLiveBibleStudyTime) return [LIVE_BIBLE_STUDY_BANNER_MESSAGE];
+    if (isLiveServiceBannerTime) return [LIVE_SERVICE_BANNER_MESSAGE];
+    return HOMEPAGE_BANNER_MESSAGES;
+  }, [isLiveBibleStudyTime, isLiveServiceBannerTime]);
 
   useEffect(() => {
     const loadSlides = async () => {
@@ -178,38 +199,88 @@ export default function HeroSlideshow({ liveEvents, announcements = [] }) {
     loadSlides();
   }, []);
 
+  useEffect(() => {
+    const interval = setInterval(() => setNow(new Date()), 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const activeSlides = useMemo(() => {
+    if (!isLiveBibleStudyTime) return slides;
+
+    const zoomSlides = slides.filter(slide =>
+      slide.alt_text?.toLowerCase().includes('bible study') ||
+      slide.alt_text?.toLowerCase().includes('zoom') ||
+      slide.link_url?.includes('zoom.us')
+    );
+
+    return zoomSlides.length > 0 ? zoomSlides : slides;
+  }, [isLiveBibleStudyTime, slides]);
+
+  useEffect(() => {
+    setCurrent(0);
+  }, [activeSlides.length, isLiveBibleStudyTime]);
+
+  useEffect(() => {
+    if (isLiveBanner) {
+      setIsTickerClosed(false);
+    }
+  }, [isLiveBanner]);
+
   const resetTimer = () => {
     clearInterval(timerRef.current);
     timerRef.current = setInterval(() => {
-      setCurrent(prev => (prev + 1) % slides.length);
+      setCurrent(prev => (prev + 1) % activeSlides.length);
     }, SLIDE_INTERVAL);
   };
 
   useEffect(() => {
     timerRef.current = setInterval(() => {
-      setCurrent(prev => (prev + 1) % slides.length);
+      setCurrent(prev => (prev + 1) % activeSlides.length);
     }, SLIDE_INTERVAL);
     return () => clearInterval(timerRef.current);
-  }, [slides.length]);
+  }, [activeSlides.length]);
 
   const handleNext = () => {
-    setCurrent(prev => (prev + 1) % slides.length);
+    setCurrent(prev => (prev + 1) % activeSlides.length);
     resetTimer();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleBack = () => {
-    setCurrent(prev => (prev - 1 + slides.length) % slides.length);
+    setCurrent(prev => (prev - 1 + activeSlides.length) % activeSlides.length);
     resetTimer();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   return (
     <section ref={sectionRef} className="relative w-full bg-white">
+      {!isTickerClosed && (
+        <div className={`homepage-ticker relative text-white border-y ${isLiveBanner ? 'bg-red-700 border-red-200/40' : 'bg-[#3f2a1f] border-amber-300/30'}`}>
+          <div className="homepage-ticker__track h-5 pr-12">
+            {bannerMessages.map((message, index) => (
+              <span
+                key={`${message}-${index}`}
+                className="homepage-ticker__message inline-flex h-full items-center whitespace-nowrap text-[11px] font-light tracking-wide md:text-xs"
+              >
+                {message}
+              </span>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsTickerClosed(true)}
+            className={`absolute right-0 top-0 z-20 flex h-full w-8 items-center justify-center text-white/70 transition-colors hover:text-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white/70 ${isLiveBanner ? 'bg-red-700' : 'bg-[#3f2a1f]'}`}
+            aria-label="Close homepage banner"
+          >
+            <span aria-hidden="true" className="text-sm leading-none">×</span>
+          </button>
+        </div>
+      )}
+
       {/* Slides */}
-      {slides.length > 0 && (
-        <div className="relative w-full h-[clamp(420px,40vw,760px)] overflow-hidden bg-black">
-          {slides.map((slide, i) => (
+      {activeSlides.length > 0 && (
+        <div className="relative w-full h-[clamp(300px,40vw,760px)] overflow-hidden bg-black sm:h-[clamp(360px,40vw,760px)]">
+          {activeSlides.map((slide, i) => (
             <div
               key={i}
               className="relative h-full w-full transition-opacity duration-700"
@@ -227,7 +298,7 @@ export default function HeroSlideshow({ liveEvents, announcements = [] }) {
                   href={slide.link_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-amber-600/90 hover:bg-amber-700 text-white font-semibold px-6 py-3 rounded-full shadow-lg transition-all text-sm md:text-base"
+                  className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-blue-600/95 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-full shadow-lg transition-all text-sm md:text-base"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <ExternalLink className="w-4 h-4" />
@@ -246,16 +317,16 @@ export default function HeroSlideshow({ liveEvents, announcements = [] }) {
           </div>
 
           {/* Zoom Countdown Overlay — only on the Bible Study slide */}
-          {(slides[current]?.alt_text?.toLowerCase().includes('bible study') ||
-            slides[current]?.alt_text?.toLowerCase().includes('zoom') ||
-            slides[current]?.link_url?.includes('zoom.us')) && (
+          {(activeSlides[current]?.alt_text?.toLowerCase().includes('bible study') ||
+            activeSlides[current]?.alt_text?.toLowerCase().includes('zoom') ||
+            activeSlides[current]?.link_url?.includes('zoom.us')) && (
             <ZoomCountdownOverlay />
           )}
         </div>
       )}
 
       {/* Prev / Next buttons */}
-      {slides.length > 0 && (
+      {activeSlides.length > 1 && (
         <>
           <button
             onClick={handleBack}
