@@ -29,6 +29,102 @@ const FALLBACK_SLIDES = [
     link_url: "",
     link_label: "",
   },
+  {
+    image_url: "/images/hero/celebrating-achievements.png",
+    alt_text: "Celebrating Achievements",
+    link_url: "",
+    link_label: "",
+  },
+  {
+    image_url: "/images/hero/chancel-choir-spring-concert.png",
+    alt_text: "Chancel Choir Spring Concert",
+    link_url: "",
+    link_label: "",
+  },
+  {
+    image_url: "/images/hero/christian-education-youth-ministry.png",
+    alt_text: "Christian Education and Youth Ministry",
+    link_url: "",
+    link_label: "",
+  },
+  {
+    image_url: "/images/hero/devotional-booklet.png",
+    alt_text: "Devotional Booklet Distribution",
+    link_url: "",
+    link_label: "",
+  },
+  {
+    image_url: "/images/hero/dr-lawson-fortune-phd.png",
+    alt_text: "Congratulations to Dr. Lawson Fortune",
+    link_url: "",
+    link_label: "",
+  },
+  {
+    image_url: "/images/hero/health-focused-hero.png",
+    alt_text: "Health-Focused Ministry",
+    link_url: "",
+    link_label: "",
+  },
+  {
+    image_url: "/images/hero/health-prayer-focus.png",
+    alt_text: "Health and Prayer Focus for June",
+    link_url: "",
+    link_label: "",
+  },
+  {
+    image_url: "/images/hero/johnson-c-smith-university-day.png",
+    alt_text: "Johnson C. Smith University Day",
+    link_url: "",
+    link_label: "",
+  },
+  {
+    image_url: "/images/hero/honoring-our-educators-hero.png",
+    alt_text: "Honoring Our Educators",
+    link_url: "",
+    link_label: "",
+  },
+  {
+    image_url: "/images/hero/juneteenth-celebration-2.png",
+    alt_text: "Juneteenth Worship Celebration",
+    link_url: "",
+    link_label: "",
+  },
+  {
+    image_url: "/images/hero/may-birthdays.png",
+    alt_text: "May Birthdays",
+    link_url: "",
+    link_label: "",
+  },
+  {
+    image_url: "/images/hero/midlands-gives.png",
+    alt_text: "Midlands Gives",
+    link_url: "",
+    link_label: "",
+  },
+  {
+    image_url: "/images/hero/online-worshipers-hero.png",
+    alt_text: "Online Worshipers Prayer, Care and Connection",
+    link_url: "",
+    link_label: "",
+  },
+  {
+    image_url: "/images/hero/scholarship-fund.png",
+    alt_text: "College and Higher Education Scholarship Fund",
+    link_url: "",
+    link_label: "",
+  },
+  {
+    image_url: "/images/hero/summer-summit.png",
+    alt_text: "Summer Summit",
+    link_url: "",
+    link_label: "",
+  },
+  {
+    image_url: "/images/hero/vacation-bible-school.png",
+    alt_text: "Vacation Bible School",
+    link_url: "",
+    link_label: "",
+  },
 ];
 
 const SLIDE_INTERVAL = 10000;
@@ -302,7 +398,7 @@ export default function HeroSlideshow() {
                   href={slide.link_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="absolute bottom-2 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-blue-600/95 px-3 py-1.5 text-xs font-semibold text-white shadow-lg transition-all hover:bg-blue-700 sm:bottom-4 sm:px-4 sm:py-2 sm:text-sm md:bottom-8 md:gap-2 md:px-6 md:py-3 md:text-base"
+                  className="absolute bottom-8 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-blue-600/95 px-3 py-1.5 text-xs font-semibold text-white shadow-lg transition-all hover:bg-blue-700 sm:bottom-12 sm:px-4 sm:py-2 sm:text-sm md:bottom-16 md:gap-2 md:px-6 md:py-3 md:text-base"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <ExternalLink className="w-4 h-4" />
@@ -312,11 +408,11 @@ export default function HeroSlideshow() {
             </div>
           ))}
 
-          {/* Church name — bottom left, signature style */}
-          <div className="absolute bottom-2 left-3 z-20">
+          {/* Church name signature */}
+          <div className="absolute right-3 top-2 z-20 text-right">
             <div className="leading-tight">
-              <div className="text-[11px] text-amber-200 sm:text-[15px]" style={{ textShadow: '1px 2px 6px rgba(0,0,0,0.9)', fontFamily: "'Brush Script MT', 'Segoe Script', cursive" }}>Goodwill</div>
-              <div className="text-[5px] uppercase tracking-[0.18em] text-white/80 sm:text-[7px]" style={{ textShadow: '1px 1px 4px rgba(0,0,0,0.9)', letterSpacing: '0.22em' }}>Presbyterian Church, USA</div>
+              <div className="text-[11px] text-amber-200 sm:text-[15px]" style={{ textShadow: '0 2px 2px rgba(0,0,0,1), 0 4px 8px rgba(0,0,0,1), 1px 1px 12px rgba(0,0,0,0.95)', fontFamily: "'Brush Script MT', 'Segoe Script', cursive" }}>Goodwill</div>
+              <div className="text-[5px] uppercase tracking-[0.18em] text-white sm:text-[7px]" style={{ textShadow: '0 1px 2px rgba(0,0,0,1), 0 3px 7px rgba(0,0,0,1), 1px 1px 10px rgba(0,0,0,0.95)', letterSpacing: '0.22em' }}>Presbyterian Church, USA</div>
             </div>
           </div>
 
