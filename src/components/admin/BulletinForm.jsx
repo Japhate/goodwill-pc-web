@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { UploadFile } from "@/integrations/Core";
@@ -22,7 +22,7 @@ export default function BulletinForm({ bulletin, onSubmit, onCancel }) {
         if (bulletin.date) {
             try {
                 initialData.date = new Date(bulletin.date).toISOString().split('T')[0];
-            } catch (e) {
+            } catch {
                 console.error("Invalid date format", bulletin.date);
                 initialData.date = '';
             }

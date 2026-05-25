@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { base44 } from "@/api/base44Client";
+import { localApi } from "@/api/localApiClient";
 import { Loader2, Upload } from "lucide-react";
 
 export default function HeroSlideForm({ slide, onSubmit, onCancel }) {
@@ -26,7 +26,7 @@ export default function HeroSlideForm({ slide, onSubmit, onCancel }) {
     const file = e.target.files[0];
     if (!file) return;
     setUploading(true);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    const { file_url } = await localApi.integrations.Core.UploadFile({ file });
     handleChange("image_url", file_url);
     setUploading(false);
   };

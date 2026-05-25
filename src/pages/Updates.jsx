@@ -2,8 +2,6 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import { AnnouncementsEvents } from "@/entities/AnnouncementsEvents";
 import { WorshipEvent } from "@/entities/WorshipEvent";
-import { base44 } from "@/api/base44Client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, Clock, MapPin, Image, CheckCircle } from "lucide-react";
 import { format, isBefore, startOfDay, parseISO, isValid } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -253,7 +251,7 @@ export default function Updates() {
       <section
         className="text-white relative overflow-hidden"
         style={{
-          backgroundImage: "url('https://media.base44.com/images/public/68754282289ae06e12e7a81d/b990fc3ab_ChatGPTImageApr12202612_54_21PM.png')",
+          backgroundImage: "url('/images/site/updates-header.png')",
           backgroundSize: 'cover',
           backgroundPosition: 'center',
         }}
@@ -340,7 +338,7 @@ export default function Updates() {
                         <div className="text-gray-600 prose prose-sm max-w-none">
                           <ReactMarkdown
                             components={{
-                                a: ({node, ...props}) => <a {...props} target="_blank" rel="noopener noreferrer" className="text-amber-600 hover:underline"/>
+                                a: ({ node: _node, ...props }) => <a {...props} target="_blank" rel="noopener noreferrer" className="text-amber-600 hover:underline"/>
                             }}
                           >
                               {item.content}
@@ -460,7 +458,7 @@ export default function Updates() {
                           <div className="text-gray-600 text-sm mb-3 prose prose-sm max-w-none">
                             <ReactMarkdown
                               components={{
-                                  a: ({node, ...props}) => <a {...props} target="_blank" rel="noopener noreferrer" className="text-amber-600 hover:underline"/>
+                                  a: ({ node: _node, ...props }) => <a {...props} target="_blank" rel="noopener noreferrer" className="text-amber-600 hover:underline"/>
                               }}
                             >
                                 {item.content}

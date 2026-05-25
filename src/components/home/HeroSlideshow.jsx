@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { ChevronLeft, ChevronRight, ExternalLink, Video, Clock } from "lucide-react";
-import { base44 } from "@/api/base44Client";
-import { format, parseISO, isValid } from "date-fns";
+import { localApi } from "@/api/localApiClient";
+import { format } from "date-fns";
 
 // Fallback slides if no slides are in the database
 const FALLBACK_SLIDES = [
@@ -88,8 +88,6 @@ function ZoomCountdownOverlay() {
   const totalSeconds = Math.floor(msUntilStart / 1000);
   const mins = Math.floor(totalSeconds / 60);
   const secs = totalSeconds % 60;
-  const nextSessionLabel = format(start, "EEEE, MMMM d 'at' h:mm a");
-
   return (
     <div className="absolute bottom-2 right-3 z-20 flex justify-end">
       <div className="bg-black/70 backdrop-blur-sm rounded-lg px-2 py-1.5 flex flex-col items-center gap-0.5 shadow-xl border border-white/20">
@@ -163,7 +161,7 @@ function ZoomCountdownOverlay() {
   );
 }
 
-export default function HeroSlideshow({ liveEvents, announcements = [] }) {
+export default function HeroSlideshow() {
   const [slides, setSlides] = useState(FALLBACK_SLIDES);
   const [current, setCurrent] = useState(0);
   const [isTickerClosed, setIsTickerClosed] = useState(false);
@@ -185,14 +183,14 @@ export default function HeroSlideshow({ liveEvents, announcements = [] }) {
   useEffect(() => {
     const loadSlides = async () => {
       try {
-        const data = await base44.entities.HeroSlide.list('order', 50);
+        const data = await localApi.entities.HeroSlide.list('order', 50);
         const active = data.filter(s => s.is_active !== false);
         if (active.length > 0) {
           setSlides(active);
         } else {
           setSlides(FALLBACK_SLIDES);
         }
-      } catch (e) {
+      } catch {
         setSlides(FALLBACK_SLIDES);
       }
     };

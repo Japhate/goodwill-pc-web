@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -28,7 +28,7 @@ export default function AnnouncementForm({ announcement, onSubmit, onCancel }) {
         if (announcement.date) {
             try {
                 initialData.date = new Date(announcement.date).toISOString().split('T')[0];
-            } catch (e) {
+            } catch {
                 console.error("Invalid date format", announcement.date);
                 initialData.date = '';
             }

@@ -1,3 +1,3 @@
-import { base44 } from "@/api/base44Client";
+import { localApi } from "@/api/localApiClient";
 
-export const Bulletins = base44.entities.Bulletins;
+export const Bulletins = localApi.entities.Bulletins;

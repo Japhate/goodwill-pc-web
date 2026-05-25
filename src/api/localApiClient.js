@@ -34,15 +34,15 @@ const seedData = {
   Sermons: [
     {
       id: 'sermon-active',
-      title: 'The Good Shepherd',
-      speaker: 'Rev. Dr. Ella F. Busby',
-      date: '2026-05-17',
-      scripture: 'Psalm 23',
-      series: 'Sunday Worship',
-      notes: 'A message of comfort, care, and faithful community.',
-      youtube_url: 'https://www.youtube.com/watch?v=bERzxb_Sbvo',
+      title: 'When the Holy Spirit is Present',
+      speaker: 'Rev. Dr. Joe W. Rigsby',
+      date: '2026-05-23',
+      scripture: 'Acts 2:1-6, 12-22',
+      series: '',
+      notes: 'Living in the power of the Holy Spirit.',
+      youtube_url: 'https://youtu.be/veQ-5a40p6g',
       status: 'Active',
-      created_date: '2026-05-17T12:00:00.000Z',
+      created_date: '2026-05-23T12:00:00.000Z',
     },
     {
       id: 'sermon-archive-1',
@@ -221,7 +221,7 @@ function localEntity(entityName) {
   };
 }
 
-export const base44 = {
+export const localApi = {
   entities: new Proxy({}, {
     get: (_, name) => localEntity(name),
   }),

@@ -1,15 +1,15 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import {
-    Home, Users, Calendar, BookOpen, HelpingHand, Facebook, Instagram, Youtube, HandHeart,
-    Video, Menu, X, Mail, Phone, ArrowUp, ChevronDown, BookText, Target, HeartHandshake,
+    Home, Users, BookOpen, Facebook, Youtube, HandHeart,
+    Video, Menu, X, Mail, Phone, ArrowUp, BookText,
     Users2, HelpCircle, Megaphone, CalendarDays, Images, Youtube as YoutubeIcon, PlaySquare,
-    FileText, Send, List, Sparkles, BookHeart, Map, MailQuestion, Handshake, MapPin, Smartphone, Search, Settings
+    FileText, Send, Sparkles, BookHeart, Map, MailQuestion, Handshake, Search, Settings
 } from "lucide-react";
 import SearchModal from "@/components/search/SearchModal";
 import { Button } from "@/components/ui/button";
-import { base44 } from '@/api/base44Client';
+import { localApi } from '@/api/localApiClient';
 
 export default function Layout({ children, currentPageName }) {
   const location = useLocation();
@@ -23,7 +23,7 @@ export default function Layout({ children, currentPageName }) {
     window.scrollTo(0, 0);
     const fetchUser = async () => {
         try {
-            const user = await base44.auth.me();
+            const user = await localApi.auth.me();
             setCurrentUser(user);
         } catch (e) {
             setCurrentUser(null);
@@ -234,7 +234,7 @@ export default function Layout({ children, currentPageName }) {
           <Link to={createPageUrl("Home")} className="flex flex-shrink-0 items-center space-x-3">
             <div className="w-14 h-14 rounded-full bg-white p-1 shadow-lg flex items-center justify-center">
               <img
-                src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68754282289ae06e12e7a81d/418fa72a7_Logo01.png"
+                src="/images/site/church-logo.png"
                 alt="Goodwill Presbyterian Church Logo"
                 className="h-full w-full object-contain rounded-full"
               />
@@ -249,7 +249,7 @@ export default function Layout({ children, currentPageName }) {
 
           {/* Desktop Navigation */}
           <nav className="hidden lg:flex flex-grow items-center justify-center space-x-1">
-            {navigation.map((item, index) => (
+            {navigation.map((item) => (
               <div
                 key={item.name}
                 className={`dropdown-container relative ${isActive(item.href) ? 'is-active' : ''}`}
@@ -436,7 +436,7 @@ export default function Layout({ children, currentPageName }) {
               <div className="flex items-center space-x-3">
                 <div className="w-14 h-14 bg-white rounded-full p-1 flex items-center justify-center shadow-lg">
                   <img
-                    src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68754282289ae06e12e7a81d/418fa72a7_Logo01.png"
+                    src="/images/site/church-logo.png"
                     alt="Goodwill Presbyterian Church Logo"
                     className="w-full h-full object-contain rounded-full"
                   />

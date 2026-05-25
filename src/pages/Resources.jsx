@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import { Sermons } from "@/entities/Sermons";
 import { Bulletins } from "@/entities/Bulletins";
-import { base44 } from "@/api/base44Client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -64,23 +63,6 @@ const getNextSunday = () => {
   
   nextSunday.setHours(10, 30, 0, 0);
   return nextSunday;
-};
-
-// Helper function to check if currently in service time (Sunday 10:30 AM - 12:00 PM)
-const isServiceTime = () => {
-  const now = new Date();
-  const isSunday = now.getDay() === 0;
-  const currentHour = now.getHours();
-  const currentMinute = now.getMinutes();
-  
-  if (!isSunday) return false;
-  
-  // Service runs from 10:30 AM to 12:00 PM
-  const serviceStart = 10 * 60 + 30; // 10:30 in minutes
-  const serviceEnd = 12 * 60; // 12:00 in minutes
-  const currentTime = currentHour * 60 + currentMinute;
-  
-  return currentTime >= serviceStart && currentTime <= serviceEnd;
 };
 
 export default function Resources() {
@@ -397,7 +379,7 @@ export default function Resources() {
       <section
         className="text-white relative overflow-hidden"
         style={{
-          backgroundImage: "url('https://media.base44.com/images/public/68754282289ae06e12e7a81d/eea186ce6_mitchell-leach-OoaoPYz-E3M-unsplash.jpg')",
+          backgroundImage: "url('/images/site/resources-header.jpg')",
           backgroundSize: 'cover',
           backgroundPosition: 'center',
         }}

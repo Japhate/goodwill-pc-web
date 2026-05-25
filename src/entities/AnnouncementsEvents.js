@@ -1,3 +1,3 @@
-import { base44 } from "@/api/base44Client";
+import { localApi } from "@/api/localApiClient";
 
-export const AnnouncementsEvents = base44.entities.AnnouncementsEvents;
+export const AnnouncementsEvents = localApi.entities.AnnouncementsEvents;

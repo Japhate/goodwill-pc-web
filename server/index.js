@@ -158,7 +158,31 @@ app.post('/api/send-welcome-email', async (req, res) => {
   }
 });
 
-if (fs.existsSync(DIST_DIR)) {
+const useLocalViteServer = process.env.LOCAL_VITE_DEV === 'true';
+
+if (useLocalViteServer) {
+  const { createServer: createViteServer } = await import('vite');
+  const vite = await createViteServer({
+    appType: 'custom',
+    server: { middlewareMode: true },
+  });
+
+  app.use(vite.middlewares);
+  app.use(async (req, res, next) => {
+    if (req.path.startsWith('/api/')) {
+      return next();
+    }
+
+    try {
+      const template = fs.readFileSync(path.join(ROOT_DIR, 'index.html'), 'utf8');
+      const html = await vite.transformIndexHtml(req.originalUrl, template);
+      res.status(200).set({ 'Content-Type': 'text/html' }).end(html);
+    } catch (error) {
+      vite.ssrFixStacktrace(error);
+      next(error);
+    }
+  });
+} else if (fs.existsSync(DIST_DIR)) {
   app.use(express.static(DIST_DIR));
 
   app.use((req, res) => {

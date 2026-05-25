@@ -1,22 +1,21 @@
-import { base44 } from './base44Client';
+import { localApi } from './localApiClient';
 
 
 
 
-export const Core = base44.integrations.Core;
+export const Core = localApi.integrations.Core;
 
-export const InvokeLLM = base44.integrations.Core.InvokeLLM;
+export const InvokeLLM = localApi.integrations.Core.InvokeLLM;
 
-export const SendEmail = base44.integrations.Core.SendEmail;
+export const SendEmail = localApi.integrations.Core.SendEmail;
 
-export const SendSMS = base44.integrations.Core.SendSMS;
+export const SendSMS = localApi.integrations.Core.SendSMS;
 
-export const UploadFile = base44.integrations.Core.UploadFile;
+export const UploadFile = localApi.integrations.Core.UploadFile;
 
-export const GenerateImage = base44.integrations.Core.GenerateImage;
+export const GenerateImage = localApi.integrations.Core.GenerateImage;
 
-export const ExtractDataFromUploadedFile = base44.integrations.Core.ExtractDataFromUploadedFile;
-
+export const ExtractDataFromUploadedFile = localApi.integrations.Core.ExtractDataFromUploadedFile;
 
 
 

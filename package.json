@@ -1,12 +1,10 @@
 {
-  "name": "base44-app",
+  "name": "goodwill-presbyterian-church-web",
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite --host localhost --port 3001 --strictPort",
-    "dev:0001": "vite --host 127.0.0.1 --port 0001",
-    "dev:1001": "vite --host localhost --port 1001 --strictPort",
+    "dev": "node scripts/local-dev.js",
     "api": "node server/index.js",
     "start": "node server/index.js",
     "build": "vite build",
@@ -16,8 +14,6 @@
     "preview": "vite preview --host localhost --port 3001 --strictPort"
   },
   "dependencies": {
-    "@base44/sdk": "^0.8.30",
-    "@base44/vite-plugin": "^1.0.18",
     "@hello-pangea/dnd": "^17.0.0",
     "@hookform/resolvers": "^4.1.2",
     "@radix-ui/react-accordion": "^1.2.3",

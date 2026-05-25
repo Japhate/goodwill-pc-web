@@ -1,9 +1,7 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { createPageUrl } from "@/utils";
-import { Clock, MapPin, Calendar, Users, Heart, BookOpen, ChevronDown, ArrowRight, Share2, Youtube as YoutubeIcon, Megaphone, Send, Download, Phone, Mail, ChevronLeft, ChevronRight, User, Circle, Video, Play, Pause, X, Map, Navigation } from "lucide-react";
+import { Clock, MapPin, BookOpen, ChevronDown, Youtube as YoutubeIcon, Send, Video, Play, Pause, X, Map, Navigation } from "lucide-react";
 import HeroSlideshow from "@/components/home/HeroSlideshow";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AnnouncementsEvents } from "@/entities/AnnouncementsEvents";
 import { Sermons } from "@/entities/Sermons";
@@ -11,8 +9,6 @@ import { Banner } from "@/entities/Banner";
 import { format, isBefore, startOfDay, parseISO } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { NewsletterSubscriptions } from "@/entities/NewsletterSubscriptions";
-import ReactMarkdown from "react-markdown";
-import { Badge } from "@/components/ui/badge";
 
 export default function Home() {
   const [announcements, setAnnouncements] = useState([]);
@@ -20,24 +16,17 @@ export default function Home() {
   const [newsletterEmail, setNewsletterEmail] = useState("");
   const [newsletterMessage, setNewsletterMessage] = useState("");
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [scrollY, setScrollY] = useState(0);
-  const [scrollProgress, setScrollProgress] = useState(0);
   const [currentVerseIndex, setCurrentVerseIndex] = useState(() => Math.floor(Math.random() * 100));
   const [versesPaused, setVersesPaused] = useState(false);
-  const [isCarouselPlaying, setIsCarouselPlaying] = useState(true);
   const announcementsScrollRef = useRef(null);
-          const scrollTimerRef = useRef(null);
-          const isTransitioning = useRef(false);
-          const touchStartX = useRef(0);
-          const touchEndX = useRef(0);
+  const scrollTimerRef = useRef(null);
+  const isTransitioning = useRef(false);
   const observerRef = useRef(null);
   const [liveSermonUrl, setLiveSermonUrl] = useState("https://www.youtube.com/embed/bERzxb_Sbvo");
   const [liveEvents, setLiveEvents] = useState([]);
 
   // New state variables for live stream logic
   const [isLive, setIsLive] = useState(false);
-  const [timeToService, setTimeToService] = useState(null);
-  const [shouldAutoplayLiveStream, setShouldAutoplayLiveStream] = useState(true);
   const [playingSermonId, setPlayingSermonId] = useState(null); // To prevent multiple videos playing simultaneously
   const [hasLiveSermon, setHasLiveSermon] = useState(false); // NEW: Track if there's a Live sermon in DB
   const [liveSermon, setLiveSermon] = useState(null); // NEW: Store the actual live sermon object
@@ -173,27 +162,7 @@ export default function Home() {
     return currentTime >= serviceStart && currentTime < serviceEnd;
   };
 
-  // Helper function to get next Sunday at 10:30 AM
-  const getNextSunday = () => {
-    const now = new Date();
-    const nextSunday = new Date(now);
-    
-    // Set to the next Sunday's date
-    nextSunday.setDate(now.getDate() + (SERVICE_DAY + 7 - now.getDay()) % 7);
-    nextSunday.setHours(SERVICE_HOUR, SERVICE_MINUTE, 0, 0);
-
-    // If the calculated nextSunday is today AND the current time has passed service time,
-    // then set it for the Sunday of the next week.
-    if (now.getDay() === SERVICE_DAY && now.getTime() >= nextSunday.getTime()) {
-        nextSunday.setDate(nextSunday.getDate() + 7);
-    } else if (nextSunday.getTime() < now.getTime()) { // If it's a past Sunday (shouldn't happen with modulo logic but as a safeguard)
-        nextSunday.setDate(nextSunday.getDate() + 7);
-    }
-    
-    return nextSunday;
-  };
-
-  // Check for live events in real-time
+  // Check for scheduled announcement events that are live right now.
   useEffect(() => {
     const checkLiveEvents = () => {
       const now = new Date();
@@ -209,16 +178,15 @@ export default function Home() {
         return currentTime >= announcement.time && currentTime <= announcement.end_time;
       });
 
-      // Deduplicate by id (announcements are tripled for carousel)
-      const uniqueLive = live.filter((event, index, self) => 
-        index === self.findIndex(e => e.id === event.id)
+      const uniqueLive = live.filter((event, index, self) =>
+        index === self.findIndex(item => item.id === event.id)
       );
 
       setLiveEvents(uniqueLive);
     };
 
     checkLiveEvents();
-    const interval = setInterval(checkLiveEvents, 30000); // Check every 30 seconds
+    const interval = setInterval(checkLiveEvents, 30000);
 
     return () => clearInterval(interval);
   }, [announcements]);
@@ -257,22 +225,6 @@ export default function Home() {
 
     return () => clearInterval(verseInterval);
   }, [scriptureVerses.length, versesPaused]);
-
-  // Enhanced parallax scroll effect
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrolled = window.scrollY;
-      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
-      const progress = scrolled / docHeight;
-      
-      setScrollY(scrolled);
-      setScrollProgress(progress);
-    };
-    
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    handleScroll(); // Initial call
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
 
   // Enhanced Intersection Observer for scroll-triggered animations
   useEffect(() => {
@@ -387,31 +339,11 @@ export default function Home() {
       // If there's a sermon marked as "Live" in the database, show it regardless of time
       if (hasLiveSermon) {
         setIsLive(true);
-        setTimeToService(null);
         return;
       }
       
       // Otherwise, use time-based check
       setIsLive(isServiceTime());
-      
-      if (!isServiceTime()) {
-        const nextService = getNextSunday();
-        const now = new Date();
-        const timeDiff = nextService.getTime() - now.getTime();
-        
-        if (timeDiff > 0) {
-          const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
-          const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-          const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
-          const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000);
-          
-          setTimeToService({ days, hours, minutes, seconds });
-        } else {
-          setTimeToService(null);
-        }
-      } else {
-        setTimeToService(null);
-      }
     };
 
     updateLiveStatus();
@@ -421,7 +353,7 @@ export default function Home() {
   }, [hasLiveSermon]); // Depend on hasLiveSermon
 
   const resetScrollTimer = () => {
-    if (announcements.length / 3 <= 1 || !isCarouselPlaying) return; 
+    if (announcements.length / 3 <= 1) return;
     if (scrollTimerRef.current) {
       clearInterval(scrollTimerRef.current);
     }
@@ -442,42 +374,6 @@ export default function Home() {
             resetScrollTimer();
           }
 
-          // Touch handlers for swipe gestures
-          const handleTouchStart = (e) => {
-            touchStartX.current = e.touches[0].clientX;
-          };
-
-          const handleTouchMove = (e) => {
-            touchEndX.current = e.touches[0].clientX;
-          };
-
-          const handleTouchEnd = () => {
-            const swipeThreshold = 50;
-            const diff = touchStartX.current - touchEndX.current;
-
-            if (Math.abs(diff) > swipeThreshold) {
-              if (diff > 0) {
-                handleScroll('right');
-              } else {
-                handleScroll('left');
-              }
-            }
-          };
-
-          // Get real index for dot navigation
-          const getRealIndex = () => {
-            const numRealItems = announcements.length / 3;
-            return currentIndex % numRealItems;
-          };
-
-          const goToSlide = (index) => {
-            if (isTransitioning.current) return;
-            isTransitioning.current = true;
-            const numRealItems = announcements.length / 3;
-            setCurrentIndex(numRealItems + index);
-            resetScrollTimer();
-          };
-  
   const handleNewsletterSubmit = async (e) => {
     e.preventDefault();
     if (!newsletterEmail) return;
@@ -502,7 +398,7 @@ export default function Home() {
   }
   
   useEffect(() => {
-    if (announcements.length / 3 > 1 && isCarouselPlaying) {
+    if (announcements.length / 3 > 1) {
       resetScrollTimer();
     } else if (scrollTimerRef.current) {
       clearInterval(scrollTimerRef.current);
@@ -512,7 +408,7 @@ export default function Home() {
         clearInterval(scrollTimerRef.current);
       }
     };
-  }, [announcements.length, isCarouselPlaying]);
+  }, [announcements.length]);
 
   useEffect(() => {
     const scrollContainer = announcementsScrollRef.current;
@@ -587,30 +483,6 @@ export default function Home() {
     
     return `https://www.youtube.com/embed/${videoId}?${params.toString()}`;
   }, [latestSermon, playingSermonId]);
-
-  const features = [
-    {
-      icon: Users,
-      title: "Welcoming Community",
-      description: "Join our loving church family where everyone belongs",
-      color: "from-purple-100 to-purple-200",
-      iconColor: "text-purple-700"
-    },
-    {
-      icon: BookOpen,
-      title: "Biblical Teaching",
-      description: "Grow in your faith through God's word and fellowship",
-      color: "from-green-100 to-green-200",
-      iconColor: "text-green-700"
-    },
-    {
-      icon: Heart,
-      title: "Caring Ministry",
-      description: "Support one another through prayer and service",
-      color: "from-yellow-100 to-yellow-200",
-      iconColor: "text-yellow-700"
-    }
-  ];
 
   return (
     <div className="min-h-screen relative overflow-hidden" style={{ background: 'linear-gradient(160deg, #FBF7F0 0%, #F5E8CC 30%, #EDD9A3 55%, #F2E6D6 75%, #FBF7F0 100%)' }}>
@@ -954,7 +826,7 @@ export default function Home() {
 
       {/* Hero Slideshow Section */}
       <div>
-        <HeroSlideshow liveEvents={liveEvents} announcements={announcements} />
+        <HeroSlideshow />
       </div>
 
       {/* New to Goodwill Section */}
@@ -1097,7 +969,7 @@ export default function Home() {
                 <div className="w-full bg-gradient-to-br from-gray-900 to-black relative" style={{ paddingTop: '56.25%' }}>
                   <iframe
                     style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
-                    src={`${liveSermonUrl}${shouldAutoplayLiveStream ? '?autoplay=1' : ''}`}
+                    src={`${liveSermonUrl}?autoplay=1`}
                     title="Live Worship Service"
                     frameBorder="0"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
@@ -1182,7 +1054,7 @@ export default function Home() {
                   <YoutubeIcon className="w-3.5 h-3.5 text-white" />
                   <h3 className="text-xs font-bold uppercase text-white tracking-wider">Latest Sermon</h3>
                 </div>
-                <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 mb-1 whitespace-nowrap">{latestSermon.title}</h2>
+                <h2 className="mb-1 break-words text-lg font-bold leading-tight text-gray-900 sm:text-xl md:text-2xl lg:text-3xl">{latestSermon.title}</h2>
                 <div className="text-gray-600 text-sm space-y-0.5 mb-4">
                     <p><span className="font-semibold">Speaker:</span> {latestSermon.speaker}</p>
                     <p><span className="font-semibold">Date:</span> {format(parseISO(latestSermon.date), 'MMMM d, yyyy')}</p>

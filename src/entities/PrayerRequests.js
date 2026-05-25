@@ -1,3 +1,3 @@
-import { base44 } from "@/api/base44Client";
+import { localApi } from "@/api/localApiClient";
 
-export const PrayerRequests = base44.entities.PrayerRequests;
+export const PrayerRequests = localApi.entities.PrayerRequests;

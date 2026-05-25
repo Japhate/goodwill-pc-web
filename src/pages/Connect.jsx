@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MapPin, Phone, Mail, Clock, Car, Users, Heart, Copy, Check, Map, MailQuestion, Handshake, Smartphone, Video } from "lucide-react";
+import { MapPin, Phone, Mail, Clock, Car, Users, Heart, Copy, Check, Map, MailQuestion, Handshake, Video } from "lucide-react";
 
 export default function Connect() {
   const location = useLocation();
@@ -217,7 +217,7 @@ export default function Connect() {
       <section
         className="text-white relative overflow-hidden"
         style={{
-          backgroundImage: "url('https://media.base44.com/images/public/68754282289ae06e12e7a81d/496531324_ChatGPTImageApr12202601_26_48PM.png')",
+          backgroundImage: "url('/images/site/connect-header.png')",
           backgroundSize: 'cover',
           backgroundPosition: '50% 65%',
         }}

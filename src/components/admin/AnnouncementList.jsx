@@ -1,4 +1,3 @@
-import React from 'react';
 import { Button } from '@/components/ui/button';
 import { format, isBefore, startOfDay, parseISO } from 'date-fns';
 import { Edit, Trash, PlusCircle, Copy, ImageOff } from 'lucide-react';

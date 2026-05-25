@@ -1,13 +1,12 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import { PrayerRequests } from "@/entities/PrayerRequests";
-import { base44 } from "@/api/base44Client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { HandHeart, Send, Users, BookOpen, Loader2, Heart, Sparkles } from "lucide-react";
+import { HandHeart, Send, Users, Loader2, Heart, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 export default function Prayer() {
@@ -17,8 +16,6 @@ export default function Prayer() {
   const [isPublic, setIsPublic] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [publicPrayers, setPublicPrayers] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [activeSection, setActiveSection] = useState("");
   const location = useLocation();
 
@@ -30,20 +27,6 @@ export default function Prayer() {
     { title: "Prayer Request", href: "#submit-request", icon: HandHeart },
     { title: "Prayer List", href: "#prayer-list", icon: Users },
   ], []);
-
-  useEffect(() => {
-    const loadPrayers = async () => {
-      try {
-        const prayers = await PrayerRequests.filter({ is_public: true, status: 'approved' }, '-created_date', 50);
-        setPublicPrayers(prayers);
-      } catch (error) {
-        console.error("Error loading prayers:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadPrayers();
-  }, []);
 
   useEffect(() => {
     const handleHashNavigation = () => {
@@ -202,7 +185,7 @@ export default function Prayer() {
       <section
         className="text-white relative overflow-hidden"
         style={{
-          backgroundImage: "url('https://media.base44.com/images/public/68754282289ae06e12e7a81d/32cf7f928_Prayer-banner.jpg')",
+          backgroundImage: "url('/images/site/prayer-header.jpg')",
           backgroundSize: 'cover',
           backgroundPosition: 'top',
         }}

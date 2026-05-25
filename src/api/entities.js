@@ -1,9 +1,9 @@
-import { base44 } from './base44Client';
+import { localApi } from './localApiClient';
 
 
-export const Query = base44.entities.Query;
+export const Query = localApi.entities.Query;
 
 
 
 // auth sdk:
-export const User = base44.auth;
+export const User = localApi.auth;

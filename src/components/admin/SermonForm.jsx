@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -33,7 +33,7 @@ export default function SermonForm({ sermon, onSubmit, onCancel }) {
         if (sermon.date) {
             try {
                 initialData.date = new Date(sermon.date).toISOString().split('T')[0];
-            } catch (e) {
+            } catch {
                 console.error("Invalid date format", sermon.date);
                 initialData.date = '';
             }

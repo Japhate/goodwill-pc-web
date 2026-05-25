@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { Search, X, Megaphone, PlaySquare, FileText, ChevronRight } from "lucide-react";

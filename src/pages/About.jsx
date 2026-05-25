@@ -1,9 +1,8 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
-import { base44 } from "@/api/base44Client";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Heart, Users, BookOpen, Globe, ChevronsRight, HelpCircle, CheckCircle } from "lucide-react";
+import { Heart, Users, BookOpen, Globe, HelpCircle, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function About() {
@@ -207,7 +206,7 @@ export default function About() {
       <section
         className="text-white relative overflow-hidden"
         style={{
-          backgroundImage: "url('https://media.base44.com/images/public/68754282289ae06e12e7a81d/0eca60411_kelly-sikkema-ggS0_G6WI-I-unsplash.jpg')",
+          backgroundImage: "url('/images/site/about-header.jpg')",
           backgroundSize: 'cover',
           backgroundPosition: '50% 75%',
         }}
@@ -274,7 +273,7 @@ export default function About() {
               </div>
               <div>
                 <img 
-                  src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68754282289ae06e12e7a81d/b5c914d69_HomePageImage01.png" 
+                  src="/images/site/about-community.png"
                   alt="Goodwill Presbyterian Church building"
                   className="rounded-lg shadow-lg"
                 />

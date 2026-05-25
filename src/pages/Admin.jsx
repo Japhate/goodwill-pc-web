@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { AnnouncementsEvents } from '@/entities/AnnouncementsEvents';
 import { WorshipEvent } from '@/entities/WorshipEvent';
 import { Sermons } from '@/entities/Sermons';
@@ -20,7 +20,6 @@ import HeroSlideForm from '@/components/admin/HeroSlideForm';
 import { HeroSlide } from '@/entities/HeroSlide';
 import { Loader2, ShieldAlert, Megaphone, CalendarHeart, Images, PlaySquare, FileText, MessageSquare, EyeOff, LayoutTemplate } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { isBefore, startOfDay } from 'date-fns';
 
 export default function AdminPage() {
   const [announcements, setAnnouncements] = useState([]);
@@ -141,7 +140,7 @@ export default function AdminPage() {
     if (!entityInfo) return;
 
     if (window.confirm(`Are you sure you want to duplicate this ${entityInfo.name}?`)) {
-        const { id, created_date, updated_date, created_by, ...duplicatableData } = item;
+        const { id: _id, created_date: _createdDate, updated_date: _updatedDate, created_by: _createdBy, ...duplicatableData } = item;
         const duplicatedItem = {
             ...duplicatableData,
         };
@@ -287,8 +286,6 @@ export default function AdminPage() {
       </div>
     );
   }
-
-  const today = startOfDay(new Date());
 
   // Split first, then sort each list independently
   // Filter by status for admin view
