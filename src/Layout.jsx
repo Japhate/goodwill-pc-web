@@ -499,9 +499,9 @@ export default function Layout({ children, currentPageName }) {
 
         {/* Bottom Bar */}
         <div className="bg-black/20 border-t border-white/10">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col items-center gap-4 md:grid md:grid-cols-3">
             {/* Contact Info */}
-            <div className="flex flex-col sm:flex-row items-center gap-3 md:gap-4 text-sm text-yellow-100/90">
+            <div className="flex flex-col sm:flex-row items-center gap-3 md:justify-self-start md:gap-4 text-sm text-yellow-100/90">
               <a href="tel:8034953599" className="flex items-center gap-2 hover:text-amber-300 transition-colors">
                 <Phone className="w-4 h-4" /> (803) 495-3599
               </a>
@@ -511,14 +511,16 @@ export default function Layout({ children, currentPageName }) {
             </div>
 
             {/* Social Media */}
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center justify-center space-x-3 md:justify-self-center">
               <a href="https://www.facebook.com/share/177iq2ZzgN/" target="_blank" rel="noopener noreferrer" className="p-2 rounded-full text-white social-facebook transition-all duration-300 hover:scale-110">
                 <Facebook className="w-4 h-4" />
               </a>
               <a href="https://www.youtube.com/@goodwillpresbyterianchurch1867" target="_blank" rel="noopener noreferrer" className="p-2 rounded-full text-white social-youtube transition-all duration-300 hover:scale-110">
                 <Youtube className="w-4 h-4" />
               </a>
-              </div>
+            </div>
+
+            <div className="hidden md:block" aria-hidden="true"></div>
           </div>
         </div>
 
