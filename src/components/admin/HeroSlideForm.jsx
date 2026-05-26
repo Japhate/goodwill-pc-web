@@ -31,12 +31,11 @@ export default function HeroSlideForm({ slide, onSubmit, onCancel }) {
     setUploading(true);
     setUploadError("");
     try {
-      const filesToUpload = slide ? files.slice(0, 1) : files;
       const uploaded = await Promise.all(
-        filesToUpload.map((file) => localApi.integrations.Core.UploadFile({ file, destination: "heroImage" }))
+        files.map((file) => localApi.integrations.Core.UploadFile({ file, destination: "heroImage" }))
       );
       const imageUrls = uploaded.map(({ file_url }) => file_url);
-      setUploadedImages(slide ? [] : imageUrls);
+      setUploadedImages(imageUrls);
       handleChange("image_url", imageUrls[0] || "");
     } catch (error) {
       console.error("Hero image upload failed:", error);
@@ -50,7 +49,7 @@ export default function HeroSlideForm({ slide, onSubmit, onCancel }) {
     e.preventDefault();
     const order = Number(formData.order);
 
-    if (!slide && uploadedImages.length > 1) {
+    if (uploadedImages.length > 1) {
       onSubmit(uploadedImages.map((imageUrl, index) => ({
         ...formData,
         image_url: imageUrl,
@@ -71,16 +70,16 @@ export default function HeroSlideForm({ slide, onSubmit, onCancel }) {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1">
-              {slide ? "Image *" : "Images *"}
+              Images *
             </label>
             <div className="flex gap-2 mb-2">
               <label className="cursor-pointer flex items-center gap-2 bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded-md text-sm transition-colors">
                 {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                {slide ? "Upload Image" : "Upload Images"}
-                <input type="file" accept="image/*" multiple={!slide} className="hidden" onChange={handleFileUpload} disabled={uploading} />
+                Upload Images
+                <input type="file" accept="image/*" multiple className="hidden" onChange={handleFileUpload} disabled={uploading} />
               </label>
               <span className="text-gray-400 self-center text-sm">
-                {slide ? "or paste URL below" : "select one or several, or paste one URL below"}
+                select one or several, or paste one URL below
               </span>
             </div>
             <Input
@@ -93,9 +92,13 @@ export default function HeroSlideForm({ slide, onSubmit, onCancel }) {
               required
             />
             {uploadError && <p className="text-xs text-red-600 mt-2">{uploadError}</p>}
-            {!slide && uploadedImages.length > 1 ? (
+            {uploadedImages.length > 1 ? (
               <>
-                <p className="text-xs text-green-700 mt-2">{uploadedImages.length} images ready. Each image will be created as its own slide.</p>
+                <p className="text-xs text-green-700 mt-2">
+                  {slide
+                    ? `${uploadedImages.length} images ready. The first will update this slide and the others will be added as new slides.`
+                    : `${uploadedImages.length} images ready. Each image will be created as its own slide.`}
+                </p>
                 <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {uploadedImages.map((imageUrl, index) => (
                     <img key={imageUrl} src={imageUrl} alt={`Preview ${index + 1}`} className="w-full h-24 object-cover rounded-md border" />
@@ -161,7 +164,9 @@ export default function HeroSlideForm({ slide, onSubmit, onCancel }) {
 
           <div className="flex gap-3 pt-2">
             <Button type="submit" className="bg-amber-600 hover:bg-amber-700 flex-1" disabled={uploading}>
-              {slide ? "Save Changes" : uploadedImages.length > 1 ? `Add ${uploadedImages.length} Slides` : "Add Slide"}
+              {slide
+                ? uploadedImages.length > 1 ? `Save And Add ${uploadedImages.length - 1} Slides` : "Save Changes"
+                : uploadedImages.length > 1 ? `Add ${uploadedImages.length} Slides` : "Add Slide"}
             </Button>
             <Button type="button" variant="outline" onClick={onCancel}>
               Cancel

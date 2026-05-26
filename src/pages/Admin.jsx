@@ -248,7 +248,11 @@ export default function AdminPage() {
                 }
                 break;
             case 'heroSlide':
-                if (isEditing) {
+                if (isEditing && Array.isArray(formData)) {
+                    const [firstSlide, ...additionalSlides] = formData;
+                    await HeroSlide.update(editingItem.id, firstSlide);
+                    await Promise.all(additionalSlides.map((slideData) => HeroSlide.create(slideData)));
+                } else if (isEditing) {
                     await HeroSlide.update(editingItem.id, formData);
                 } else if (Array.isArray(formData)) {
                     await Promise.all(formData.map((slideData) => HeroSlide.create(slideData)));
