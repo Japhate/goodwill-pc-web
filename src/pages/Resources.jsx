@@ -139,10 +139,15 @@ export default function Resources() {
         // The 'sermons' state now holds only the archive (inactive/no status)
         setSermons(inactiveSermonsFiltered); 
 
+        // Sort by bulletin date, not record creation date.
+        const bulletinsNewestFirst = [...bulletinsData].sort((a, b) =>
+          String(b.date || '').localeCompare(String(a.date || ''))
+        );
+
         // Process bulletins based on status
-        const currentBulletinCandidate = bulletinsData.find(b => b.status === 'Current');
+        const currentBulletinCandidate = bulletinsNewestFirst.find(b => b.status === 'Current');
         // Filter out the current bulletin from the list for previous bulletins
-        const pastBulletinsFiltered = bulletinsData.filter(b => b.status === 'Past' || !b.status);
+        const pastBulletinsFiltered = bulletinsNewestFirst.filter(b => b.status === 'Past' || !b.status);
 
         // Set the main 'bulletins' state with the current bulletin first, then the rest, filtering out any nulls
         setBulletins([currentBulletinCandidate, ...pastBulletinsFiltered].filter(Boolean)); 

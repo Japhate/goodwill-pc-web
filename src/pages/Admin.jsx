@@ -87,7 +87,7 @@ export default function AdminPage() {
 
   const loadBulletins = async () => {
     const data = await Bulletins.list('-date', 100);
-    setBulletins(data);
+    setBulletins([...data].sort((a, b) => String(b.date || '').localeCompare(String(a.date || ''))));
   };
 
   const loadBanners = async () => {

@@ -46,25 +46,47 @@ async function collectionItems(entityName) {
   return snapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() }));
 }
 
-function isManagedHeroImageUrl(imageUrl) {
-  if (!imageUrl) return false;
+function isManagedStorageUrl(fileUrl, folder) {
+  if (!fileUrl) return false;
 
   try {
-    const url = new URL(imageUrl);
+    const url = new URL(fileUrl);
     return url.hostname === "firebasestorage.googleapis.com"
-      && decodeURIComponent(url.pathname).includes("/homepage-hero-images/");
+      && decodeURIComponent(url.pathname).includes(`/${folder}/`);
   } catch {
     return false;
   }
 }
 
 async function deleteHeroImageFile(item) {
-  if (!isManagedHeroImageUrl(item?.image_url)) return;
+  if (!isManagedStorageUrl(item?.image_url, "homepage-hero-images")) return;
 
   try {
     await deleteObject(ref(firebaseStorage, item.image_url));
   } catch (error) {
     if (error?.code !== "storage/object-not-found") throw error;
+  }
+}
+
+async function deleteStoredFile(fileUrl, folder) {
+  if (!isManagedStorageUrl(fileUrl, folder)) return;
+
+  try {
+    await deleteObject(ref(firebaseStorage, fileUrl));
+  } catch (error) {
+    if (error?.code !== "storage/object-not-found") throw error;
+  }
+}
+
+async function deleteBulletinFiles(id, item) {
+  const otherBulletins = (await collectionItems("Bulletins")).filter((bulletin) => bulletin.id !== id);
+
+  if (!otherBulletins.some((bulletin) => bulletin.file_url === item.file_url)) {
+    await deleteStoredFile(item.file_url, "bulletins-pdfs");
+  }
+
+  if (!otherBulletins.some((bulletin) => bulletin.thumbnail_url === item.thumbnail_url)) {
+    await deleteStoredFile(item.thumbnail_url, "bulletin-thumbnails");
   }
 }
 
@@ -92,10 +114,14 @@ function firebaseEntity(entityName) {
       return { id, ...item };
     },
     delete: async (id) => {
-      if (entityName === "HeroSlide") {
+      if (entityName === "HeroSlide" || entityName === "Bulletins") {
         const itemSnapshot = await getDoc(doc(firestore, entityName, id));
         if (itemSnapshot.exists()) {
-          await deleteHeroImageFile(itemSnapshot.data());
+          if (entityName === "HeroSlide") {
+            await deleteHeroImageFile(itemSnapshot.data());
+          } else {
+            await deleteBulletinFiles(id, itemSnapshot.data());
+          }
         }
       }
       await deleteDoc(doc(firestore, entityName, id));
