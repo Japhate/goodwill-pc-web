@@ -1,6 +1,6 @@
 # Goodwill Presbyterian Church Website
 
-React and Vite frontend with a Node/Express local server, deployed to IONOS through GitHub Actions.
+React and Vite frontend with Firebase-backed content management, prepared for IONOS Deploy Now static hosting.
 
 ## Local Preview
 
@@ -49,7 +49,15 @@ The included rules allow anyone to view published site content, while only UIDs 
 
 ### Production Deployment
 
-The IONOS deployment is built by GitHub Actions. Add these repository secrets in GitHub under **Settings > Secrets and variables > Actions > New repository secret**:
+Use an IONOS Deploy Now **Static Project** connected to this GitHub repository. Configure:
+
+```text
+Production branch: main
+Build command: npm run build
+Output directory: dist
+```
+
+Add these build environment variables to the IONOS Deploy Now project:
 
 ```text
 VITE_FIREBASE_API_KEY
@@ -60,4 +68,6 @@ VITE_FIREBASE_MESSAGING_SENDER_ID
 VITE_FIREBASE_APP_ID
 ```
 
-After those secrets are configured, push the Firebase integration changes to `main`. The deployment workflow builds the website with Firebase enabled and uploads it to IONOS.
+After those values are configured, deploy the project and test its IONOS preview URL before connecting the church domain. IONOS Deploy Now creates and manages the required GitHub Actions deployment workflow during project setup.
+
+The site content and admin uploads run through Firebase in this hosting model. Server-only email/unsubscribe functionality requires a separate hosted function before it can be relied upon on static hosting.
