@@ -10,6 +10,7 @@ import {
 import SearchModal from "@/components/search/SearchModal";
 import { Button } from "@/components/ui/button";
 import { localApi } from '@/api/localApiClient';
+import { firebaseEnabled } from '@/lib/firebase';
 
 export default function Layout({ children, currentPageName }) {
   const location = useLocation();
@@ -511,8 +512,8 @@ export default function Layout({ children, currentPageName }) {
 
             {/* Admin & Social Media */}
             <div className="flex items-center space-x-3">
-              {currentUser && currentUser.role === 'admin' && (
-                <Link to={createPageUrl("Admin")} className="p-2 rounded-full text-white bg-amber-600 hover:bg-amber-700 transition-all duration-300 hover:scale-110">
+              {(firebaseEnabled || currentUser?.role === 'admin') && (
+                <Link to={createPageUrl("Admin")} title="Admin sign in" className="p-2 rounded-full text-white bg-amber-600 hover:bg-amber-700 transition-all duration-300 hover:scale-110">
                   <Settings className="w-4 h-4" />
                 </Link>
               )}

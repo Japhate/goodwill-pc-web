@@ -1,3 +1,6 @@
+import { firebaseApi } from "@/api/firebaseApiClient";
+import { firebaseEnabled } from "@/lib/firebase";
+
 const LOCAL_API = import.meta.env.VITE_LOCAL_API_URL || '';
 const LOCAL_STORAGE_KEY = 'goodwill-local-data-v5';
 
@@ -374,7 +377,7 @@ function localEntity(entityName) {
   };
 }
 
-export const localApi = {
+const developmentApi = {
   entities: new Proxy({}, {
     get: (_, name) => localEntity(name),
   }),
@@ -397,3 +400,5 @@ export const localApi = {
     logUserInApp: async () => {},
   },
 };
+
+export const localApi = firebaseEnabled ? firebaseApi : developmentApi;

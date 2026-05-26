@@ -1,0 +1,38 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isAdmin() {
+      return request.auth != null
+        && firestore.exists(/databases/(default)/documents/admins/$(request.auth.uid));
+    }
+
+    match /homepage-hero-images/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin()
+        && request.resource.size < 20 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    match /bulletins-pdfs/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin()
+        && request.resource.size < 20 * 1024 * 1024
+        && request.resource.contentType == 'application/pdf';
+    }
+
+    match /bulletin-thumbnails/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin()
+        && request.resource.size < 20 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    match /announcement-images/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin()
+        && request.resource.size < 20 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+  }
+}

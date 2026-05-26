@@ -18,8 +18,10 @@ import BannerForm from '@/components/admin/BannerForm';
 import HeroSlideList from '@/components/admin/HeroSlideList';
 import HeroSlideForm from '@/components/admin/HeroSlideForm';
 import { HeroSlide } from '@/entities/HeroSlide';
-import { Loader2, ShieldAlert, Megaphone, CalendarHeart, Images, PlaySquare, FileText, MessageSquare, EyeOff, LayoutTemplate } from 'lucide-react';
+import { firebaseEnabled } from '@/lib/firebase';
+import { Loader2, ShieldAlert, Megaphone, CalendarHeart, Images, PlaySquare, FileText, MessageSquare, EyeOff, LayoutTemplate, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 export default function AdminPage() {
   const [announcements, setAnnouncements] = useState([]);
@@ -33,9 +35,12 @@ export default function AdminPage() {
   const [editingItem, setEditingItem] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
+  const [signingIn, setSigningIn] = useState(false);
 
-  useEffect(() => {
-    const checkUserAndLoadData = async () => {
+  const checkUserAndLoadData = async () => {
       setLoading(true);
       try {
         const user = await User.me();
@@ -58,7 +63,9 @@ export default function AdminPage() {
       } finally {
         setLoading(false);
       }
-    };
+  };
+
+  useEffect(() => {
     checkUserAndLoadData();
   }, []);
 
@@ -267,6 +274,27 @@ export default function AdminPage() {
     setEditingItem(null);
   };
 
+  const handleSignIn = async (event) => {
+    event.preventDefault();
+    setSigningIn(true);
+    setLoginError('');
+    try {
+      await User.signIn(loginEmail, loginPassword);
+      await checkUserAndLoadData();
+    } catch (error) {
+      setLoginError(error.message || 'Unable to sign in.');
+    } finally {
+      setSigningIn(false);
+    }
+  };
+
+  const handleSignOut = async () => {
+    await User.logout();
+    setIsAdmin(false);
+    setEditingItem(null);
+    setFormView(null);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center pt-20">
@@ -276,6 +304,30 @@ export default function AdminPage() {
   }
 
   if (!isAdmin) {
+    if (firebaseEnabled) {
+      return (
+        <div className="min-h-screen bg-gray-100 flex items-center justify-center pt-20 px-4">
+          <form onSubmit={handleSignIn} className="w-full max-w-md space-y-5 bg-white p-8 rounded-lg shadow-md">
+            <h1 className="text-2xl font-bold text-gray-900">Admin Sign In</h1>
+            <p className="text-sm text-gray-600">Sign in with your approved Firebase administrator account.</p>
+            <div>
+              <label htmlFor="admin_email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <Input id="admin_email" type="email" autoComplete="email" value={loginEmail} onChange={(event) => setLoginEmail(event.target.value)} required />
+            </div>
+            <div>
+              <label htmlFor="admin_password" className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+              <Input id="admin_password" type="password" autoComplete="current-password" value={loginPassword} onChange={(event) => setLoginPassword(event.target.value)} required />
+            </div>
+            {loginError && <p className="text-sm text-red-600">{loginError}</p>}
+            <Button type="submit" className="w-full bg-amber-600 hover:bg-amber-700" disabled={signingIn}>
+              {signingIn && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Sign In
+            </Button>
+          </form>
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center pt-20">
         <div className="text-center p-8 bg-white rounded-lg shadow-md">
@@ -409,7 +461,14 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-gray-100 pt-28 pb-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h1 className="text-4xl font-bold text-gray-900 mb-8 text-center">Admin Panel</h1>
+        <div className="mb-8 flex items-center justify-center gap-4">
+          <h1 className="text-4xl font-bold text-gray-900 text-center">Admin Panel</h1>
+          {firebaseEnabled && (
+            <Button variant="outline" onClick={handleSignOut} className="gap-2">
+              <LogOut className="w-4 h-4" /> Sign Out
+            </Button>
+          )}
+        </div>
         
         <div className="mb-8 flex justify-center flex-wrap gap-4 border-b pb-4">
           <Button

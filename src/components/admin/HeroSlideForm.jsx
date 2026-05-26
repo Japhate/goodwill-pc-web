@@ -26,7 +26,7 @@ export default function HeroSlideForm({ slide, onSubmit, onCancel }) {
     const file = e.target.files[0];
     if (!file) return;
     setUploading(true);
-    const { file_url } = await localApi.integrations.Core.UploadFile({ file });
+    const { file_url } = await localApi.integrations.Core.UploadFile({ file, destination: "heroImage" });
     handleChange("image_url", file_url);
     setUploading(false);
   };

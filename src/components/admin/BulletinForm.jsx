@@ -38,13 +38,13 @@ export default function BulletinForm({ bulletin, onSubmit, onCancel }) {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleFileChange = async (e, field, uploaderStateSetter) => {
+  const handleFileChange = async (e, field, destination, uploaderStateSetter) => {
     const file = e.target.files[0];
     if (!file) return;
 
     uploaderStateSetter(true);
     try {
-      const { file_url } = await UploadFile({ file });
+      const { file_url } = await UploadFile({ file, destination });
       handleChange(field, file_url);
     } catch (error) {
       console.error("File upload failed:", error);
@@ -89,7 +89,7 @@ export default function BulletinForm({ bulletin, onSubmit, onCancel }) {
       <div>
         <label htmlFor="file_upload" className="block text-sm font-medium text-gray-700 mb-1">Bulletin PDF File *</label>
         <div className="flex items-center gap-4">
-            <Input id="file_upload" type="file" accept=".pdf" onChange={(e) => handleFileChange(e, 'file_url', setIsUploadingFile)} className="max-w-xs" />
+            <Input id="file_upload" type="file" accept=".pdf" onChange={(e) => handleFileChange(e, 'file_url', 'bulletinPdf', setIsUploadingFile)} className="max-w-xs" />
             {isUploadingFile && <Loader2 className="w-6 h-6 animate-spin text-gray-500" />}
         </div>
         {formData.file_url && !isUploadingFile && (
@@ -100,7 +100,7 @@ export default function BulletinForm({ bulletin, onSubmit, onCancel }) {
       <div>
         <label htmlFor="thumb_upload" className="block text-sm font-medium text-gray-700 mb-1">Thumbnail Image *</label>
         <div className="flex items-center gap-4">
-            <Input id="thumb_upload" type="file" accept="image/*" onChange={(e) => handleFileChange(e, 'thumbnail_url', setIsUploadingThumb)} className="max-w-xs" />
+            <Input id="thumb_upload" type="file" accept="image/*" onChange={(e) => handleFileChange(e, 'thumbnail_url', 'bulletinThumbnail', setIsUploadingThumb)} className="max-w-xs" />
             {isUploadingThumb && <Loader2 className="w-6 h-6 animate-spin text-gray-500" />}
         </div>
         {formData.thumbnail_url && !isUploadingThumb && (

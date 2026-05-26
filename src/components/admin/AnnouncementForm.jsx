@@ -47,7 +47,7 @@ export default function AnnouncementForm({ announcement, onSubmit, onCancel }) {
 
     setIsUploading(true);
     try {
-      const { file_url } = await UploadFile({ file });
+      const { file_url } = await UploadFile({ file, destination: "announcementImage" });
       handleChange('image_upload', file_url);
     } catch (error) {
       console.error("File upload failed:", error);

@@ -378,14 +378,6 @@ export default function Home() {
     e.preventDefault();
     if (!newsletterEmail) return;
     try {
-        // Check if email already exists
-        const existing = await NewsletterSubscriptions.filter({ email: newsletterEmail });
-        if (existing.length > 0) {
-          setNewsletterMessage("This email is already subscribed.");
-          setTimeout(() => setNewsletterMessage(""), 5000);
-          return;
-        }
-        
         await NewsletterSubscriptions.create({ email: newsletterEmail });
         setNewsletterMessage("Thank you for subscribing!");
         setNewsletterEmail("");
