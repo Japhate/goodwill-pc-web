@@ -13,6 +13,7 @@ import {
   signOut,
 } from "firebase/auth";
 import {
+  deleteObject,
   getDownloadURL,
   ref,
   uploadBytes,
@@ -45,6 +46,28 @@ async function collectionItems(entityName) {
   return snapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() }));
 }
 
+function isManagedHeroImageUrl(imageUrl) {
+  if (!imageUrl) return false;
+
+  try {
+    const url = new URL(imageUrl);
+    return url.hostname === "firebasestorage.googleapis.com"
+      && decodeURIComponent(url.pathname).includes("/homepage-hero-images/");
+  } catch {
+    return false;
+  }
+}
+
+async function deleteHeroImageFile(item) {
+  if (!isManagedHeroImageUrl(item?.image_url)) return;
+
+  try {
+    await deleteObject(ref(firebaseStorage, item.image_url));
+  } catch (error) {
+    if (error?.code !== "storage/object-not-found") throw error;
+  }
+}
+
 function firebaseEntity(entityName) {
   return {
     list: async (sort, limit) => {
@@ -69,6 +92,12 @@ function firebaseEntity(entityName) {
       return { id, ...item };
     },
     delete: async (id) => {
+      if (entityName === "HeroSlide") {
+        const itemSnapshot = await getDoc(doc(firestore, entityName, id));
+        if (itemSnapshot.exists()) {
+          await deleteHeroImageFile(itemSnapshot.data());
+        }
+      }
       await deleteDoc(doc(firestore, entityName, id));
       return { success: true };
     },

@@ -126,8 +126,13 @@ export default function AdminPage() {
     if (!entityInfo) return;
 
     if (window.confirm(`Are you sure you want to delete this ${entityInfo.name}?`)) {
-      await entityInfo.entity.delete(id);
-      await refreshDataForType(type);
+      try {
+        await entityInfo.entity.delete(id);
+        await refreshDataForType(type);
+      } catch (error) {
+        console.error(`Unable to delete ${entityInfo.name}:`, error);
+        window.alert(`Unable to delete this ${entityInfo.name}. Please try again.`);
+      }
     }
   };
 
