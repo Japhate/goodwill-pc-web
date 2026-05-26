@@ -15,7 +15,8 @@
     "image_url": "/images/hero/zoom-meeting-hero.png",
     "alt_text": "Join us every Wednesday at 6:30 PM for Zoom Bible Study",
     "link_url": "https://us06web.zoom.us/j/82013337566?pwd=mULnQC1Zjg5GWkoTTKGvx3PyAFaCeZ.1",
-    "link_label": "Join Zoom"
+    "link_label": "Join Zoom",
+    "is_zoom_bible_study": true
   },
   {
     "id": "hero-3",

@@ -16,6 +16,7 @@ const FALLBACK_SLIDES = [
     alt_text: "Join us every Wednesday at 6:30 PM for Zoom Bible Study",
     link_url: "https://us06web.zoom.us/j/82013337566?pwd=mULnQC1Zjg5GWkoTTKGvx3PyAFaCeZ.1",
     link_label: "Join Zoom",
+    is_zoom_bible_study: true,
   },
   {
     image_url: "/images/hero/pentecost-sunday-hero.png",
@@ -145,6 +146,16 @@ const BIBLE_STUDY_END_HOUR = 19;   // 7:00 PM
 const BIBLE_STUDY_END_MIN = 0;
 const COUNTDOWN_START_HOUR = 18;   // Show countdown from 6:00 PM
 const COUNTDOWN_START_MIN = 0;
+
+function isZoomBibleStudySlide(slide) {
+  if (!slide) return false;
+
+  return slide.is_zoom_bible_study === true
+    || slide.alt_text?.toLowerCase().includes("bible study")
+    || slide.alt_text?.toLowerCase().includes("zoom")
+    || slide.link_url?.includes("zoom.us")
+    || slide.image_url?.toLowerCase().includes("zoom");
+}
 
 // Get this Wednesday's (or next Wednesday's) Bible Study times
 function getNextBibleStudy(now) {
@@ -307,11 +318,7 @@ export default function HeroSlideshow() {
   const activeSlides = useMemo(() => {
     if (!isLiveBibleStudyTime) return slides;
 
-    const zoomSlides = slides.filter(slide =>
-      slide.alt_text?.toLowerCase().includes('bible study') ||
-      slide.alt_text?.toLowerCase().includes('zoom') ||
-      slide.link_url?.includes('zoom.us')
-    );
+    const zoomSlides = slides.filter(isZoomBibleStudySlide);
 
     return zoomSlides.length > 0 ? zoomSlides : slides;
   }, [isLiveBibleStudyTime, slides]);
@@ -393,16 +400,16 @@ export default function HeroSlideshow() {
                 draggable={false}
               />
               {/* Link overlay button */}
-              {slide.link_url && (
+              {(slide.link_url || isZoomBibleStudySlide(slide)) && (
                 <a
-                  href={slide.link_url}
+                  href={slide.link_url || BIBLE_STUDY_ZOOM}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="absolute bottom-8 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-blue-600/95 px-3 py-1.5 text-xs font-semibold text-white shadow-lg transition-all hover:bg-blue-700 sm:bottom-12 sm:px-4 sm:py-2 sm:text-sm md:bottom-16 md:gap-2 md:px-6 md:py-3 md:text-base"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <ExternalLink className="w-4 h-4" />
-                  {slide.link_label || "Learn More"}
+                  {slide.link_label || (isZoomBibleStudySlide(slide) ? "Join Zoom" : "Learn More")}
                 </a>
               )}
             </div>
@@ -417,9 +424,7 @@ export default function HeroSlideshow() {
           </div>
 
           {/* Zoom Countdown Overlay — only on the Bible Study slide */}
-          {(activeSlides[current]?.alt_text?.toLowerCase().includes('bible study') ||
-            activeSlides[current]?.alt_text?.toLowerCase().includes('zoom') ||
-            activeSlides[current]?.link_url?.includes('zoom.us')) && (
+          {isZoomBibleStudySlide(activeSlides[current]) && (
             <ZoomCountdownOverlay />
           )}
         </div>

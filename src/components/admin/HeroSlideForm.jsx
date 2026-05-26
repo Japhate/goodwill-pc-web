@@ -6,15 +6,24 @@ import { Switch } from "@/components/ui/switch";
 import { localApi } from "@/api/localApiClient";
 import { Loader2, Upload } from "lucide-react";
 
+const BIBLE_STUDY_ZOOM = "https://us06web.zoom.us/j/82013337566?pwd=mULnQC1Zjg5GWkoTTKGvx3PyAFaCeZ.1";
+
 export default function HeroSlideForm({ slide, onSubmit, onCancel }) {
   const [formData, setFormData] = useState({
     image_url: "",
     alt_text: "",
     link_url: "",
     link_label: "",
+    is_zoom_bible_study: false,
     order: 0,
     is_active: true,
     ...slide,
+    is_zoom_bible_study: slide?.is_zoom_bible_study === true
+      || slide?.alt_text?.toLowerCase().includes("bible study")
+      || slide?.alt_text?.toLowerCase().includes("zoom")
+      || slide?.link_url?.includes("zoom.us")
+      || slide?.image_url?.toLowerCase().includes("zoom")
+      || false,
   });
   const [uploading, setUploading] = useState(false);
   const [uploadedImages, setUploadedImages] = useState([]);
@@ -22,6 +31,16 @@ export default function HeroSlideForm({ slide, onSubmit, onCancel }) {
 
   const handleChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleZoomSlideChange = (checked) => {
+    setFormData((prev) => ({
+      ...prev,
+      is_zoom_bible_study: checked,
+      alt_text: checked && !prev.alt_text ? "Join us every Wednesday at 6:30 PM for Zoom Bible Study" : prev.alt_text,
+      link_url: checked && !prev.link_url ? BIBLE_STUDY_ZOOM : prev.link_url,
+      link_label: checked && !prev.link_label ? "Join Zoom" : prev.link_label,
+    }));
   };
 
   const handleFileUpload = async (e) => {
@@ -160,6 +179,19 @@ export default function HeroSlideForm({ slide, onSubmit, onCancel }) {
               onCheckedChange={(val) => handleChange("is_active", val)}
             />
             <label className="text-sm font-semibold text-gray-700">Active (show on homepage)</label>
+          </div>
+
+          <div className="rounded-md border border-blue-200 bg-blue-50 p-3">
+            <div className="flex items-center gap-3">
+              <Switch
+                checked={formData.is_zoom_bible_study}
+                onCheckedChange={handleZoomSlideChange}
+              />
+              <label className="text-sm font-semibold text-gray-700">Zoom Bible Study slide</label>
+            </div>
+            <p className="text-xs text-gray-600 mt-2">
+              Enables the Join Zoom button and the countdown to the next Wednesday Bible Study meeting.
+            </p>
           </div>
 
           <div className="flex gap-3 pt-2">
