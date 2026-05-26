@@ -1,6 +1,6 @@
 # Goodwill Presbyterian Church Website
 
-React and Vite frontend with Firebase-backed content management, prepared for IONOS Deploy Now static hosting.
+React and Vite frontend with Firebase-backed content management, deployed on Render. IONOS manages the domain DNS records that point to Render.
 
 ## Local Preview
 
@@ -49,15 +49,16 @@ The included rules allow anyone to view published site content, while only UIDs 
 
 ### Production Deployment
 
-Use an IONOS Deploy Now **Static Project** connected to this GitHub repository. Configure:
+Use the existing Render service connected to this GitHub repository. Configure:
 
 ```text
-Production branch: main
+Branch: main
 Build command: npm run build
-Output directory: dist
+Start command for Web Service: npm start
+Publish directory for Static Site: dist
 ```
 
-Add these build environment variables to the IONOS Deploy Now project:
+Add these environment variables to the Render service:
 
 ```text
 VITE_FIREBASE_API_KEY
@@ -68,6 +69,6 @@ VITE_FIREBASE_MESSAGING_SENDER_ID
 VITE_FIREBASE_APP_ID
 ```
 
-After those values are configured, deploy the project and test its IONOS preview URL before connecting the church domain. IONOS Deploy Now creates and manages the required GitHub Actions deployment workflow during project setup.
+After those values are configured, use **Manual Deploy > Deploy latest commit** in Render and test `/Admin` on the live domain. Keep the existing IONOS DNS records pointing to Render.
 
-The site content and admin uploads run through Firebase in this hosting model. Server-only email/unsubscribe functionality requires a separate hosted function before it can be relied upon on static hosting.
+The current Node/Express server can remain on a Render Web Service while Firebase handles site content and admin uploads.
