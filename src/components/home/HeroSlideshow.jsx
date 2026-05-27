@@ -138,14 +138,12 @@ const HOMEPAGE_BANNER_MESSAGES = [
 const LIVE_SERVICE_BANNER_MESSAGE = "\u{1F534} Our Live service is happening now, click the Live button to join.";
 const LIVE_BIBLE_STUDY_BANNER_MESSAGE = "\u{1F534} Our Zoom Bible Study is happening now. Click the Zoom button to join us.";
 
-// Bible Study: pin the Zoom slide every Wednesday from 6:00 PM to 6:45 PM.
+// Bible Study: pin the Zoom slide every Wednesday from 6:00 PM to 7:00 PM.
 const BIBLE_STUDY_ZOOM = "https://us06web.zoom.us/j/82013337566?pwd=mULnQC1Zjg5GWkoTTKGvx3PyAFaCeZ.1";
-const BIBLE_STUDY_START_HOUR = 18; // 6:30 PM
-const BIBLE_STUDY_START_MIN = 30;
-const BIBLE_STUDY_END_HOUR = 18;   // 6:45 PM
-const BIBLE_STUDY_END_MIN = 45;
-const COUNTDOWN_START_HOUR = 18;   // Show countdown from 6:00 PM
-const COUNTDOWN_START_MIN = 0;
+const BIBLE_STUDY_START_HOUR = 18; // 6:00 PM
+const BIBLE_STUDY_START_MIN = 0;
+const BIBLE_STUDY_END_HOUR = 19;   // 7:00 PM
+const BIBLE_STUDY_END_MIN = 0;
 
 function isZoomBibleStudySlide(slide) {
   if (!slide) return false;
@@ -171,17 +169,13 @@ function getNextBibleStudy(now) {
   const wedEnd = new Date(wed);
   wedEnd.setHours(BIBLE_STUDY_END_HOUR, BIBLE_STUDY_END_MIN, 0, 0);
 
-  const wedCountdownStart = new Date(wed);
-  wedCountdownStart.setHours(COUNTDOWN_START_HOUR, COUNTDOWN_START_MIN, 0, 0);
-
-  // If today is Wednesday but we're already past 6:45 PM, get NEXT Wednesday
+  // If today is Wednesday but we're already past 7:00 PM, get NEXT Wednesday
   if (daysUntilWed === 0 && now >= wedEnd) {
     wed.setDate(wed.getDate() + 7);
     wedEnd.setDate(wedEnd.getDate() + 7);
-    wedCountdownStart.setDate(wedCountdownStart.getDate() + 7);
   }
 
-  return { start: wed, end: wedEnd, countdownStart: wedCountdownStart };
+  return { start: wed, end: wedEnd };
 }
 
 function ZoomCountdownOverlay() {
@@ -192,21 +186,18 @@ function ZoomCountdownOverlay() {
     return () => clearInterval(interval);
   }, []);
 
-  const { start, end, countdownStart } = useMemo(() => getNextBibleStudy(now), [now]);
+  const { start, end } = useMemo(() => getNextBibleStudy(now), [now]);
 
-  const isCountdownWindow = now >= countdownStart && now < start; // Wed 6:00-6:30 PM
-  const isOngoing = now >= start && now < end;                    // Wed 6:30-6:45 PM
+  const isOngoing = now >= start && now < end;                    // Wed 6:00-7:00 PM
 
   const msUntilStart = Math.max(0, start - now);
   const totalSeconds = Math.floor(msUntilStart / 1000);
-  const mins = Math.floor(totalSeconds / 60);
-  const secs = totalSeconds % 60;
   return (
     <div className="absolute bottom-2 right-3 z-20 flex justify-end">
       <div className="bg-black/70 backdrop-blur-sm rounded-lg px-2 py-1.5 flex flex-col items-center gap-0.5 shadow-xl border border-white/20">
 
         {/* DEFAULT: full countdown to next session */}
-        {!isCountdownWindow && !isOngoing && (
+        {!isOngoing && (
           <>
             <div className="flex items-center gap-1 text-amber-300 text-[10px] font-semibold">
               <Clock className="w-2.5 h-2.5 flex-shrink-0" />
@@ -229,29 +220,7 @@ function ZoomCountdownOverlay() {
           </>
         )}
 
-        {/* COUNTDOWN: 6:00-6:30 PM */}
-        {isCountdownWindow && (
-          <>
-            <div className="flex items-center gap-1 text-amber-300 text-[10px] font-semibold">
-              <Clock className="w-2.5 h-2.5 flex-shrink-0" />
-              Bible Study starts in
-            </div>
-            <div className="text-white font-bold text-sm tabular-nums">
-              {String(mins).padStart(2, "0")}:{String(secs).padStart(2, "0")}
-            </div>
-            <a
-              href={BIBLE_STUDY_ZOOM}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-2.5 py-1 rounded-full shadow transition-all text-[10px]"
-            >
-              <Video className="w-3 h-3" />
-              Join Zoom
-            </a>
-          </>
-        )}
-
-        {/* LIVE: 6:30-6:45 PM */}
+        {/* LIVE: 6:00-7:00 PM */}
         {isOngoing && (
           <>
             <div className="flex items-center gap-1 text-green-300 text-[10px] font-semibold">
@@ -285,11 +254,9 @@ export default function HeroSlideshow() {
   const currentMinutes = now.getHours() * 60 + now.getMinutes();
   const isLiveServiceBannerTime = now.getDay() === 0 && currentMinutes >= 10 * 60 + 30 && currentMinutes < 12 * 60;
   const isBibleStudyPinnedTime = now.getDay() === 3
-    && currentMinutes >= COUNTDOWN_START_HOUR * 60 + COUNTDOWN_START_MIN
-    && currentMinutes < BIBLE_STUDY_END_HOUR * 60 + BIBLE_STUDY_END_MIN;
-  const isLiveBibleStudyTime = now.getDay() === 3
     && currentMinutes >= BIBLE_STUDY_START_HOUR * 60 + BIBLE_STUDY_START_MIN
     && currentMinutes < BIBLE_STUDY_END_HOUR * 60 + BIBLE_STUDY_END_MIN;
+  const isLiveBibleStudyTime = isBibleStudyPinnedTime;
   const isLiveBanner = isLiveServiceBannerTime || isLiveBibleStudyTime;
 
   const bannerMessages = useMemo(() => {
