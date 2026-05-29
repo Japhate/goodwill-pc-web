@@ -295,10 +295,7 @@ export default function HeroSlideshow() {
   useEffect(() => {
     const loadBanners = async () => {
       try {
-        let data = await localApi.entities.HomeBannerMessages.list('-created_date', 100);
-        if (data.length === 0) {
-          data = await localApi.entities.Banner.list('-created_date', 100);
-        }
+        const data = await localApi.entities.HomeBannerMessages.list('-created_date', 100);
         const live = data.filter((banner) => banner.status === "live");
         const standard = data.filter((banner) => banner.status === "active");
         const inactive = data.filter((banner) => banner.status !== "live" && banner.status !== "active");

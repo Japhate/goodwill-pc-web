@@ -5,6 +5,7 @@ import { Bulletins } from "@/entities/Bulletins";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PlayCircle, BookOpen, Calendar, User, FileText, Youtube, Download, Loader2, Radio, Clock, PlaySquare, X, MapPin, LayoutGrid, List, Search } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { AnimatePresence, motion } from "framer-motion";
@@ -37,6 +38,101 @@ const formatBulletinDate = (dateString) => {
   // Use parseISO to correctly handle date strings, especially ISO 8601 formatted ones from the backend.
   const date = parseISO(dateString);
   return format(date, 'MMMM d, yyyy');
+};
+
+const BIBLE_BOOK_ORDER = [
+  "genesis", "exodus", "leviticus", "numbers", "deuteronomy", "joshua", "judges", "ruth",
+  "1 samuel", "2 samuel", "1 kings", "2 kings", "1 chronicles", "2 chronicles", "ezra",
+  "nehemiah", "esther", "job", "psalms", "proverbs", "ecclesiastes", "song of solomon",
+  "isaiah", "jeremiah", "lamentations", "ezekiel", "daniel", "hosea", "joel", "amos",
+  "obadiah", "jonah", "micah", "nahum", "habakkuk", "zephaniah", "haggai", "zechariah",
+  "malachi", "matthew", "mark", "luke", "john", "acts", "romans", "1 corinthians",
+  "2 corinthians", "galatians", "ephesians", "philippians", "colossians", "1 thessalonians",
+  "2 thessalonians", "1 timothy", "2 timothy", "titus", "philemon", "hebrews", "james",
+  "1 peter", "2 peter", "1 john", "2 john", "3 john", "jude", "revelation",
+];
+
+const getDateTime = (dateString) => {
+  if (!dateString) return null;
+  const time = parseISO(dateString).getTime();
+  return Number.isNaN(time) ? null : time;
+};
+
+const sortByDate = (items, direction = "newest") => {
+  return [...items].sort((a, b) => {
+    const aTime = getDateTime(a.date);
+    const bTime = getDateTime(b.date);
+    if (aTime === null && bTime === null) return 0;
+    if (aTime === null) return 1;
+    if (bTime === null) return -1;
+    return direction === "oldest" ? aTime - bTime : bTime - aTime;
+  });
+};
+
+const compareText = (a = "", b = "", direction = "asc") => {
+  const left = String(a || "").trim();
+  const right = String(b || "").trim();
+  if (!left && !right) return 0;
+  if (!left) return 1;
+  if (!right) return -1;
+
+  const comparison = left.localeCompare(right, undefined, {
+    numeric: true,
+    sensitivity: "base",
+  });
+  return direction === "desc" ? -comparison : comparison;
+};
+
+const parseScriptureSortKey = (scripture = "") => {
+  const normalized = String(scripture).toLowerCase().replace(/\s+/g, " ").trim();
+  const match = normalized.match(/^([1-3]?\s?[a-z]+(?:\s+[a-z]+)*?)\s+(\d+)(?::(\d+))?/);
+  if (!match) return { book: Number.MAX_SAFE_INTEGER, chapter: Number.MAX_SAFE_INTEGER, verse: Number.MAX_SAFE_INTEGER, text: normalized };
+
+  const bookIndex = BIBLE_BOOK_ORDER.indexOf(match[1].trim());
+  return {
+    book: bookIndex === -1 ? Number.MAX_SAFE_INTEGER : bookIndex,
+    chapter: Number(match[2]) || Number.MAX_SAFE_INTEGER,
+    verse: Number(match[3]) || 0,
+    text: normalized,
+  };
+};
+
+const compareScripture = (a = "", b = "", direction = "asc") => {
+  const left = parseScriptureSortKey(a);
+  const right = parseScriptureSortKey(b);
+  const comparison = (left.book - right.book)
+    || (left.chapter - right.chapter)
+    || (left.verse - right.verse)
+    || compareText(left.text, right.text, "asc");
+
+  return direction === "desc" ? -comparison : comparison;
+};
+
+const sortSermons = (items, sortField = "date", direction = "desc") => {
+  return [...items].sort((a, b) => {
+    if (sortField === "date") {
+      const aTime = getDateTime(a.date);
+      const bTime = getDateTime(b.date);
+      if (aTime === null && bTime === null) return 0;
+      if (aTime === null) return 1;
+      if (bTime === null) return -1;
+      return direction === "asc" ? aTime - bTime : bTime - aTime;
+    }
+
+    if (sortField === "scripture") {
+      return compareScripture(a.scripture, b.scripture, direction);
+    }
+
+    return compareText(a[sortField] || "", b[sortField] || "", direction);
+  });
+};
+
+const sortBulletins = (items, sortField = "date", direction = "desc") => {
+  if (sortField === "date") {
+    return sortByDate(items, direction === "asc" ? "oldest" : "newest");
+  }
+
+  return [...items].sort((a, b) => compareText(a[sortField] || "", b[sortField] || "", direction));
 };
 
 // Helper function to get next Sunday at 10:30 AM
@@ -79,9 +175,19 @@ export default function Resources() {
   const [activeSection, setActiveSection] = useState("");
   const [enlargedBulletin, setEnlargedBulletin] = useState(null);
   const [hasLiveSermon, setHasLiveSermon] = useState(false);
-  const [sermonsView, setSermonsView] = useState("list"); // "grid" or "list"
+  const [sermonsView, setSermonsView] = useState("grid"); // "grid" or "list"
+  const [selectedSpeaker, setSelectedSpeaker] = useState("all");
+  const [sermonsSortField, setSermonsSortField] = useState("date");
+  const [sermonsSortDirection, setSermonsSortDirection] = useState("desc");
+  const [sermonsDateDirection, setSermonsDateDirection] = useState("desc");
+  const [sermonsAlphaDirection, setSermonsAlphaDirection] = useState("asc");
   const [sermonSearch, setSermonSearch] = useState("");
-  const [bulletinsView, setBulletinsView] = useState("list"); // "grid" or "list"
+  const [bulletinsView, setBulletinsView] = useState("grid"); // "grid" or "list"
+  const [bulletinSearch, setBulletinSearch] = useState("");
+  const [bulletinsSortField, setBulletinsSortField] = useState("date");
+  const [bulletinsSortDirection, setBulletinsSortDirection] = useState("desc");
+  const [bulletinsDateDirection, setBulletinsDateDirection] = useState("desc");
+  const [bulletinsAlphaDirection, setBulletinsAlphaDirection] = useState("asc");
   const [visibleSermonsCount, setVisibleSermonsCount] = useState(8);
   const [visibleBulletinsCount, setVisibleBulletinsCount] = useState(8); // New state to indicate if a sermon is marked "Live" in DB
   const location = useLocation();
@@ -357,18 +463,41 @@ export default function Resources() {
 
   // Derived state from the main 'sermons' and 'bulletins' states
   const latestSermon = useMemo(() => selectedSermon, [selectedSermon]);
+  const sermonSpeakers = useMemo(() => {
+    return [...new Set(sermons.map((sermon) => sermon.speaker).filter(Boolean))]
+      .sort((a, b) => compareText(a, b, "asc"));
+  }, [sermons]);
+
   const moreSermons = useMemo(() => {
-    if (!sermonSearch.trim()) return sermons;
-    const q = sermonSearch.toLowerCase();
-    return sermons.filter(s =>
+    const q = sermonSearch.trim().toLowerCase();
+    const speakerFiltered = selectedSpeaker === "all"
+      ? sermons
+      : sermons.filter((sermon) => sermon.speaker === selectedSpeaker);
+
+    const filtered = q ? speakerFiltered.filter(s =>
       s.title?.toLowerCase().includes(q) ||
       s.scripture?.toLowerCase().includes(q) ||
       s.speaker?.toLowerCase().includes(q) ||
       s.series?.toLowerCase().includes(q)
-    );
-  }, [sermons, sermonSearch]);
+    ) : speakerFiltered;
+
+    return sortSermons(filtered, sermonsSortField, sermonsSortDirection);
+  }, [sermons, sermonSearch, selectedSpeaker, sermonsSortField, sermonsSortDirection]);
   const currentBulletin = useMemo(() => bulletins.find(b => b.status === 'Current'), [bulletins]);
-  const previousBulletins = useMemo(() => bulletins.filter(b => b.status === 'Past' || !b.status), [bulletins]);
+  const previousBulletins = useMemo(() => {
+    const q = bulletinSearch.trim().toLowerCase();
+    const pastBulletins = bulletins.filter(b => b.status === 'Past' || !b.status);
+    const filtered = q ? pastBulletins.filter((bulletin) =>
+      bulletin.title?.toLowerCase().includes(q) ||
+      formatBulletinDate(bulletin.date).toLowerCase().includes(q)
+    ) : pastBulletins;
+
+    return sortBulletins(
+      filtered,
+      bulletinsSortField,
+      bulletinsSortDirection
+    );
+  }, [bulletins, bulletinSearch, bulletinsSortField, bulletinsSortDirection]);
 
   if (loading) {
     return (
@@ -634,9 +763,66 @@ export default function Resources() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-3xl font-bold text-gray-900">More Sermons</h2>
-              <div className="flex items-center gap-1 bg-gray-200 rounded-lg p-1">
-                <button onClick={() => setSermonsView("grid")} className={`p-2 rounded-md transition-colors ${sermonsView === "grid" ? "bg-white shadow text-amber-600" : "text-gray-500 hover:text-gray-700"}`} aria-label="Grid view"><LayoutGrid className="w-4 h-4" /></button>
-                <button onClick={() => setSermonsView("list")} className={`p-2 rounded-md transition-colors ${sermonsView === "list" ? "bg-white shadow text-amber-600" : "text-gray-500 hover:text-gray-700"}`} aria-label="List view"><List className="w-4 h-4" /></button>
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <div className="flex flex-wrap items-center gap-2 rounded-lg bg-gray-200 p-1">
+                  <span className="px-2 text-xs font-semibold text-gray-600">Speaker</span>
+                  <Select
+                    value={selectedSpeaker}
+                    onValueChange={setSelectedSpeaker}
+                  >
+                    <SelectTrigger className="h-8 w-[180px] bg-white text-xs font-semibold text-gray-800">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Speakers</SelectItem>
+                      {sermonSpeakers.map((speaker) => (
+                        <SelectItem key={speaker} value={speaker}>{speaker}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 rounded-lg bg-gray-200 p-1">
+                  <span className="px-2 text-xs font-semibold text-gray-600">Date</span>
+                  <Select
+                    value={sermonsDateDirection}
+                    onValueChange={(value) => {
+                      setSermonsDateDirection(value);
+                      setSermonsSortField("date");
+                      setSermonsSortDirection(value);
+                    }}
+                  >
+                    <SelectTrigger className="h-8 w-[128px] bg-white text-xs font-semibold text-gray-800">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="desc">New to Old</SelectItem>
+                      <SelectItem value="asc">Old to New</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 rounded-lg bg-gray-200 p-1">
+                  <span className="px-2 text-xs font-semibold text-gray-600">Alphabetical</span>
+                  <Select
+                    value={sermonsAlphaDirection}
+                    onValueChange={(value) => {
+                      setSermonsAlphaDirection(value);
+                      setSermonsSortField("title");
+                      setSermonsSortDirection(value);
+                    }}
+                  >
+                    <SelectTrigger className="h-8 w-[96px] bg-white text-xs font-semibold text-gray-800">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="asc">A-Z</SelectItem>
+                      <SelectItem value="desc">Z-A</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center gap-1 bg-gray-200 rounded-lg p-1">
+                  <button onClick={() => setSermonsView("grid")} className={`p-2 rounded-md transition-colors ${sermonsView === "grid" ? "bg-white shadow text-amber-600" : "text-gray-500 hover:text-gray-700"}`} aria-label="Grid view"><LayoutGrid className="w-4 h-4" /></button>
+                  <button onClick={() => setSermonsView("list")} className={`p-2 rounded-md transition-colors ${sermonsView === "list" ? "bg-white shadow text-amber-600" : "text-gray-500 hover:text-gray-700"}`} aria-label="List view"><List className="w-4 h-4" /></button>
+                </div>
               </div>
             </div>
 
@@ -787,10 +973,65 @@ export default function Resources() {
                   <div>
                     <div className="flex items-center justify-between border-t pt-12 mb-6">
                       <h3 className="text-2xl font-bold text-gray-900">Previous Worship Bulletins</h3>
-                      <div className="flex items-center gap-1 bg-gray-200 rounded-lg p-1">
-                        <button onClick={() => setBulletinsView("grid")} className={`p-2 rounded-md transition-colors ${bulletinsView === "grid" ? "bg-white shadow text-amber-600" : "text-gray-500 hover:text-gray-700"}`} aria-label="Grid view"><LayoutGrid className="w-4 h-4" /></button>
-                        <button onClick={() => setBulletinsView("list")} className={`p-2 rounded-md transition-colors ${bulletinsView === "list" ? "bg-white shadow text-amber-600" : "text-gray-500 hover:text-gray-700"}`} aria-label="List view"><List className="w-4 h-4" /></button>
+                      <div className="flex flex-wrap items-center justify-end gap-2">
+                        <div className="flex flex-wrap items-center gap-2 rounded-lg bg-gray-200 p-1">
+                          <span className="px-2 text-xs font-semibold text-gray-600">Date</span>
+                          <Select
+                            value={bulletinsDateDirection}
+                            onValueChange={(value) => {
+                              setBulletinsDateDirection(value);
+                              setBulletinsSortField("date");
+                              setBulletinsSortDirection(value);
+                            }}
+                          >
+                            <SelectTrigger className="h-8 w-[128px] bg-white text-xs font-semibold text-gray-800">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="desc">New to Old</SelectItem>
+                              <SelectItem value="asc">Old to New</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2 rounded-lg bg-gray-200 p-1">
+                          <span className="px-2 text-xs font-semibold text-gray-600">Alphabetical</span>
+                          <Select
+                            value={bulletinsAlphaDirection}
+                            onValueChange={(value) => {
+                              setBulletinsAlphaDirection(value);
+                              setBulletinsSortField("title");
+                              setBulletinsSortDirection(value);
+                            }}
+                          >
+                            <SelectTrigger className="h-8 w-[96px] bg-white text-xs font-semibold text-gray-800">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="asc">A-Z</SelectItem>
+                              <SelectItem value="desc">Z-A</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="flex items-center gap-1 bg-gray-200 rounded-lg p-1">
+                          <button onClick={() => setBulletinsView("grid")} className={`p-2 rounded-md transition-colors ${bulletinsView === "grid" ? "bg-white shadow text-amber-600" : "text-gray-500 hover:text-gray-700"}`} aria-label="Grid view"><LayoutGrid className="w-4 h-4" /></button>
+                          <button onClick={() => setBulletinsView("list")} className={`p-2 rounded-md transition-colors ${bulletinsView === "list" ? "bg-white shadow text-amber-600" : "text-gray-500 hover:text-gray-700"}`} aria-label="List view"><List className="w-4 h-4" /></button>
+                        </div>
                       </div>
+                    </div>
+                    <div className="relative mb-6">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <input
+                        type="text"
+                        placeholder="Search by bulletin title or date..."
+                        value={bulletinSearch}
+                        onChange={(e) => setBulletinSearch(e.target.value)}
+                        className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white"
+                      />
+                      {bulletinSearch && (
+                        <button onClick={() => setBulletinSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                     {bulletinsView === "grid" ? (
                       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
@@ -844,7 +1085,9 @@ export default function Resources() {
                 {!currentBulletin && previousBulletins.length === 0 && (
                   <div className="text-center py-12">
                     <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-xl font-semibold text-gray-900 mb-2">No bulletins found</h3>
+                    <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                      {bulletinSearch ? "No bulletins match your search" : "No bulletins found"}
+                    </h3>
                   </div>
                 )}
               </>
