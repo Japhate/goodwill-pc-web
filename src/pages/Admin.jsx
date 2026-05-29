@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { AnnouncementsEvents } from '@/entities/AnnouncementsEvents';
 import { WorshipEvent } from '@/entities/WorshipEvent';
 import { Sermons } from '@/entities/Sermons';
 import { Bulletins } from '@/entities/Bulletins';
-import { Banner } from '@/entities/Banner';
+import { HomeBannerMessages } from '@/entities/HomeBannerMessages';
 import { User } from '@/entities/User';
 import AnnouncementList from '@/components/admin/AnnouncementList';
 import AnnouncementForm from '@/components/admin/AnnouncementForm';
@@ -19,9 +19,23 @@ import HeroSlideList from '@/components/admin/HeroSlideList';
 import HeroSlideForm from '@/components/admin/HeroSlideForm';
 import { HeroSlide } from '@/entities/HeroSlide';
 import { firebaseEnabled } from '@/lib/firebase';
+import { DEFAULT_HOMEPAGE_BANNERS } from '@/lib/homepageBanners';
 import { Loader2, ShieldAlert, Megaphone, CalendarHeart, Images, PlaySquare, FileText, MessageSquare, EyeOff, LayoutTemplate, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+
+const ADMIN_INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000;
+const AUTO_LOGOUT_NOTICE_KEY = 'goodwill-admin-auto-logout';
+const AUTO_LOGOUT_MESSAGE = 'You were logged out automatically due to inactivity.';
+const ACTIVITY_EVENTS = ['click', 'keydown', 'mousemove', 'scroll', 'touchstart'];
+
+function consumeAutoLogoutNotice() {
+  if (typeof window === 'undefined') return '';
+  if (window.localStorage.getItem(AUTO_LOGOUT_NOTICE_KEY) !== 'true') return '';
+
+  window.localStorage.removeItem(AUTO_LOGOUT_NOTICE_KEY);
+  return AUTO_LOGOUT_MESSAGE;
+}
 
 export default function AdminPage() {
   const [announcements, setAnnouncements] = useState([]);
@@ -38,7 +52,9 @@ export default function AdminPage() {
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
+  const [loginNotice, setLoginNotice] = useState('');
   const [signingIn, setSigningIn] = useState(false);
+  const inactivityTimerRef = useRef(null);
 
   const checkUserAndLoadData = async () => {
       setLoading(true);
@@ -46,6 +62,7 @@ export default function AdminPage() {
         const user = await User.me();
         if (user && user.role === 'admin') {
           setIsAdmin(true);
+          setLoginNotice('');
           await Promise.all([
             loadAnnouncements(), 
             loadWorshipEvents(),
@@ -56,9 +73,11 @@ export default function AdminPage() {
           ]);
         } else {
           setIsAdmin(false);
+          setLoginNotice(consumeAutoLogoutNotice());
         }
       } catch (error) {
         setIsAdmin(false);
+        setLoginNotice(consumeAutoLogoutNotice());
         console.error("User not authenticated or not an admin", error);
       } finally {
         setLoading(false);
@@ -68,6 +87,44 @@ export default function AdminPage() {
   useEffect(() => {
     checkUserAndLoadData();
   }, []);
+
+  useEffect(() => {
+    if (!firebaseEnabled || !isAdmin) return undefined;
+
+    const endSessionForInactivity = async () => {
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(AUTO_LOGOUT_NOTICE_KEY, 'true');
+      }
+
+      try {
+        await User.logout();
+      } catch (error) {
+        console.error('Unable to auto logout inactive admin session:', error);
+      } finally {
+        setIsAdmin(false);
+        setEditingItem(null);
+        setFormView(null);
+        setLoginNotice(AUTO_LOGOUT_MESSAGE);
+      }
+    };
+
+    const resetInactivityTimer = () => {
+      window.clearTimeout(inactivityTimerRef.current);
+      inactivityTimerRef.current = window.setTimeout(endSessionForInactivity, ADMIN_INACTIVITY_TIMEOUT_MS);
+    };
+
+    ACTIVITY_EVENTS.forEach((eventName) => {
+      window.addEventListener(eventName, resetInactivityTimer, { passive: true });
+    });
+    resetInactivityTimer();
+
+    return () => {
+      window.clearTimeout(inactivityTimerRef.current);
+      ACTIVITY_EVENTS.forEach((eventName) => {
+        window.removeEventListener(eventName, resetInactivityTimer);
+      });
+    };
+  }, [isAdmin]);
 
   const loadAnnouncements = async () => {
     // Fetch with a default sort, will be re-sorted in the component
@@ -91,8 +148,19 @@ export default function AdminPage() {
   };
 
   const loadBanners = async () => {
-    const data = await Banner.list('-created_date', 100);
-    setBanners(data);
+    const data = await HomeBannerMessages.list('-created_date', 100);
+    if (data.length > 0) {
+      setBanners(data);
+      return;
+    }
+
+    const seededBanners = await Promise.all(
+      DEFAULT_HOMEPAGE_BANNERS.map((banner, index) => HomeBannerMessages.create({
+        ...banner,
+        order: index + 1,
+      }))
+    );
+    setBanners(seededBanners);
   };
 
   const loadHeroSlides = async () => {
@@ -118,7 +186,7 @@ export default function AdminPage() {
       worshipEvent: { name: 'worship event', entity: WorshipEvent },
       sermon: { name: 'sermon', entity: Sermons },
       bulletin: { name: 'bulletin', entity: Bulletins },
-      banner: { name: 'banner', entity: Banner },
+      banner: { name: 'banner', entity: HomeBannerMessages },
       heroSlide: { name: 'hero slide', entity: HeroSlide },
     };
 
@@ -165,7 +233,7 @@ export default function AdminPage() {
       worshipEvent: { name: 'worship event', entity: WorshipEvent },
       sermon: { name: 'sermon', entity: Sermons },
       bulletin: { name: 'bulletin', entity: Bulletins },
-      banner: { name: 'banner', entity: Banner },
+      banner: { name: 'banner', entity: HomeBannerMessages },
       heroSlide: { name: 'hero slide', entity: HeroSlide },
     };
 
@@ -181,7 +249,7 @@ export default function AdminPage() {
         // Add [COPY] prefix to title or message field
         if (type === 'banner' && item.message) {
             duplicatedItem.message = `[COPY] ${item.message}`;
-            duplicatedItem.is_active = false; // Don't duplicate as active
+            duplicatedItem.status = 'inactive';
         } else if (item.title) {
             duplicatedItem.title = `[COPY] ${item.title}`;
         }
@@ -268,9 +336,9 @@ export default function AdminPage() {
                 break;
             case 'banner':
                 if (isEditing) {
-                    await Banner.update(editingItem.id, formData);
+                    await HomeBannerMessages.update(editingItem.id, formData);
                 } else {
-                    await Banner.create(formData);
+                    await HomeBannerMessages.create(formData);
                 }
                 break;
             case 'heroSlide':
@@ -310,6 +378,7 @@ export default function AdminPage() {
     event.preventDefault();
     setSigningIn(true);
     setLoginError('');
+    setLoginNotice('');
     try {
       await User.signIn(loginEmail, loginPassword);
       await checkUserAndLoadData();
@@ -321,10 +390,12 @@ export default function AdminPage() {
   };
 
   const handleSignOut = async () => {
+    window.clearTimeout(inactivityTimerRef.current);
     await User.logout();
     setIsAdmin(false);
     setEditingItem(null);
     setFormView(null);
+    setLoginNotice('');
   };
 
   if (loading) {
@@ -342,6 +413,11 @@ export default function AdminPage() {
           <form onSubmit={handleSignIn} className="w-full max-w-md space-y-5 bg-white p-8 rounded-lg shadow-md">
             <h1 className="text-2xl font-bold text-gray-900">Admin Sign In</h1>
             <p className="text-sm text-gray-600">Sign in with your approved Firebase administrator account.</p>
+            {loginNotice && (
+              <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                {loginNotice}
+              </div>
+            )}
             <div>
               <label htmlFor="admin_email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
               <Input id="admin_email" type="email" autoComplete="email" value={loginEmail} onChange={(event) => setLoginEmail(event.target.value)} required />

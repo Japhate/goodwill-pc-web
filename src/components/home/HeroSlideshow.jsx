@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { ChevronLeft, ChevronRight, ExternalLink, Video, Clock } from "lucide-react";
 import { localApi } from "@/api/localApiClient";
 import { format } from "date-fns";
+import { DEFAULT_HOMEPAGE_BANNER_MESSAGES } from "@/lib/homepageBanners";
 
 // Fallback slides if no slides are in the database
 const FALLBACK_SLIDES = [
@@ -130,11 +131,6 @@ const FALLBACK_SLIDES = [
 
 const SLIDE_INTERVAL = 10000;
 
-const HOMEPAGE_BANNER_MESSAGES = [
-  "\u{1F64F} Our Live Service happens every Sunday at 10:30 am.",
-  "\u{1F4BB} Join us every Wednesday at 6:30 pm for our weekly Bible Study on Zoom.",
-];
-
 const LIVE_SERVICE_BANNER_MESSAGE = "\u{1F534} Our Live service is happening now, click the Live button to join.";
 const LIVE_BIBLE_STUDY_BANNER_MESSAGE = "\u{1F534} Our Zoom Bible Study is happening now. Click the Zoom button to join us.";
 
@@ -245,6 +241,7 @@ function ZoomCountdownOverlay() {
 
 export default function HeroSlideshow() {
   const [slides, setSlides] = useState(FALLBACK_SLIDES);
+  const [managedBanners, setManagedBanners] = useState(null);
   const [current, setCurrent] = useState(0);
   const [isTickerClosed, setIsTickerClosed] = useState(false);
   const [now, setNow] = useState(new Date());
@@ -262,8 +259,21 @@ export default function HeroSlideshow() {
   const bannerMessages = useMemo(() => {
     if (isLiveBibleStudyTime) return [LIVE_BIBLE_STUDY_BANNER_MESSAGE];
     if (isLiveServiceBannerTime) return [LIVE_SERVICE_BANNER_MESSAGE];
-    return HOMEPAGE_BANNER_MESSAGES;
-  }, [isLiveBibleStudyTime, isLiveServiceBannerTime]);
+
+    if (Array.isArray(managedBanners)) {
+      const messages = managedBanners
+        .filter((banner) => banner.status === "live" || banner.status === "active")
+        .map((banner) => banner.message)
+        .filter(Boolean);
+
+      if (managedBanners.length > 0 || messages.length > 0) return messages;
+    }
+
+    return DEFAULT_HOMEPAGE_BANNER_MESSAGES;
+  }, [isLiveBibleStudyTime, isLiveServiceBannerTime, managedBanners]);
+
+  const hasLiveManagedBanner = managedBanners?.some((banner) => banner.status === "live") || false;
+  const isLiveTicker = isLiveBanner || hasLiveManagedBanner;
 
   useEffect(() => {
     const loadSlides = async () => {
@@ -280,6 +290,21 @@ export default function HeroSlideshow() {
       }
     };
     loadSlides();
+  }, []);
+
+  useEffect(() => {
+    const loadBanners = async () => {
+      try {
+        const data = await localApi.entities.HomeBannerMessages.list('-created_date', 100);
+        const live = data.filter((banner) => banner.status === "live");
+        const standard = data.filter((banner) => banner.status === "active");
+        const inactive = data.filter((banner) => banner.status !== "live" && banner.status !== "active");
+        setManagedBanners([...live, ...standard, ...inactive]);
+      } catch {
+        setManagedBanners(null);
+      }
+    };
+    loadBanners();
   }, []);
 
   useEffect(() => {
@@ -300,10 +325,10 @@ export default function HeroSlideshow() {
   }, [activeSlides.length, isBibleStudyPinnedTime]);
 
   useEffect(() => {
-    if (isLiveBanner) {
+    if (isLiveTicker) {
       setIsTickerClosed(false);
     }
-  }, [isLiveBanner]);
+  }, [isLiveTicker]);
 
   const resetTimer = () => {
     clearInterval(timerRef.current);
@@ -333,8 +358,8 @@ export default function HeroSlideshow() {
 
   return (
     <section ref={sectionRef} className="relative w-full bg-white">
-      {!isTickerClosed && (
-        <div className={`homepage-ticker relative text-white border-y ${isLiveBanner ? 'bg-red-700 border-red-200/40' : 'bg-[#3f2a1f] border-amber-300/30'}`}>
+      {!isTickerClosed && bannerMessages.length > 0 && (
+        <div className={`homepage-ticker relative text-white border-y ${isLiveTicker ? 'bg-red-700 border-red-200/40' : 'bg-[#3f2a1f] border-amber-300/30'}`}>
           <div className="homepage-ticker__track h-5 pr-12">
             {bannerMessages.map((message, index) => (
               <span
@@ -348,7 +373,7 @@ export default function HeroSlideshow() {
           <button
             type="button"
             onClick={() => setIsTickerClosed(true)}
-            className={`absolute right-0 top-0 z-20 flex h-full w-8 items-center justify-center text-white/70 transition-colors hover:text-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white/70 ${isLiveBanner ? 'bg-red-700' : 'bg-[#3f2a1f]'}`}
+            className={`absolute right-0 top-0 z-20 flex h-full w-8 items-center justify-center text-white/70 transition-colors hover:text-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white/70 ${isLiveTicker ? 'bg-red-700' : 'bg-[#3f2a1f]'}`}
             aria-label="Close homepage banner"
           >
             <span aria-hidden="true" className="text-sm leading-none">&times;</span>

@@ -249,6 +249,7 @@ const seedData = {
       created_date: '2026-05-20T12:00:00.000Z',
     },
   ],
+  HomeBannerMessages: [],
   Banner: [],
   PrayerRequests: [
     {

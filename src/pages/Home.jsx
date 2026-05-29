@@ -1,11 +1,10 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { createPageUrl } from "@/utils";
-import { Clock, MapPin, BookOpen, ChevronDown, Youtube as YoutubeIcon, Send, Video, Play, Pause, X, Map, Navigation } from "lucide-react";
+import { Clock, MapPin, BookOpen, ChevronDown, Youtube as YoutubeIcon, Send, Video, Play, Pause, Map, Navigation } from "lucide-react";
 import HeroSlideshow from "@/components/home/HeroSlideshow";
 import { Button } from "@/components/ui/button";
 import { AnnouncementsEvents } from "@/entities/AnnouncementsEvents";
 import { Sermons } from "@/entities/Sermons";
-import { Banner } from "@/entities/Banner";
 import { format, isBefore, startOfDay, parseISO } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { NewsletterSubscriptions } from "@/entities/NewsletterSubscriptions";
@@ -30,9 +29,6 @@ export default function Home() {
   const [playingSermonId, setPlayingSermonId] = useState(null); // To prevent multiple videos playing simultaneously
   const [hasLiveSermon, setHasLiveSermon] = useState(false); // NEW: Track if there's a Live sermon in DB
   const [liveSermon, setLiveSermon] = useState(null); // NEW: Store the actual live sermon object
-  const [bannerClosed, setBannerClosed] = useState(false);
-  const [activeBanners, setActiveBanners] = useState([]);
-  const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
 
   // Scripture verses that rotate
   const scriptureVerses = [
@@ -191,31 +187,6 @@ export default function Home() {
     return () => clearInterval(interval);
   }, [announcements]);
 
-  // Check banner state from localStorage
-  useEffect(() => {
-    const bannerState = localStorage.getItem('homeBannerClosed');
-    setBannerClosed(bannerState === 'true');
-  }, []);
-
-  // Reset banner closed state when active banners change
-  useEffect(() => {
-    if (activeBanners.length > 0) {
-      setBannerClosed(false);
-      localStorage.removeItem('homeBannerClosed');
-    }
-  }, [activeBanners.length]);
-
-  // Rotate through banners every 22 seconds (matching marquee animation duration)
-  useEffect(() => {
-    if (activeBanners.length <= 1 || bannerClosed) return;
-    
-    const interval = setInterval(() => {
-      setCurrentBannerIndex((prev) => (prev + 1) % activeBanners.length);
-    }, 22000);
-
-    return () => clearInterval(interval);
-  }, [activeBanners.length, bannerClosed]);
-
   // Rotate verses every 10 seconds
   useEffect(() => {
     if (versesPaused) return;
@@ -253,22 +224,15 @@ export default function Home() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [allAnnouncements, allSermons, allBanners] = await Promise.all([
+        const [allAnnouncements, allSermons] = await Promise.all([
             AnnouncementsEvents.list('-created_date', 100),
-            Sermons.list('-date', 10),
-            Banner.list('-created_date', 100)
+            Sermons.list('-date', 10)
         ]);
 
         // Filter for Active and Timeless announcements
         const activeAnnouncements = allAnnouncements.filter(a => 
           a.status === 'Active' || a.status === 'Timeless' || !a.status
         );
-        
-        // Get live banners first, then active banners
-        const liveBanners = allBanners.filter(b => b.status === 'live');
-        const activeBannersOnly = allBanners.filter(b => b.status === 'active');
-        // Live banners have priority, then active banners
-        setActiveBanners([...liveBanners, ...activeBannersOnly]);
         
         const today = startOfDay(new Date());
 
@@ -478,60 +442,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen relative overflow-hidden" style={{ background: 'linear-gradient(160deg, #FBF7F0 0%, #F5E8CC 30%, #EDD9A3 55%, #F2E6D6 75%, #FBF7F0 100%)' }}>
-      {/* Banner Carousel */}
-      {!bannerClosed && activeBanners.length > 0 && (
-        <div className="fixed top-20 left-0 right-0 z-40 text-white py-1 shadow-lg overflow-hidden" style={{ 
-          background: activeBanners[currentBannerIndex]?.status === 'live' 
-            ? 'linear-gradient(135deg, #dc2626, #ef4444)' 
-            : 'linear-gradient(135deg, #7A5230, #A3743E)' 
-        }}>
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between gap-2">
-              {activeBanners.length > 1 && (
-                <div className="flex gap-1 flex-shrink-0">
-                  {activeBanners.map((_, index) => (
-                    <button
-                      key={index}
-                      onClick={() => setCurrentBannerIndex(index)}
-                      className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
-                        index === currentBannerIndex
-                          ? 'bg-amber-300 w-4'
-                          : 'bg-amber-100/50 hover:bg-amber-200'
-                      }`}
-                      aria-label={`Go to banner ${index + 1}`}
-                    />
-                  ))}
-                </div>
-              )}
-              <div className="flex-1 flex items-center overflow-hidden relative min-h-[24px]">
-                {activeBanners[currentBannerIndex] && (
-                  <div key={currentBannerIndex} className="absolute inset-0 flex items-center">
-                    <div className="flex items-center gap-2">
-                      {activeBanners[currentBannerIndex].status === 'live' && (
-                        <div className="w-2 h-2 bg-white rounded-full animate-pulse flex-shrink-0"></div>
-                      )}
-                      <span className="text-xs md:text-sm whitespace-nowrap inline-block animate-marquee">
-                        {activeBanners[currentBannerIndex].message}
-                      </span>
-                    </div>
-                    </div>
-                )}
-              </div>
-              <button
-                onClick={() => {
-                  setBannerClosed(true);
-                  localStorage.setItem('homeBannerClosed', 'true');
-                }}
-                className="text-amber-100 hover:text-white transition-colors flex-shrink-0"
-                aria-label="Close banner"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Live Events Banner - Fixed at very top */}
       {liveEvents.length > 0 && (
         <div className="fixed top-20 left-0 right-0 z-50 bg-gradient-to-r from-red-600 to-red-700 text-white py-1 shadow-lg">
@@ -767,16 +677,6 @@ export default function Home() {
             animation: gradient 3s ease infinite;
           }
 
-          @keyframes marquee {
-            0% { transform: translateX(0); }
-            12% { transform: translateX(0); }
-            88% { transform: translateX(calc(-100vw - 100%)); }
-            100% { transform: translateX(calc(-100vw - 100%)); }
-          }
-
-          .animate-marquee {
-            animation: marquee 20s linear 1;
-          }
           `}
           </style>
 

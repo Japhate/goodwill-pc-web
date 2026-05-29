@@ -50,13 +50,13 @@ export default function BannerForm({ banner, onSubmit, onCancel }) {
                 <SelectValue placeholder="Select status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="live">Live (Priority Display)</SelectItem>
-                <SelectItem value="active">Active (Rotating Display)</SelectItem>
+                <SelectItem value="live">Live (Red Priority Ticker)</SelectItem>
+                <SelectItem value="active">Active (Standard Ticker)</SelectItem>
                 <SelectItem value="inactive">Inactive (Hidden)</SelectItem>
               </SelectContent>
             </Select>
             <p className="text-xs text-gray-500 mt-1">
-              Live banners appear first with red background and pulse animation
+              Live banners appear first on the homepage ticker with a red background. Active banners show in the standard ticker. Inactive banners are hidden.
             </p>
           </div>
 
