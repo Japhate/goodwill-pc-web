@@ -9,10 +9,12 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, '..');
 const DIST_DIR = path.join(ROOT_DIR, 'dist');
-const CANONICAL_HOST = 'www.goodwillpresch1867.org';
+const CANONICAL_HOST = 'www.goodwillpres.org';
 const LEGACY_HOSTS = new Set([
   'goodwillpresch1867.com',
   'www.goodwillpresch1867.com',
+  'goodwillpresch1867.org',
+  'www.goodwillpresch1867.org',
 ]);
 
 app.use((req, res, next) => {

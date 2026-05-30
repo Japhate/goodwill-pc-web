@@ -1,6 +1,6 @@
 # Goodwill Presbyterian Church Website
 
-React and Vite frontend with Firebase-backed content management, deployed on Render at `www.goodwillpresch1867.org`. IONOS manages the domain DNS records that point to Render.
+React and Vite frontend with Firebase-backed content management, deployed on Render at `www.goodwillpres.org`. IONOS manages the domain DNS records that point to Render.
 
 ## Local Preview
 
@@ -69,8 +69,8 @@ VITE_FIREBASE_MESSAGING_SENDER_ID
 VITE_FIREBASE_APP_ID
 ```
 
-After those values are configured, use **Manual Deploy > Deploy latest commit** in Render and test `/Admin` on `https://www.goodwillpresch1867.org/Admin`. Keep the IONOS DNS records for `goodwillpresch1867.org` and `www.goodwillpresch1867.org` pointing to Render.
+After those values are configured, use **Manual Deploy > Deploy latest commit** in Render and test `/Admin` on `https://www.goodwillpres.org/Admin`. Keep the IONOS DNS records for `goodwillpres.org` and `www.goodwillpres.org` pointing to Render.
 
-Requests for `goodwillpresch1867.com` and `www.goodwillpresch1867.com` are redirected to `https://www.goodwillpresch1867.org`.
+Requests for `goodwillpresch1867.com`, `www.goodwillpresch1867.com`, `goodwillpresch1867.org`, and `www.goodwillpresch1867.org` are redirected to `https://www.goodwillpres.org`.
 
 The current Node/Express server can remain on a Render Web Service while Firebase handles site content and admin uploads.
