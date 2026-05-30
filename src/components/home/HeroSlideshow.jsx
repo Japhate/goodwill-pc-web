@@ -243,6 +243,7 @@ export default function HeroSlideshow() {
   const [slides, setSlides] = useState(FALLBACK_SLIDES);
   const [managedBanners, setManagedBanners] = useState(null);
   const [current, setCurrent] = useState(0);
+  const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
   const [isTickerClosed, setIsTickerClosed] = useState(false);
   const [now, setNow] = useState(new Date());
   const timerRef = useRef(null);
@@ -274,6 +275,7 @@ export default function HeroSlideshow() {
 
   const hasLiveManagedBanner = managedBanners?.some((banner) => banner.status === "live") || false;
   const isLiveTicker = isLiveBanner || hasLiveManagedBanner;
+  const currentBannerMessage = bannerMessages[currentBannerIndex] || bannerMessages[0];
 
   useEffect(() => {
     const loadSlides = async () => {
@@ -330,6 +332,15 @@ export default function HeroSlideshow() {
     }
   }, [isLiveTicker]);
 
+  useEffect(() => {
+    setCurrentBannerIndex(0);
+  }, [bannerMessages.length]);
+
+  const handleBannerCycle = () => {
+    if (bannerMessages.length <= 1) return;
+    setCurrentBannerIndex(prev => (prev + 1) % bannerMessages.length);
+  };
+
   const resetTimer = () => {
     clearInterval(timerRef.current);
     timerRef.current = setInterval(() => {
@@ -361,14 +372,13 @@ export default function HeroSlideshow() {
       {!isTickerClosed && bannerMessages.length > 0 && (
         <div className={`homepage-ticker relative text-white border-y ${isLiveTicker ? 'bg-red-700 border-red-200/40' : 'bg-[#3f2a1f] border-amber-300/30'}`}>
           <div className="homepage-ticker__track h-5 pr-12">
-            {bannerMessages.map((message, index) => (
-              <span
-                key={`${message}-${index}`}
-                className="homepage-ticker__message inline-flex h-full items-center whitespace-nowrap text-[11px] font-light tracking-wide md:text-xs"
-              >
-                {message}
-              </span>
-            ))}
+            <span
+              key={`${currentBannerMessage}-${currentBannerIndex}`}
+              className="homepage-ticker__message inline-flex h-full items-center whitespace-nowrap text-[11px] font-light tracking-wide md:text-xs"
+              onAnimationIteration={handleBannerCycle}
+            >
+              {currentBannerMessage}
+            </span>
           </div>
           <button
             type="button"

@@ -176,29 +176,40 @@ button:focus-visible {
 }
 
 .homepage-ticker__track {
-  display: flex;
-  width: max-content;
+  position: relative;
+  width: 100%;
   align-items: center;
-  animation: homepage-ticker-scroll 46s linear infinite;
+  overflow: hidden;
 }
 
 .homepage-ticker__message {
-  width: 100vw;
-  justify-content: center;
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: max-content;
+  max-width: none;
   padding-inline: 0.75rem;
   line-height: 1.15;
+  animation: homepage-ticker-scroll 18s linear infinite;
+  will-change: transform;
 }
 
-.homepage-ticker:hover .homepage-ticker__track {
+.homepage-ticker:hover .homepage-ticker__message {
   animation-play-state: paused;
 }
 
 @keyframes homepage-ticker-scroll {
   from {
-    transform: translateX(0);
+    transform: translateX(100vw);
   }
 
   to {
     transform: translateX(-100%);
+  }
+}
+
+@media (min-width: 768px) {
+  .homepage-ticker__message {
+    animation-duration: 22s;
   }
 }
