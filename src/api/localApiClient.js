@@ -406,7 +406,7 @@ function localEntity(entityName) {
         }
 
         const store = getStore();
-        const item = { id: `${entityName}-${Date.now()}`, created_date: new Date().toISOString(), ...data };
+        const item = { created_date: new Date().toISOString(), ...data, id: `${entityName}-${Date.now()}` };
         store[entityName] = [...(store[entityName] || []), item];
         setStore(store);
         return item;

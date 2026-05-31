@@ -34,6 +34,19 @@ const AUTO_LOGOUT_NOTICE_KEY = 'goodwill-admin-auto-logout';
 const AUTO_LOGOUT_MESSAGE = 'You were logged out automatically due to inactivity.';
 const ACTIVITY_EVENTS = ['click', 'keydown', 'mousemove', 'scroll', 'touchstart'];
 
+function getSaveErrorMessage(error) {
+  if (error?.code === 'permission-denied' || String(error?.message || '').toLowerCase().includes('permission')) {
+    return 'Unable to save this item. Firestore rejected the change. Confirm the latest rules are published and that your Firebase Auth UID exists in the admins collection.';
+  }
+
+  return 'Unable to save this item. Please refresh and try again.';
+}
+
+function prepareSitePopupData(data) {
+  const { id: _id, is_unsaved_fallback: _isUnsavedFallback, ...popupData } = data || {};
+  return popupData;
+}
+
 function consumeAutoLogoutNotice() {
   if (typeof window === 'undefined') return '';
   if (window.localStorage.getItem(AUTO_LOGOUT_NOTICE_KEY) !== 'true') return '';
@@ -209,7 +222,10 @@ export default function AdminPage() {
   };
 
   const loadSitePopups = async () => {
-    const fallbackPopup = createSpecialServicePopup();
+    const fallbackPopup = {
+      ...createSpecialServicePopup(),
+      is_unsaved_fallback: true,
+    };
 
     try {
       const data = await SitePopups.list('priority', 100);
@@ -357,7 +373,7 @@ export default function AdminPage() {
   };
 
   const handleFormSubmit = async (formData) => {
-    const isEditing = editingItem && editingItem.id;
+    const isEditing = editingItem && editingItem.id && !editingItem.is_unsaved_fallback;
 
     try {
         switch (formView) {
@@ -427,9 +443,9 @@ export default function AdminPage() {
                 break;
             case 'sitePopup':
                 if (isEditing) {
-                    await SitePopups.update(editingItem.id, formData);
+                    await SitePopups.update(editingItem.id, prepareSitePopupData(formData));
                 } else {
-                    await SitePopups.create(formData);
+                    await SitePopups.create(prepareSitePopupData(formData));
                 }
                 break;
             default:
@@ -443,7 +459,7 @@ export default function AdminPage() {
 
     } catch (error) {
         console.error("Error in handleFormSubmit:", error);
-        window.alert("Unable to save this item. Please check that Firestore rules have been deployed and try again.");
+        window.alert(getSaveErrorMessage(error));
     }
   };
 

@@ -44,7 +44,7 @@ function filterItems(items, filter = {}) {
 
 async function collectionItems(entityName) {
   const snapshot = await getDocs(collection(firestore, entityName));
-  return snapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() }));
+  return snapshot.docs.map((entry) => ({ ...entry.data(), id: entry.id }));
 }
 
 function isManagedStorageUrl(fileUrl, folder) {
@@ -102,9 +102,10 @@ function firebaseEntity(entityName) {
       return items.slice(0, limit || undefined);
     },
     create: async (data) => {
+      const { id: _ignoredId, ...documentData } = data || {};
       const item = {
-        ...data,
-        created_date: data.created_date || new Date().toISOString(),
+        ...documentData,
+        created_date: documentData.created_date || new Date().toISOString(),
       };
 
       if (entityName === "NewsletterSubscriptions") {
@@ -127,11 +128,11 @@ function firebaseEntity(entityName) {
           throw error;
         }
 
-        return { id: emailKey, ...subscription };
+        return { ...subscription, id: emailKey };
       }
 
       const created = await addDoc(collection(firestore, entityName), item);
-      return { id: created.id, ...item };
+      return { ...item, id: created.id };
     },
     update: async (id, data) => {
       const item = { ...data, updated_date: new Date().toISOString() };
