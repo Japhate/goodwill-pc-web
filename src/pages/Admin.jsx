@@ -5,6 +5,7 @@ import { Sermons } from '@/entities/Sermons';
 import { Bulletins } from '@/entities/Bulletins';
 import { HomeBannerMessages } from '@/entities/HomeBannerMessages';
 import { Banner as LegacyBanner } from '@/entities/Banner';
+import { SitePopups } from '@/entities/SitePopups';
 import { User } from '@/entities/User';
 import AnnouncementList from '@/components/admin/AnnouncementList';
 import AnnouncementForm from '@/components/admin/AnnouncementForm';
@@ -18,10 +19,13 @@ import BannerList from '@/components/admin/BannerList';
 import BannerForm from '@/components/admin/BannerForm';
 import HeroSlideList from '@/components/admin/HeroSlideList';
 import HeroSlideForm from '@/components/admin/HeroSlideForm';
+import SitePopupList from '@/components/admin/SitePopupList';
+import SitePopupForm from '@/components/admin/SitePopupForm';
 import { HeroSlide } from '@/entities/HeroSlide';
 import { firebaseEnabled } from '@/lib/firebase';
 import { DEFAULT_HOMEPAGE_BANNERS } from '@/lib/homepageBanners';
-import { Loader2, ShieldAlert, Megaphone, CalendarHeart, Images, PlaySquare, FileText, MessageSquare, EyeOff, LayoutTemplate, LogOut } from 'lucide-react';
+import { createSpecialServicePopup } from '@/lib/specialServiceNotice';
+import { Loader2, ShieldAlert, Megaphone, CalendarHeart, Images, PlaySquare, FileText, MessageSquare, EyeOff, LayoutTemplate, LogOut, BellRing } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -45,8 +49,9 @@ export default function AdminPage() {
   const [bulletins, setBulletins] = useState([]);
   const [banners, setBanners] = useState([]);
   const [heroSlides, setHeroSlides] = useState([]);
-  const [view, setView] = useState('announcements'); // 'announcements', 'worshipEvents', 'pastEvents', 'sermons', 'bulletins', 'banners', 'hiddenAnnouncements', 'heroSlides'
-  const [formView, setFormView] = useState(null); // 'announcement', 'worshipEvent', 'sermon', 'bulletin', 'banner', 'heroSlide', or null
+  const [sitePopups, setSitePopups] = useState([]);
+  const [view, setView] = useState('announcements'); // 'announcements', 'worshipEvents', 'pastEvents', 'sermons', 'bulletins', 'banners', 'hiddenAnnouncements', 'heroSlides', 'sitePopups'
+  const [formView, setFormView] = useState(null); // 'announcement', 'worshipEvent', 'sermon', 'bulletin', 'banner', 'heroSlide', 'sitePopup', or null
   const [editingItem, setEditingItem] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -66,6 +71,7 @@ export default function AdminPage() {
       ['bulletins', loadBulletins],
       ['homepage banners', loadBanners],
       ['hero slides', loadHeroSlides],
+      ['homepage popups', loadSitePopups],
     ];
 
     const results = await Promise.allSettled(loaders.map(([, loader]) => loader()));
@@ -202,6 +208,17 @@ export default function AdminPage() {
     setHeroSlides(data);
   };
 
+  const loadSitePopups = async () => {
+    const data = await SitePopups.list('priority', 100);
+    if (data.length > 0) {
+      setSitePopups(data);
+      return;
+    }
+
+    const seededPopup = await SitePopups.create(createSpecialServicePopup());
+    setSitePopups([seededPopup]);
+  };
+
   const handleAddNew = (type) => {
     setEditingItem(null);
     setFormView(type);
@@ -222,6 +239,7 @@ export default function AdminPage() {
       bulletin: { name: 'bulletin', entity: Bulletins },
       banner: { name: 'banner', entity: HomeBannerMessages },
       heroSlide: { name: 'hero slide', entity: HeroSlide },
+      sitePopup: { name: 'homepage popup', entity: SitePopups },
     };
 
     const entityInfo = entityMap[type];
@@ -269,6 +287,7 @@ export default function AdminPage() {
       bulletin: { name: 'bulletin', entity: Bulletins },
       banner: { name: 'banner', entity: HomeBannerMessages },
       heroSlide: { name: 'hero slide', entity: HeroSlide },
+      sitePopup: { name: 'homepage popup', entity: SitePopups },
     };
 
     const entityInfo = entityMap[type];
@@ -284,9 +303,12 @@ export default function AdminPage() {
         if (type === 'banner' && item.message) {
             duplicatedItem.message = `[COPY] ${item.message}`;
             duplicatedItem.status = 'inactive';
-        } else if (item.title) {
-            duplicatedItem.title = `[COPY] ${item.title}`;
-        }
+      } else if (item.title) {
+          duplicatedItem.title = `[COPY] ${item.title}`;
+      }
+      if (type === 'sitePopup') {
+          duplicatedItem.status = 'Inactive';
+      }
         
         await entityInfo.entity.create(duplicatedItem);
         await refreshDataForType(type);
@@ -313,6 +335,9 @@ export default function AdminPage() {
         break;
       case 'heroSlide':
         await loadHeroSlides();
+        break;
+      case 'sitePopup':
+        await loadSitePopups();
         break;
       default:
         break;
@@ -386,6 +411,13 @@ export default function AdminPage() {
                     await Promise.all(formData.map((slideData) => HeroSlide.create(slideData)));
                 } else {
                     await HeroSlide.create(formData);
+                }
+                break;
+            case 'sitePopup':
+                if (isEditing) {
+                    await SitePopups.update(editingItem.id, formData);
+                } else {
+                    await SitePopups.create(formData);
                 }
                 break;
             default:
@@ -524,6 +556,8 @@ export default function AdminPage() {
         return <BannerForm banner={editingItem} onSubmit={handleFormSubmit} onCancel={handleCancelForm} />;
       case 'heroSlide':
         return <HeroSlideForm slide={editingItem} onSubmit={handleFormSubmit} onCancel={handleCancelForm} />;
+      case 'sitePopup':
+        return <SitePopupForm popup={editingItem} onSubmit={handleFormSubmit} onCancel={handleCancelForm} />;
       default:
         break;
     }
@@ -596,6 +630,14 @@ export default function AdminPage() {
           onDelete={(id) => handleDelete(id, 'heroSlide')}
           onDeleteSelected={handleDeleteSelectedHeroSlides}
           onAddNew={() => handleAddNew('heroSlide')}
+        />;
+      case 'sitePopups':
+        return <SitePopupList
+          popups={sitePopups}
+          onEdit={(item) => handleEdit(item, 'sitePopup')}
+          onDelete={(id) => handleDelete(id, 'sitePopup')}
+          onDuplicate={(item) => handleDuplicate(item, 'sitePopup')}
+          onAddNew={() => handleAddNew('sitePopup')}
         />;
       default:
         return null;
@@ -675,6 +717,13 @@ export default function AdminPage() {
               className={`gap-2 ${view === 'heroSlides' ? 'bg-amber-600 hover:bg-amber-700' : ''}`}
             >
               <LayoutTemplate className="w-5 h-5" /> Hero Slideshow
+            </Button>
+            <Button
+              variant={view === 'sitePopups' ? 'default' : 'outline'}
+              onClick={() => { setView('sitePopups'); setFormView(null); }}
+              className={`gap-2 ${view === 'sitePopups' ? 'bg-amber-600 hover:bg-amber-700' : ''}`}
+            >
+              <BellRing className="w-5 h-5" /> Homepage Popups
             </Button>
         </div>
         

@@ -55,3 +55,24 @@ export function createSpecialServiceHeroSlide(notice = SPECIAL_SERVICE_NOTICE) {
     priority_end: notice.priorityEnd,
   };
 }
+
+export function createSpecialServicePopup(notice = SPECIAL_SERVICE_NOTICE) {
+  return {
+    id: "special-service-popup-2026-05-31",
+    title: "United Service Today",
+    eyebrow: "Important Worship Update",
+    message: "Today's 10:30 AM service is at Second Presbyterian Church in Sumter. No service at Goodwill's main sanctuary. No livestream today.",
+    detail: "Please join us in person for this united service. The website will return to normal after 12:00 PM today.",
+    scripture: "Let us consider how to stir up one another to love and good works, not neglecting to meet together.",
+    time_label: `Today at ${notice.serviceTimeLabel}`,
+    location: notice.locationLabel,
+    cta_label: "Get Directions",
+    cta_url: notice.directionsUrl,
+    start_at: notice.priorityStart,
+    end_at: notice.priorityEnd,
+    priority: 1,
+    status: "Active",
+    dismissible: true,
+    created_date: "2026-05-31T00:00:00.000Z",
+  };
+}

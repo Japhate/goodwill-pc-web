@@ -263,6 +263,26 @@ const seedData = {
   ],
   HomeBannerMessages: [],
   Banner: [],
+  SitePopups: [
+    {
+      id: 'special-service-popup-2026-05-31',
+      title: 'United Service Today',
+      eyebrow: 'Important Worship Update',
+      message: "Today's 10:30 AM service is at Second Presbyterian Church in Sumter. No service at Goodwill's main sanctuary. No livestream today.",
+      detail: 'Please join us in person for this united service. The website will return to normal after 12:00 PM today.',
+      scripture: 'Let us consider how to stir up one another to love and good works, not neglecting to meet together.',
+      time_label: 'Today at 10:30 AM',
+      location: 'Second Presbyterian Church, Sumter, SC',
+      cta_label: 'Get Directions',
+      cta_url: 'https://www.google.com/maps/search/?api=1&query=Second+Presbyterian+Church+Sumter+SC',
+      start_at: '2026-05-31T00:00',
+      end_at: '2026-05-31T12:00',
+      priority: 1,
+      status: 'Active',
+      dismissible: true,
+      created_date: '2026-05-31T00:00:00.000Z',
+    },
+  ],
   PrayerRequests: [
     {
       id: 'prayer-1',

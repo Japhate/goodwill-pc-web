@@ -8,7 +8,9 @@ import { Sermons } from "@/entities/Sermons";
 import { format, isBefore, startOfDay, parseISO } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { NewsletterSubscriptions } from "@/entities/NewsletterSubscriptions";
-import { getActiveSpecialServiceNotice } from "@/lib/specialServiceNotice";
+import { createSpecialServicePopup, getActiveSpecialServiceNotice } from "@/lib/specialServiceNotice";
+import { SitePopups } from "@/entities/SitePopups";
+import SitePopupModal, { getActivePopup } from "@/components/home/SitePopupModal";
 
 function createUnsubscribeToken() {
   const bytes = new Uint8Array(18);
@@ -37,6 +39,7 @@ export default function Home() {
   const observerRef = useRef(null);
   const [liveSermonUrl, setLiveSermonUrl] = useState("https://www.youtube.com/embed/bERzxb_Sbvo");
   const [liveEvents, setLiveEvents] = useState([]);
+  const [sitePopups, setSitePopups] = useState([]);
 
   // New state variables for live stream logic
   const [isLive, setIsLive] = useState(false);
@@ -47,6 +50,7 @@ export default function Home() {
   const serviceLabel = activeSpecialServiceNotice?.serviceLabel || "Sunday Morning Service @ 10:30 AM";
   const serviceLocationLabel = activeSpecialServiceNotice?.locationLabel || "295 N Brick Church Road, Mayesville, SC 29104";
   const serviceDirectionsUrl = activeSpecialServiceNotice?.directionsUrl || "https://www.google.com/maps/search/?api=1&query=295+N+Brick+Church+Rd,+Mayesville,+SC+29104";
+  const activeSitePopup = useMemo(() => getActivePopup(sitePopups), [sitePopups]);
 
   // Scripture verses that rotate
   const scriptureVerses = [
@@ -242,9 +246,10 @@ export default function Home() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [allAnnouncements, allSermons] = await Promise.all([
+        const [allAnnouncements, allSermons, allSitePopups] = await Promise.all([
             AnnouncementsEvents.list('-created_date', 100),
-            Sermons.list('-date', 10)
+            Sermons.list('-date', 10),
+            SitePopups.list('priority', 50).catch(() => [])
         ]);
 
         // Filter for Active and Timeless announcements
@@ -307,6 +312,13 @@ export default function Home() {
 
         const activeSermon = allSermons.find(s => s.status === 'Active');
         setLatestSermon(activeSermon || (allSermons.length > 0 ? allSermons[0] : null));
+        setSitePopups(
+          allSitePopups?.length > 0
+            ? allSitePopups
+            : activeSpecialServiceNotice
+              ? [createSpecialServicePopup(activeSpecialServiceNotice)]
+              : []
+        );
         
       } catch (error) {
         console.error("Error loading homepage data:", error);
@@ -499,6 +511,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen relative overflow-hidden" style={{ background: 'linear-gradient(160deg, #FBF7F0 0%, #F5E8CC 30%, #EDD9A3 55%, #F2E6D6 75%, #FBF7F0 100%)' }}>
+      <SitePopupModal popup={activeSitePopup} />
       {/* Live Events Banner - Fixed at very top */}
       {liveEvents.length > 0 && (
         <div className="fixed top-20 left-0 right-0 z-50 bg-gradient-to-r from-red-600 to-red-700 text-white py-1 shadow-lg">
