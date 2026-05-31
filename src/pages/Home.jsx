@@ -439,6 +439,19 @@ export default function Home() {
           setNewsletterStatus("success");
           setNewsletterMessage("Thank you. You're already subscribed with that email.");
           setNewsletterEmail("");
+          try {
+            const duplicateResponse = await fetch('/api/send-duplicate-subscription-email', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email }),
+            });
+
+            if (!duplicateResponse.ok) {
+              setNewsletterMessage("Thank you. You're already subscribed with that email, but we could not send the confirmation email.");
+            }
+          } catch {
+            setNewsletterMessage("Thank you. You're already subscribed with that email, but we could not send the confirmation email.");
+          }
           setTimeout(() => setNewsletterMessage(""), 5000);
           return;
         }
