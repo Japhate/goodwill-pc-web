@@ -15,6 +15,9 @@ export default function HeroSlideForm({ slide, onSubmit, onCancel }) {
     link_url: "",
     link_label: "",
     is_zoom_bible_study: false,
+    is_priority_announcement: false,
+    priority_start: "",
+    priority_end: "",
     order: 0,
     is_active: true,
     ...slide,
@@ -192,6 +195,39 @@ export default function HeroSlideForm({ slide, onSubmit, onCancel }) {
             <p className="text-xs text-gray-600 mt-2">
               Enables the Join Zoom button and the countdown to the next Wednesday Bible Study meeting.
             </p>
+          </div>
+
+          <div className="rounded-md border border-red-200 bg-red-50 p-3">
+            <div className="flex items-center gap-3">
+              <Switch
+                checked={formData.is_priority_announcement === true}
+                onCheckedChange={(val) => handleChange("is_priority_announcement", val)}
+              />
+              <label className="text-sm font-semibold text-gray-700">Priority announcement slide</label>
+            </div>
+            <p className="text-xs text-gray-600 mt-2">
+              When active during the scheduled window, this slide is shown by itself and the homepage slideshow does not rotate.
+            </p>
+            {formData.is_priority_announcement && (
+              <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Starts</label>
+                  <Input
+                    type="datetime-local"
+                    value={formData.priority_start || ""}
+                    onChange={(e) => handleChange("priority_start", e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Ends</label>
+                  <Input
+                    type="datetime-local"
+                    value={formData.priority_end || ""}
+                    onChange={(e) => handleChange("priority_end", e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex gap-3 pt-2">

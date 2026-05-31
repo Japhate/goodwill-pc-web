@@ -8,12 +8,26 @@ import { Sermons } from "@/entities/Sermons";
 import { format, isBefore, startOfDay, parseISO } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { NewsletterSubscriptions } from "@/entities/NewsletterSubscriptions";
+import { getActiveSpecialServiceNotice } from "@/lib/specialServiceNotice";
+
+function createUnsubscribeToken() {
+  const bytes = new Uint8Array(18);
+
+  if (globalThis.crypto?.getRandomValues) {
+    globalThis.crypto.getRandomValues(bytes);
+    return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+  }
+
+  return `${Date.now()}${Math.random()}`.replace(/\D/g, "").padEnd(36, "0").slice(0, 36);
+}
 
 export default function Home() {
   const [announcements, setAnnouncements] = useState([]);
   const [latestSermon, setLatestSermon] = useState(null);
   const [newsletterEmail, setNewsletterEmail] = useState("");
   const [newsletterMessage, setNewsletterMessage] = useState("");
+  const [newsletterStatus, setNewsletterStatus] = useState("");
+  const [isNewsletterSubmitting, setIsNewsletterSubmitting] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [currentVerseIndex, setCurrentVerseIndex] = useState(() => Math.floor(Math.random() * 100));
   const [versesPaused, setVersesPaused] = useState(false);
@@ -29,6 +43,10 @@ export default function Home() {
   const [playingSermonId, setPlayingSermonId] = useState(null); // To prevent multiple videos playing simultaneously
   const [hasLiveSermon, setHasLiveSermon] = useState(false); // NEW: Track if there's a Live sermon in DB
   const [liveSermon, setLiveSermon] = useState(null); // NEW: Store the actual live sermon object
+  const activeSpecialServiceNotice = getActiveSpecialServiceNotice();
+  const serviceLabel = activeSpecialServiceNotice?.serviceLabel || "Sunday Morning Service @ 10:30 AM";
+  const serviceLocationLabel = activeSpecialServiceNotice?.locationLabel || "295 N Brick Church Road, Mayesville, SC 29104";
+  const serviceDirectionsUrl = activeSpecialServiceNotice?.directionsUrl || "https://www.google.com/maps/search/?api=1&query=295+N+Brick+Church+Rd,+Mayesville,+SC+29104";
 
   // Scripture verses that rotate
   const scriptureVerses = [
@@ -340,16 +358,55 @@ export default function Home() {
 
   const handleNewsletterSubmit = async (e) => {
     e.preventDefault();
-    if (!newsletterEmail) return;
+    const email = newsletterEmail.trim().toLowerCase();
+    if (!email || isNewsletterSubmitting) return;
+
+    setIsNewsletterSubmitting(true);
+    setNewsletterStatus("");
+    setNewsletterMessage("");
+
     try {
-        await NewsletterSubscriptions.create({ email: newsletterEmail });
+        const emailKey = encodeURIComponent(email);
+        const unsubscribeToken = createUnsubscribeToken();
+
+        await NewsletterSubscriptions.create({
+          email,
+          email_key: emailKey,
+          unsubscribe_token: unsubscribeToken,
+          status: "active",
+        });
+
+        fetch('/api/send-welcome-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email,
+            emailKey,
+            unsubscribeToken,
+            host: window.location.host,
+            protocol: window.location.protocol.replace(':', ''),
+          }),
+        }).catch(() => {});
+
+        setNewsletterStatus("success");
         setNewsletterMessage("Thank you for subscribing!");
         setNewsletterEmail("");
         setTimeout(() => setNewsletterMessage(""), 5000);
     } catch (error) {
         console.error("Newsletter subscription error:", error);
+        if (error?.message === "already-subscribed" || error?.status === 409) {
+          setNewsletterStatus("success");
+          setNewsletterMessage("Thank you. You're already subscribed with that email.");
+          setNewsletterEmail("");
+          setTimeout(() => setNewsletterMessage(""), 5000);
+          return;
+        }
+
+        setNewsletterStatus("error");
         setNewsletterMessage("Subscription failed. Please try again.");
         setTimeout(() => setNewsletterMessage(""), 5000);
+    } finally {
+        setIsNewsletterSubmitting(false);
     }
   }
   
@@ -740,18 +797,18 @@ export default function Home() {
                 
                 <div className="max-w-4xl mx-auto">
                     <div className="mb-3 space-y-1">
-                        <p className="text-sm sm:text-base md:text-lg font-bold text-amber-300 flex items-center justify-center gap-2 whitespace-nowrap">
+                        <p className="text-sm sm:text-base md:text-lg font-bold text-amber-300 flex flex-wrap items-center justify-center gap-2 text-center">
                             <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
-                            Sunday Morning Service @ 10:30 AM
+                            {serviceLabel}
                         </p>
-                        <p className="text-xs sm:text-sm md:text-base text-amber-200 flex items-center justify-center gap-2 whitespace-nowrap">
+                        <p className="text-xs sm:text-sm md:text-base text-amber-200 flex flex-wrap items-center justify-center gap-2 text-center">
                             <MapPin className="w-4 h-4 flex-shrink-0" />
-                            295 N Brick Church Road, Mayesville, SC 29104
+                            {serviceLocationLabel}
                         </p>
                         <div className="flex flex-row gap-3 items-center justify-center mx-auto">
                             <Button asChild className="bg-white/20 hover:bg-white/40 text-white font-semibold px-6 py-2 rounded-md shadow transition-all hover:shadow-lg border border-white/40 hover:border-white/60 flex items-center gap-2">
                                 <a 
-                                    href="https://www.google.com/maps/search/?api=1&query=295+N+Brick+Church+Rd,+Mayesville,+SC+29104" 
+                                    href={serviceDirectionsUrl}
                                     target="_blank" 
                                     rel="noopener noreferrer"
                                     className="flex items-center gap-2"
@@ -1034,13 +1091,22 @@ export default function Home() {
                             value={newsletterEmail}
                             onChange={(e) => setNewsletterEmail(e.target.value)}
                             className="bg-gray-100"
+                            disabled={isNewsletterSubmitting}
                             required
                         />
-                        <Button type="submit" className="bg-amber-600 hover:bg-amber-700 text-white glow-effect">
-                            <Send className="w-4 h-4 mr-2 sm:mr-0" /><span className="sm:hidden lg:inline">Subscribe</span>
+                        <Button type="submit" disabled={isNewsletterSubmitting} className="bg-amber-600 hover:bg-amber-700 text-white glow-effect disabled:cursor-not-allowed disabled:opacity-70">
+                            <Send className="w-4 h-4 mr-2 sm:mr-0" /><span className="sm:hidden lg:inline">{isNewsletterSubmitting ? "Subscribing..." : "Subscribe"}</span>
                         </Button>
                     </form>
-                    {newsletterMessage && <p className="text-sm text-green-700 mt-2">{newsletterMessage}</p>}
+                    {newsletterMessage && (
+                      <p
+                        className={`mt-2 text-sm ${newsletterStatus === "error" ? "text-red-700" : "text-green-700"}`}
+                        role="status"
+                        aria-live="polite"
+                      >
+                        {newsletterMessage}
+                      </p>
+                    )}
                 </div>
 
 

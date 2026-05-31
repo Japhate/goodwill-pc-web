@@ -82,6 +82,11 @@ export default function HeroSlideList({ slides, onEdit, onDelete, onDeleteSelect
                   />
                 </div>
                 <div className="absolute top-2 right-2 flex gap-1">
+                  {slide.is_priority_announcement && (
+                    <Badge className="bg-red-600">
+                      Priority
+                    </Badge>
+                  )}
                   <Badge className={slide.is_active ? "bg-green-600" : "bg-gray-400"}>
                     {slide.is_active ? "Active" : "Inactive"}
                   </Badge>

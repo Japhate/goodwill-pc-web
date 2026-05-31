@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { ChevronLeft, ChevronRight, ExternalLink, Video, Clock } from "lucide-react";
+import { ChevronLeft, ChevronRight, ExternalLink, Video, Clock, Navigation } from "lucide-react";
 import { localApi } from "@/api/localApiClient";
 import { format } from "date-fns";
 import { DEFAULT_HOMEPAGE_BANNER_MESSAGES } from "@/lib/homepageBanners";
+import { createSpecialServiceHeroSlide, getActiveSpecialServiceNotice } from "@/lib/specialServiceNotice";
 
 // Fallback slides if no slides are in the database
 const FALLBACK_SLIDES = [
@@ -151,6 +152,20 @@ function isZoomBibleStudySlide(slide) {
     || slide.image_url?.toLowerCase().includes("zoom");
 }
 
+function isPrioritySlideActive(slide, now) {
+  if (!slide?.is_priority_announcement) return false;
+
+  const startsAt = slide.priority_start ? new Date(slide.priority_start) : null;
+  const endsAt = slide.priority_end ? new Date(slide.priority_end) : null;
+
+  if (startsAt && Number.isNaN(startsAt.getTime())) return false;
+  if (endsAt && Number.isNaN(endsAt.getTime())) return false;
+  if (startsAt && now < startsAt) return false;
+  if (endsAt && now >= endsAt) return false;
+
+  return true;
+}
+
 // Get this Wednesday's (or next Wednesday's) Bible Study times
 function getNextBibleStudy(now) {
   const d = new Date(now);
@@ -256,8 +271,15 @@ export default function HeroSlideshow() {
     && currentMinutes < BIBLE_STUDY_END_HOUR * 60 + BIBLE_STUDY_END_MIN;
   const isLiveBibleStudyTime = isBibleStudyPinnedTime;
   const isLiveBanner = isLiveServiceBannerTime || isLiveBibleStudyTime;
+  const activeSpecialServiceNotice = useMemo(() => getActiveSpecialServiceNotice(now), [now]);
+  const specialServiceSlide = useMemo(() => {
+    if (!activeSpecialServiceNotice) return null;
+
+    return createSpecialServiceHeroSlide(activeSpecialServiceNotice);
+  }, [activeSpecialServiceNotice]);
 
   const bannerMessages = useMemo(() => {
+    if (activeSpecialServiceNotice) return [activeSpecialServiceNotice.message];
     if (isLiveBibleStudyTime) return [LIVE_BIBLE_STUDY_BANNER_MESSAGE];
     if (isLiveServiceBannerTime) return [LIVE_SERVICE_BANNER_MESSAGE];
 
@@ -271,10 +293,10 @@ export default function HeroSlideshow() {
     }
 
     return DEFAULT_HOMEPAGE_BANNER_MESSAGES;
-  }, [isLiveBibleStudyTime, isLiveServiceBannerTime, managedBanners]);
+  }, [activeSpecialServiceNotice, isLiveBibleStudyTime, isLiveServiceBannerTime, managedBanners]);
 
   const hasLiveManagedBanner = managedBanners?.some((banner) => banner.status === "live") || false;
-  const isLiveTicker = isLiveBanner || hasLiveManagedBanner;
+  const isLiveTicker = Boolean(activeSpecialServiceNotice) || isLiveBanner || hasLiveManagedBanner;
   const currentBannerMessage = bannerMessages[currentBannerIndex] || bannerMessages[0];
 
   useEffect(() => {
@@ -315,12 +337,27 @@ export default function HeroSlideshow() {
   }, []);
 
   const activeSlides = useMemo(() => {
-    if (!isBibleStudyPinnedTime) return slides;
+    const activePrioritySlides = slides
+      .filter((slide) => isPrioritySlideActive(slide, now))
+      .sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0));
 
-    const zoomSlides = slides.filter(isZoomBibleStudySlide);
+    if (activePrioritySlides.length > 0) {
+      return [activePrioritySlides[0]];
+    }
 
-    return zoomSlides.length > 0 ? zoomSlides : slides;
-  }, [isBibleStudyPinnedTime, slides]);
+    if (specialServiceSlide) {
+      return [specialServiceSlide];
+    }
+
+    const baseSlides = !isBibleStudyPinnedTime
+      ? slides
+      : (() => {
+          const zoomSlides = slides.filter(isZoomBibleStudySlide);
+          return zoomSlides.length > 0 ? zoomSlides : slides;
+        })();
+
+    return baseSlides;
+  }, [isBibleStudyPinnedTime, now, slides, specialServiceSlide]);
 
   useEffect(() => {
     setCurrent(0);
@@ -371,10 +408,10 @@ export default function HeroSlideshow() {
     <section ref={sectionRef} className="relative w-full bg-white">
       {!isTickerClosed && bannerMessages.length > 0 && (
         <div className={`homepage-ticker relative text-white border-y ${isLiveTicker ? 'bg-red-700 border-red-200/40' : 'bg-[#3f2a1f] border-amber-300/30'}`}>
-          <div className="homepage-ticker__track h-5 pr-12">
+          <div className="homepage-ticker__track h-6 pr-12">
             <span
               key={`${currentBannerMessage}-${currentBannerIndex}`}
-              className="homepage-ticker__message inline-flex h-full items-center whitespace-nowrap text-[11px] font-light tracking-wide md:text-xs"
+              className="homepage-ticker__message inline-flex h-full items-center whitespace-nowrap text-[11px] font-bold tracking-wide md:text-sm"
               onAnimationIteration={handleBannerCycle}
             >
               {currentBannerMessage}
@@ -412,10 +449,18 @@ export default function HeroSlideshow() {
                   href={slide.link_url || BIBLE_STUDY_ZOOM}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="absolute bottom-8 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-blue-600/95 px-3 py-1.5 text-xs font-semibold text-white shadow-lg transition-all hover:bg-blue-700 sm:bottom-12 sm:px-4 sm:py-2 sm:text-sm md:bottom-16 md:gap-2 md:px-6 md:py-3 md:text-base"
+                  className={
+                    slide.is_priority_announcement
+                      ? "absolute bottom-1 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-amber-200/70 bg-amber-500/95 px-3 py-1.5 text-xs font-bold text-black shadow-lg transition-all hover:bg-amber-400 sm:bottom-2 sm:px-4 sm:py-2 sm:text-sm md:bottom-3 md:gap-2 md:px-6 md:py-3 md:text-base"
+                      : "absolute bottom-8 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-blue-600/95 px-3 py-1.5 text-xs font-semibold text-white shadow-lg transition-all hover:bg-blue-700 sm:bottom-12 sm:px-4 sm:py-2 sm:text-sm md:bottom-16 md:gap-2 md:px-6 md:py-3 md:text-base"
+                  }
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <ExternalLink className="w-4 h-4" />
+                  {slide.is_priority_announcement ? (
+                    <Navigation className="w-4 h-4" />
+                  ) : (
+                    <ExternalLink className="w-4 h-4" />
+                  )}
                   {slide.link_label || (isZoomBibleStudySlide(slide) ? "Join Zoom" : "Learn More")}
                 </a>
               )}

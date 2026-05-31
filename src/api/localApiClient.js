@@ -7,6 +7,18 @@ const LOCAL_STORAGE_KEY = 'goodwill-local-data-v5';
 const seedData = {
   HeroSlide: [
     {
+      id: 'special-service-second-presbyterian-2026-05-31',
+      order: -100,
+      is_active: true,
+      image_url: '/images/hero/united-service-second-presbyterian.png',
+      alt_text: 'United service today at 10:30 AM at Second Presbyterian Church in Sumter, South Carolina',
+      link_url: 'https://www.google.com/maps/search/?api=1&query=Second+Presbyterian+Church+Sumter+SC',
+      link_label: 'Get Directions',
+      is_priority_announcement: true,
+      priority_start: '2026-05-31T00:00',
+      priority_end: '2026-05-31T12:00',
+    },
+    {
       id: 'hero-1',
       order: 1,
       is_active: true,
@@ -309,7 +321,12 @@ function filterItems(items, filter = {}) {
 
 async function request(path, options) {
   const res = await fetch(`${LOCAL_API}${path}`, options);
-  if (!res.ok) throw new Error('Local API request failed');
+  if (!res.ok) {
+    const errorBody = await res.json().catch(() => null);
+    const error = new Error(errorBody?.error || 'Local API request failed');
+    error.status = res.status;
+    throw error;
+  }
   return res.json();
 }
 
@@ -342,7 +359,32 @@ function localEntity(entityName) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data),
         });
-      } catch {
+      } catch (error) {
+        if (error?.status === 409) throw error;
+
+        if (entityName === 'NewsletterSubscriptions') {
+          const email = data.email?.trim().toLowerCase();
+          const emailKey = data.email_key || encodeURIComponent(email);
+          const store = getStore();
+          const existing = (store[entityName] || []).find(item => item.email_key === emailKey || item.email === email);
+
+          if (existing?.status !== 'unsubscribed') {
+            throw new Error('already-subscribed');
+          }
+
+          const item = {
+            id: emailKey,
+            created_date: new Date().toISOString(),
+            ...data,
+            email,
+            email_key: emailKey,
+            status: 'active',
+          };
+          store[entityName] = [...(store[entityName] || []).filter(entry => entry.id !== emailKey), item];
+          setStore(store);
+          return item;
+        }
+
         const store = getStore();
         const item = { id: `${entityName}-${Date.now()}`, created_date: new Date().toISOString(), ...data };
         store[entityName] = [...(store[entityName] || []), item];

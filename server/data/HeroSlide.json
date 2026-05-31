@@ -1,5 +1,17 @@
 [
   {
+    "id": "special-service-second-presbyterian-2026-05-31",
+    "order": -100,
+    "is_active": true,
+    "image_url": "/images/hero/united-service-second-presbyterian.png",
+    "alt_text": "United service today at 10:30 AM at Second Presbyterian Church in Sumter, South Carolina",
+    "link_url": "https://www.google.com/maps/search/?api=1&query=Second+Presbyterian+Church+Sumter+SC",
+    "link_label": "Get Directions",
+    "is_priority_announcement": true,
+    "priority_start": "2026-05-31T00:00",
+    "priority_end": "2026-05-31T12:00"
+  },
+  {
     "id": "hero-1",
     "order": 1,
     "is_active": true,

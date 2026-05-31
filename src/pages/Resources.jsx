@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { PlayCircle, BookOpen, Calendar, User, FileText, Youtube, Download, Loader2, Radio, Clock, PlaySquare, X, MapPin, LayoutGrid, List, Search } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { AnimatePresence, motion } from "framer-motion";
+import { getActiveSpecialServiceNotice, getSpecialServiceDateTime } from "@/lib/specialServiceNotice";
 
 // Helper function to extract video ID from YouTube URL
 const getYoutubeVideoId = (url) => {
@@ -136,8 +137,7 @@ const sortBulletins = (items, sortField = "date", direction = "desc") => {
 };
 
 // Helper function to get next Sunday at 10:30 AM
-const getNextSunday = () => {
-  const now = new Date();
+const getNextSunday = (now = new Date()) => {
   const nextSunday = new Date(now);
   const daysUntilSunday = (7 - now.getDay()) % 7;
   
@@ -161,6 +161,37 @@ const getNextSunday = () => {
   return nextSunday;
 };
 
+const getFollowingSunday = (now = new Date()) => {
+  const nextSunday = new Date(now);
+  const daysUntilSunday = ((7 - now.getDay()) % 7) || 7;
+  nextSunday.setDate(now.getDate() + daysUntilSunday);
+  nextSunday.setHours(10, 30, 0, 0);
+  return nextSunday;
+};
+
+const getNextServiceDetails = (now = new Date()) => {
+  const specialServiceNotice = getActiveSpecialServiceNotice(now);
+
+  if (specialServiceNotice) {
+    if (specialServiceNotice.liveStreamAvailable === false) {
+      return {
+        date: getFollowingSunday(now),
+        notice: null,
+      };
+    }
+
+    return {
+      date: getSpecialServiceDateTime(specialServiceNotice),
+      notice: specialServiceNotice,
+    };
+  }
+
+  return {
+    date: getNextSunday(now),
+    notice: null,
+  };
+};
+
 export default function Resources() {
   const [sermons, setSermons] = useState([]); // This will now hold only the archived (Inactive/no status) sermons
   const [bulletins, setBulletins] = useState([]); // This will hold all bulletins, processed to put current first
@@ -170,6 +201,7 @@ export default function Resources() {
   const [liveSermon, setLiveSermon] = useState(null); // State to hold the sermon marked as "Live"
   const [autoplaySermon, setAutoplaySermon] = useState(false);
   const [timeToService, setTimeToService] = useState(null); 
+  const [countdownServiceNotice, setCountdownServiceNotice] = useState(null);
   const [isLive, setIsLive] = useState(false);
   const [playingSermonId, setPlayingSermonId] = useState(null);
   const [activeSection, setActiveSection] = useState("");
@@ -191,6 +223,15 @@ export default function Resources() {
   const [visibleSermonsCount, setVisibleSermonsCount] = useState(8);
   const [visibleBulletinsCount, setVisibleBulletinsCount] = useState(8); // New state to indicate if a sermon is marked "Live" in DB
   const location = useLocation();
+  const activeSpecialServiceNotice = getActiveSpecialServiceNotice();
+  const inPersonOnlyNotice = activeSpecialServiceNotice?.liveStreamAvailable === false ? activeSpecialServiceNotice : null;
+  const displayServiceNotice = inPersonOnlyNotice || countdownServiceNotice || (isLive ? activeSpecialServiceNotice : null);
+  const serviceTitle = inPersonOnlyNotice ? "No Live Stream Today" : (displayServiceNotice?.serviceTitle || "Sunday Worship");
+  const serviceTimeLabel = displayServiceNotice?.serviceTimeLabel || "10:30 AM";
+  const serviceLocationLabel = displayServiceNotice?.locationLabel || "295 N Brick Church Rd, Mayesville, SC";
+  const serviceScheduleLabel = inPersonOnlyNotice ? `United service today | ${serviceTimeLabel}` : (displayServiceNotice ? `Today | ${serviceTimeLabel}` : `Every Sunday | ${serviceTimeLabel}`);
+  const serviceNoticeMessage = inPersonOnlyNotice?.liveStreamMessage || displayServiceNotice?.message || "";
+  const serviceDirectionsUrl = displayServiceNotice?.directionsUrl || "";
 
   // Refs to manage scroll behavior and avoid conflicts
   const clickNavigating = useRef(false);
@@ -270,18 +311,42 @@ export default function Resources() {
   // Live stream and countdown logic - UPDATED to always show countdown when no Live sermon
   useEffect(() => {
     const updateLiveStatus = () => {
+      const currentSpecialNotice = getActiveSpecialServiceNotice(new Date());
+      if (currentSpecialNotice?.liveStreamAvailable === false) {
+        setIsLive(false);
+        setCountdownServiceNotice(null);
+        const nextService = getFollowingSunday();
+        const now = new Date();
+        const timeDiff = nextService.getTime() - now.getTime();
+
+        if (timeDiff > 0) {
+          const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+          const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+          const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+          const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000);
+
+          setTimeToService({ days, hours, minutes, seconds });
+        } else {
+          setTimeToService(null);
+        }
+        return;
+      }
+
       // Only show live stream if there's a sermon marked as "Live" in the database
       if (hasLiveSermon) {
         setIsLive(true);
         setTimeToService(null);
+        setCountdownServiceNotice(null);
         return;
       }
       
       // Otherwise, always show countdown (never show live stream without a "Live" sermon)
       setIsLive(false);
       
-      const nextService = getNextSunday();
       const now = new Date();
+      const nextServiceDetails = getNextServiceDetails(now);
+      const nextService = nextServiceDetails.date;
+      setCountdownServiceNotice(nextServiceDetails.notice);
       const timeDiff = nextService.getTime() - now.getTime();
       
       if (timeDiff > 0) {
@@ -620,11 +685,11 @@ export default function Resources() {
                             )}
                             <div className="flex items-center gap-2">
                               <Clock className="w-4 h-4 text-gray-500" />
-                              <p><span className="font-semibold">Service Time:</span> 10:30 AM</p>
+                              <p><span className="font-semibold">Service Time:</span> {serviceTimeLabel}</p>
                             </div>
                             <div className="flex items-start gap-2">
                               <MapPin className="w-4 h-4 text-gray-500 mt-0.5 flex-shrink-0" />
-                              <p><span className="font-semibold">Location:</span> 295 N Brick Church Rd, Mayesville, SC</p>
+                              <p><span className="font-semibold">Location:</span> {serviceLocationLabel}</p>
                             </div>
                           </div>
                           {liveSermon.notes && (
@@ -637,6 +702,21 @@ export default function Resources() {
                               <strong>Streaming Live!</strong> Join us from wherever you are as we worship together.
                             </p>
                           </div>
+                          {serviceNoticeMessage && (
+                            <div className="mt-3 bg-amber-50 border-l-4 border-amber-500 p-3 rounded-r-lg">
+                              <p className={`text-xs font-bold ${inPersonOnlyNotice ? "rounded-md bg-red-600 px-3 py-2 text-white" : "text-amber-900"}`}>
+                                {serviceNoticeMessage}
+                              </p>
+                              {serviceDirectionsUrl && (
+                                <Button asChild className="mt-3 bg-amber-600 hover:bg-amber-700 text-white text-xs">
+                                  <a href={serviceDirectionsUrl} target="_blank" rel="noopener noreferrer">
+                                    <MapPin className="w-3.5 h-3.5 mr-1.5" />
+                                    Get Directions
+                                  </a>
+                                </Button>
+                              )}
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
@@ -650,15 +730,29 @@ export default function Resources() {
                       <div className="flex-shrink-0 text-center md:text-left">
                         <div className="flex items-center gap-2 mb-1">
                           <Clock className="w-5 h-5 text-amber-400" />
-                          <span className="text-xs font-semibold uppercase tracking-widest text-amber-300">Next Live Service</span>
+                          <span className="text-xs font-semibold uppercase tracking-widest text-amber-300">
+                            {inPersonOnlyNotice ? "Live Stream Update" : "Next Live Service"}
+                          </span>
                         </div>
-                        <h2 className="text-xl font-bold">Sunday Worship</h2>
-                        <p className="text-sm text-gray-300">Every Sunday | 10:30 AM</p>
+                        <h2 className="text-xl font-bold">{serviceTitle}</h2>
+                        <p className="text-sm text-gray-300">{serviceScheduleLabel}</p>
+                        <p className="text-sm font-semibold text-amber-200">{serviceLocationLabel}</p>
+                        {serviceNoticeMessage && (
+                          <p className={`mt-2 max-w-md text-xs font-bold leading-relaxed ${inPersonOnlyNotice ? "rounded-md border border-red-300 bg-red-600/95 px-3 py-2 text-white shadow-lg" : "text-amber-100"}`}>
+                            {serviceNoticeMessage}
+                          </p>
+                        )}
                       </div>
 
                       {/* Center: Countdown */}
                       {timeToService && (
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-col items-center gap-2">
+                          {inPersonOnlyNotice && (
+                            <span className="text-xs font-semibold uppercase tracking-widest text-amber-200">
+                              Next live stream resumes in
+                            </span>
+                          )}
+                          <div className="flex items-center gap-2">
                           {[
                             { val: timeToService.days, label: 'Days' },
                             { val: timeToService.hours, label: 'Hrs' },
@@ -673,14 +767,23 @@ export default function Resources() {
                               </div>
                             </React.Fragment>
                           ))}
+                          </div>
                         </div>
                       )}
 
                       {/* Right: CTA */}
-                      <div className="flex-shrink-0">
+                      <div className="flex flex-shrink-0 flex-col gap-2 sm:flex-row">
+                        {serviceDirectionsUrl && (
+                          <Button asChild className="bg-amber-500 hover:bg-amber-400 text-black font-semibold px-5 py-2 rounded-lg shadow-lg transition-all text-sm">
+                            <a href={serviceDirectionsUrl} target="_blank" rel="noopener noreferrer">
+                              <MapPin className="w-4 h-4 mr-1.5" />
+                              Get Directions
+                            </a>
+                          </Button>
+                        )}
                         <Button
                           onClick={() => handleSermonSelect(latestSermon, true)}
-                          className="bg-amber-500 hover:bg-amber-400 text-black font-semibold px-5 py-2 rounded-lg shadow-lg transition-all text-sm"
+                          className="bg-white/15 hover:bg-white/25 text-white border border-white/30 font-semibold px-5 py-2 rounded-lg shadow-lg transition-all text-sm"
                         >
                           <PlayCircle className="w-4 h-4 mr-1.5" />
                           Watch Latest Sermon
