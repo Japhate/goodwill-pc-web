@@ -27,6 +27,10 @@ function isValidNewsletterEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
+function normalizeNewsletterName(name) {
+  return String(name || "").trim().replace(/\s+/g, " ");
+}
+
 async function getApiErrorMessage(response, fallback) {
   const body = await response.json().catch(() => null);
   return [body?.error, body?.detail].filter(Boolean).join(" ") || fallback;
@@ -35,6 +39,8 @@ async function getApiErrorMessage(response, fallback) {
 export default function Home() {
   const [announcements, setAnnouncements] = useState([]);
   const [latestSermon, setLatestSermon] = useState(null);
+  const [newsletterFirstName, setNewsletterFirstName] = useState("");
+  const [newsletterLastName, setNewsletterLastName] = useState("");
   const [newsletterEmail, setNewsletterEmail] = useState("");
   const [newsletterMessage, setNewsletterMessage] = useState("");
   const [newsletterStatus, setNewsletterStatus] = useState("");
@@ -392,8 +398,15 @@ export default function Home() {
 
   const handleNewsletterSubmit = async (e) => {
     e.preventDefault();
+    const firstName = normalizeNewsletterName(newsletterFirstName);
+    const lastName = normalizeNewsletterName(newsletterLastName);
     const email = newsletterEmail.trim().toLowerCase();
-    if (!email || isNewsletterSubmitting) return;
+    if ((!firstName && !lastName && !email) || isNewsletterSubmitting) return;
+    if (!firstName || !lastName) {
+      setNewsletterStatus("error");
+      setNewsletterMessage("Please enter your first and last name.");
+      return;
+    }
     if (!isValidNewsletterEmail(email)) {
       setNewsletterStatus("error");
       setNewsletterMessage("Please enter a valid email address.");
@@ -409,6 +422,8 @@ export default function Home() {
         const unsubscribeToken = createUnsubscribeToken();
 
         await NewsletterSubscriptions.create({
+          first_name: firstName,
+          last_name: lastName,
           email,
           email_key: emailKey,
           unsubscribe_token: unsubscribeToken,
@@ -417,6 +432,8 @@ export default function Home() {
 
         setNewsletterStatus("success");
         setNewsletterMessage("Thank you for subscribing!");
+        setNewsletterFirstName("");
+        setNewsletterLastName("");
         setNewsletterEmail("");
         try {
           const welcomeResponse = await fetch('/api/send-welcome-email', {
@@ -424,6 +441,8 @@ export default function Home() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               email,
+              firstName,
+              lastName,
               emailKey,
               unsubscribeToken,
               host: window.location.host,
@@ -444,12 +463,14 @@ export default function Home() {
         if (error?.message === "already-subscribed" || error?.status === 409) {
           setNewsletterStatus("success");
           setNewsletterMessage("You are already subscribed with this email. Thank you!");
+          setNewsletterFirstName("");
+          setNewsletterLastName("");
           setNewsletterEmail("");
           try {
             const duplicateResponse = await fetch('/api/send-duplicate-subscription-email', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email }),
+              body: JSON.stringify({ email, firstName, lastName }),
             });
 
             if (!duplicateResponse.ok) {
@@ -1181,7 +1202,31 @@ export default function Home() {
                 <div className="space-y-4">
                     <h4 className="font-bold text-2xl text-gray-900">Stay Connected</h4>
                     <p className="text-gray-600">Subscribe for the latest news, events, and updates from Goodwill Church.</p>
-                    <form onSubmit={handleNewsletterSubmit} className="flex flex-col sm:flex-row gap-2">
+                    <form onSubmit={handleNewsletterSubmit} className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1.4fr_auto]">
+                        <Input
+                            type="text"
+                            name="given-name"
+                            autoComplete="given-name"
+                            placeholder="First Name"
+                            value={newsletterFirstName}
+                            onChange={(e) => setNewsletterFirstName(e.target.value)}
+                            className="bg-gray-100"
+                            disabled={isNewsletterSubmitting}
+                            aria-describedby={newsletterMessage ? "newsletter-status" : undefined}
+                            required
+                        />
+                        <Input
+                            type="text"
+                            name="family-name"
+                            autoComplete="family-name"
+                            placeholder="Last Name"
+                            value={newsletterLastName}
+                            onChange={(e) => setNewsletterLastName(e.target.value)}
+                            className="bg-gray-100"
+                            disabled={isNewsletterSubmitting}
+                            aria-describedby={newsletterMessage ? "newsletter-status" : undefined}
+                            required
+                        />
                         <Input 
                             type="email" 
                             name="email"
@@ -1194,8 +1239,8 @@ export default function Home() {
                             aria-describedby={newsletterMessage ? "newsletter-status" : undefined}
                             required
                         />
-                        <Button type="submit" disabled={isNewsletterSubmitting} aria-busy={isNewsletterSubmitting} className="bg-amber-600 hover:bg-amber-700 text-white glow-effect disabled:cursor-not-allowed disabled:opacity-70">
-                            <Send className="w-4 h-4 mr-2 sm:mr-0" /><span className="sm:hidden lg:inline">{isNewsletterSubmitting ? "Subscribing..." : "Subscribe"}</span>
+                        <Button type="submit" disabled={isNewsletterSubmitting} aria-busy={isNewsletterSubmitting} className="bg-amber-600 hover:bg-amber-700 text-white glow-effect disabled:cursor-not-allowed disabled:opacity-70 sm:col-span-2 lg:col-span-1">
+                            <Send className="w-4 h-4 mr-2" /><span>{isNewsletterSubmitting ? "Subscribing..." : "Subscribe"}</span>
                         </Button>
                     </form>
                     {newsletterMessage && (

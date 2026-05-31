@@ -67,8 +67,12 @@ export function mergeEmailTemplate(template = {}, templateId) {
 }
 
 export function renderNewsletterTemplateText(value = "", variables = {}) {
+  const subscriberName = [variables.firstName, variables.lastName].filter(Boolean).join(" ");
   return String(value || "")
     .replaceAll("[subscriber email]", variables.email || "")
+    .replaceAll("[first name]", variables.firstName || "")
+    .replaceAll("[last name]", variables.lastName || "")
+    .replaceAll("[subscriber name]", subscriberName || variables.email || "")
     .replaceAll("[unsubscribe link]", variables.unsubscribeUrl || "")
     .replaceAll("[support phone]", variables.supportPhone || "")
     .replaceAll("[support email]", variables.supportEmail || "");

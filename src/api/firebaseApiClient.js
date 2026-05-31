@@ -112,7 +112,11 @@ function firebaseEntity(entityName) {
       if (entityName === "NewsletterSubscriptions") {
         const email = item.email?.trim().toLowerCase();
         const emailKey = item.email_key || encodeURIComponent(email);
+        const firstName = String(item.first_name || "").trim().replace(/\s+/g, " ");
+        const lastName = String(item.last_name || "").trim().replace(/\s+/g, " ");
         const subscription = {
+          first_name: firstName,
+          last_name: lastName,
           email,
           email_key: emailKey,
           unsubscribe_token: item.unsubscribe_token,

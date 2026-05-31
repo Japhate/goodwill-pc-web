@@ -154,10 +154,12 @@ function renderEmailTextBlock(text, variables, options = {}) {
     .join('');
 }
 
-async function buildNewsletterEmail({ templateId, email, unsubscribeUrl = '' }) {
+async function buildNewsletterEmail({ templateId, email, firstName = '', lastName = '', unsubscribeUrl = '' }) {
   const template = await readEmailTemplate(templateId);
   const variables = {
     email,
+    firstName,
+    lastName,
     unsubscribeUrl,
     supportPhone: template.support_phone || '',
     supportEmail: template.support_email || '',
@@ -264,6 +266,8 @@ app.post('/api/entities/:entity', (req, res) => {
   if (entity === 'NewsletterSubscriptions') {
     const email = normalizeEmail(data.email);
     const emailKey = data.email_key || encodeURIComponent(email);
+    const firstName = String(data.first_name || '').trim().replace(/\s+/g, ' ');
+    const lastName = String(data.last_name || '').trim().replace(/\s+/g, ' ');
     const existingIndex = items.findIndex(item => item.email_key === emailKey || normalizeEmail(item.email) === email);
 
     if (existingIndex !== -1 && items[existingIndex].status !== 'unsubscribed') {
@@ -273,6 +277,8 @@ app.post('/api/entities/:entity', (req, res) => {
     const item = {
       id: emailKey,
       ...data,
+      first_name: firstName,
+      last_name: lastName,
       email,
       email_key: emailKey,
       status: 'active',
@@ -377,7 +383,7 @@ app.post('/api/unsubscribe', handleUnsubscribeRequest);
 app.post('/api/functions/unsubscribeNewsletter', handleUnsubscribeRequest);
 
 app.post('/api/send-welcome-email', async (req, res) => {
-  const { email, emailKey, unsubscribeToken, host, protocol } = req.body;
+  const { email, emailKey, firstName, lastName, unsubscribeToken, host, protocol } = req.body;
   if (!email) return res.status(400).json({ error: 'Email is required' });
   const fromEmail = process.env.RESEND_FROM_EMAIL || 'Goodwill Presbyterian Church <onboarding@resend.dev>';
 
@@ -399,6 +405,8 @@ app.post('/api/send-welcome-email', async (req, res) => {
     const emailContent = await buildNewsletterEmail({
       templateId: NEWSLETTER_TEMPLATE_IDS.welcome,
       email: normalizedEmail,
+      firstName: String(firstName || '').trim().replace(/\s+/g, ' '),
+      lastName: String(lastName || '').trim().replace(/\s+/g, ' '),
       unsubscribeUrl,
     });
     const response = await sendResendEmail({
@@ -424,7 +432,7 @@ app.post('/api/send-welcome-email', async (req, res) => {
 });
 
 app.post('/api/send-duplicate-subscription-email', async (req, res) => {
-  const { email } = req.body;
+  const { email, firstName, lastName } = req.body;
   if (!email) return res.status(400).json({ error: 'Email is required' });
   const fromEmail = process.env.RESEND_FROM_EMAIL || 'Goodwill Presbyterian Church <onboarding@resend.dev>';
   const normalizedEmail = normalizeEmail(email);
@@ -433,6 +441,8 @@ app.post('/api/send-duplicate-subscription-email', async (req, res) => {
     const emailContent = await buildNewsletterEmail({
       templateId: NEWSLETTER_TEMPLATE_IDS.duplicate,
       email: normalizedEmail,
+      firstName: String(firstName || '').trim().replace(/\s+/g, ' '),
+      lastName: String(lastName || '').trim().replace(/\s+/g, ' '),
     });
     const response = await sendResendEmail({
       from: fromEmail,

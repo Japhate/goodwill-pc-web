@@ -387,6 +387,8 @@ function localEntity(entityName) {
         if (entityName === 'NewsletterSubscriptions') {
           const email = data.email?.trim().toLowerCase();
           const emailKey = data.email_key || encodeURIComponent(email);
+          const firstName = String(data.first_name || '').trim().replace(/\s+/g, ' ');
+          const lastName = String(data.last_name || '').trim().replace(/\s+/g, ' ');
           const store = getStore();
           const existing = (store[entityName] || []).find(item => item.email_key === emailKey || item.email === email);
 
@@ -398,6 +400,8 @@ function localEntity(entityName) {
             id: emailKey,
             created_date: new Date().toISOString(),
             ...data,
+            first_name: firstName,
+            last_name: lastName,
             email,
             email_key: emailKey,
             status: 'active',

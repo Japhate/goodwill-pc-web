@@ -61,7 +61,7 @@ function TemplateEditor({ template, onSave, onSendTestEmail, testEmail }) {
       <div>
         <h3 className="text-lg font-bold text-gray-900">{formData.name}</h3>
         <p className="text-xs text-gray-500">
-          Available placeholders: [subscriber email], [unsubscribe link], [support phone], [support email]
+          Available placeholders: [subscriber name], [first name], [last name], [subscriber email], [unsubscribe link], [support phone], [support email]
         </p>
       </div>
 
@@ -112,6 +112,8 @@ function TemplateEditor({ template, onSave, onSendTestEmail, testEmail }) {
 }
 
 export default function NewsletterAdmin({ subscribers, templates, onAddSubscriber, onDeleteSubscriber, onSaveTemplate, onSendTestEmail }) {
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [search, setSearch] = useState("");
   const [testEmail, setTestEmail] = useState("");
@@ -128,7 +130,15 @@ export default function NewsletterAdmin({ subscribers, templates, onAddSubscribe
     const term = search.trim().toLowerCase();
     const sortedSubscribers = [...subscribers].sort((a, b) => String(a.email || "").localeCompare(String(b.email || "")));
     if (!term) return sortedSubscribers;
-    return sortedSubscribers.filter((subscriber) => String(subscriber.email || "").toLowerCase().includes(term));
+    return sortedSubscribers.filter((subscriber) => {
+      const searchable = [
+        subscriber.first_name,
+        subscriber.last_name,
+        `${subscriber.first_name || ""} ${subscriber.last_name || ""}`,
+        subscriber.email,
+      ].join(" ").toLowerCase();
+      return searchable.includes(term);
+    });
   }, [search, subscribers]);
 
   const activeCount = subscribers.filter((subscriber) => subscriber.status === "active").length;
@@ -136,12 +146,20 @@ export default function NewsletterAdmin({ subscribers, templates, onAddSubscribe
 
   const handleAdd = async (event) => {
     event.preventDefault();
+    const normalizedFirstName = firstName.trim().replace(/\s+/g, " ");
+    const normalizedLastName = lastName.trim().replace(/\s+/g, " ");
     const normalizedEmail = email.trim().toLowerCase();
-    if (!normalizedEmail) return;
+    if (!normalizedFirstName || !normalizedLastName || !normalizedEmail) return;
 
     setAdding(true);
     try {
-      await onAddSubscriber(normalizedEmail);
+      await onAddSubscriber({
+        firstName: normalizedFirstName,
+        lastName: normalizedLastName,
+        email: normalizedEmail,
+      });
+      setFirstName("");
+      setLastName("");
       setEmail("");
     } finally {
       setAdding(false);
@@ -165,13 +183,29 @@ export default function NewsletterAdmin({ subscribers, templates, onAddSubscribe
           </div>
         </div>
 
-        <form onSubmit={handleAdd} className="mb-5 flex flex-col gap-3 md:flex-row">
+        <form onSubmit={handleAdd} className="mb-5 grid grid-cols-1 gap-3 md:grid-cols-[1fr_1fr_1.4fr_auto]">
+          <Input
+            type="text"
+            value={firstName}
+            onChange={(event) => setFirstName(event.target.value)}
+            placeholder="First name"
+            autoComplete="given-name"
+            required
+          />
+          <Input
+            type="text"
+            value={lastName}
+            onChange={(event) => setLastName(event.target.value)}
+            placeholder="Last name"
+            autoComplete="family-name"
+            required
+          />
           <Input
             type="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             placeholder="Add email address"
-            className="md:max-w-md"
+            autoComplete="email"
             required
           />
           <Button type="submit" className="bg-amber-600 hover:bg-amber-700" disabled={adding}>
@@ -189,6 +223,7 @@ export default function NewsletterAdmin({ subscribers, templates, onAddSubscribe
           <table className="w-full text-left text-sm">
             <thead className="bg-gray-50 text-xs uppercase text-gray-600">
               <tr>
+                <th className="px-4 py-3">Name</th>
                 <th className="px-4 py-3">Email</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3">Created</th>
@@ -198,10 +233,13 @@ export default function NewsletterAdmin({ subscribers, templates, onAddSubscribe
             <tbody>
               {filteredSubscribers.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-gray-500">No newsletter subscribers found.</td>
+                  <td colSpan={5} className="px-4 py-8 text-center text-gray-500">No newsletter subscribers found.</td>
                 </tr>
               ) : filteredSubscribers.map((subscriber) => (
                 <tr key={subscriber.id} className="border-b hover:bg-gray-50">
+                  <td className="px-4 py-4 font-semibold text-gray-900">
+                    {[subscriber.first_name, subscriber.last_name].filter(Boolean).join(" ") || "Name not provided"}
+                  </td>
                   <td className="px-4 py-4 font-semibold text-gray-900">{subscriber.email}</td>
                   <td className="px-4 py-4">
                     <Badge className={subscriber.status === "active" ? "bg-green-600" : "bg-gray-500"}>

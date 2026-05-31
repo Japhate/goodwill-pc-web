@@ -292,12 +292,16 @@ export default function AdminPage() {
     setEmailTemplates(seededTemplates);
   };
 
-  const handleAddNewsletterSubscriber = async (email) => {
-    const normalizedEmail = email.trim().toLowerCase();
-    if (!normalizedEmail) return;
+  const handleAddNewsletterSubscriber = async ({ firstName, lastName, email }) => {
+    const normalizedFirstName = String(firstName || '').trim().replace(/\s+/g, ' ');
+    const normalizedLastName = String(lastName || '').trim().replace(/\s+/g, ' ');
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+    if (!normalizedFirstName || !normalizedLastName || !normalizedEmail) return;
 
     try {
       await NewsletterSubscriptions.create({
+        first_name: normalizedFirstName,
+        last_name: normalizedLastName,
         email: normalizedEmail,
         email_key: encodeURIComponent(normalizedEmail),
         unsubscribe_token: createUnsubscribeToken(),
@@ -356,9 +360,11 @@ export default function AdminPage() {
       ? '/api/send-duplicate-subscription-email'
       : '/api/send-welcome-email';
     const payload = templateId === NEWSLETTER_TEMPLATE_IDS.duplicate
-      ? { email: normalizedEmail }
+      ? { email: normalizedEmail, firstName: 'Test', lastName: 'Subscriber' }
       : {
           email: normalizedEmail,
+          firstName: 'Test',
+          lastName: 'Subscriber',
           emailKey,
           unsubscribeToken,
           host: window.location.host,

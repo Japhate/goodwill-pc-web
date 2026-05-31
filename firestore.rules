@@ -80,8 +80,14 @@ service cloud.firestore {
     match /NewsletterSubscriptions/{documentId} {
       allow read, delete: if isAdmin();
       allow create: if request.resource.data.keys().hasOnly([
-          'email', 'email_key', 'unsubscribe_token', 'status', 'created_date'
+          'first_name', 'last_name', 'email', 'email_key', 'unsubscribe_token', 'status', 'created_date'
         ])
+        && request.resource.data.first_name is string
+        && request.resource.data.first_name.size() > 0
+        && request.resource.data.first_name.size() <= 80
+        && request.resource.data.last_name is string
+        && request.resource.data.last_name.size() > 0
+        && request.resource.data.last_name.size() <= 80
         && request.resource.data.email is string
         && request.resource.data.email.size() > 3
         && request.resource.data.email.size() <= 320
@@ -105,6 +111,12 @@ service cloud.firestore {
         )
         || (
           resource.data.status == 'unsubscribed'
+          && request.resource.data.first_name is string
+          && request.resource.data.first_name.size() > 0
+          && request.resource.data.first_name.size() <= 80
+          && request.resource.data.last_name is string
+          && request.resource.data.last_name.size() > 0
+          && request.resource.data.last_name.size() <= 80
           && request.resource.data.email == resource.data.email
           && request.resource.data.email_key == resource.data.email_key
           && request.resource.data.email_key == documentId
@@ -112,7 +124,7 @@ service cloud.firestore {
           && request.resource.data.unsubscribe_token.size() >= 24
           && request.resource.data.status == 'active'
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            'unsubscribe_token', 'status', 'created_date', 'unsubscribed_date', 'updated_date', 'unsubscribe_token_confirm'
+            'first_name', 'last_name', 'unsubscribe_token', 'status', 'created_date', 'unsubscribed_date', 'updated_date', 'unsubscribe_token_confirm'
           ])
         );
     }
