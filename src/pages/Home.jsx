@@ -47,6 +47,7 @@ export default function Home() {
   const [hasLiveSermon, setHasLiveSermon] = useState(false); // NEW: Track if there's a Live sermon in DB
   const [liveSermon, setLiveSermon] = useState(null); // NEW: Store the actual live sermon object
   const activeSpecialServiceNotice = getActiveSpecialServiceNotice();
+  const inPersonOnlyNotice = activeSpecialServiceNotice?.liveStreamAvailable === false ? activeSpecialServiceNotice : null;
   const serviceLabel = activeSpecialServiceNotice?.serviceLabel || "Sunday Morning Service @ 10:30 AM";
   const serviceLocationLabel = activeSpecialServiceNotice?.locationLabel || "295 N Brick Church Road, Mayesville, SC 29104";
   const serviceDirectionsUrl = activeSpecialServiceNotice?.directionsUrl || "https://www.google.com/maps/search/?api=1&query=295+N+Brick+Church+Rd,+Mayesville,+SC+29104";
@@ -166,6 +167,8 @@ export default function Home() {
   // Helper function to check if currently in service time (Sunday 10:30 AM - 12:00 PM)
   const isServiceTime = () => {
     const now = new Date();
+    if (getActiveSpecialServiceNotice(now)?.liveStreamAvailable === false) return false;
+
     const isSunday = now.getDay() === SERVICE_DAY;
     const currentHour = now.getHours();
     const currentMinute = now.getMinutes();
@@ -184,6 +187,11 @@ export default function Home() {
   useEffect(() => {
     const checkLiveEvents = () => {
       const now = new Date();
+      if (getActiveSpecialServiceNotice(now)) {
+        setLiveEvents([]);
+        return;
+      }
+
       const currentDay = format(now, 'yyyy-MM-dd');
       const currentTime = format(now, 'HH:mm');
 
@@ -330,6 +338,11 @@ export default function Home() {
   // Live stream and countdown logic - UPDATED to check for Live sermon in DB
   useEffect(() => {
     const updateLiveStatus = () => {
+      if (getActiveSpecialServiceNotice(new Date())?.liveStreamAvailable === false) {
+        setIsLive(false);
+        return;
+      }
+
       // If there's a sermon marked as "Live" in the database, show it regardless of time
       if (hasLiveSermon) {
         setIsLive(true);
@@ -924,7 +937,43 @@ export default function Home() {
         <div className="absolute top-0 left-0 w-96 h-96 bg-gradient-to-br from-purple-200/20 to-transparent rounded-full blur-3xl"></div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          {isLive && liveSermon ? (
+          {inPersonOnlyNotice ? (
+            <div className="relative overflow-hidden rounded-3xl border border-red-200 bg-white shadow-2xl lg:flex lg:items-stretch">
+              <div className="relative flex min-h-[260px] items-center justify-center bg-gradient-to-br from-red-800 via-red-700 to-amber-700 p-8 text-white lg:w-1/2">
+                <div className="absolute inset-0 bg-black/20"></div>
+                <div className="relative text-center">
+                  <Video className="mx-auto mb-4 h-16 w-16 text-amber-200" />
+                  <p className="text-sm font-bold uppercase tracking-widest text-amber-200">Live Stream Update</p>
+                  <h2 className="mt-2 text-3xl font-bold">No Live Stream Today</h2>
+                </div>
+              </div>
+              <div className="relative p-6 lg:w-1/2 lg:p-8">
+                <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-red-600 px-4 py-2 text-xs font-bold uppercase tracking-wider text-white shadow-lg">
+                  Important Worship Update
+                </div>
+                <h2 className="mb-3 text-2xl font-bold text-gray-900">United Service Today</h2>
+                <p className="mb-4 rounded-md bg-red-600 px-4 py-3 text-sm font-bold leading-relaxed text-white">
+                  {inPersonOnlyNotice.liveStreamMessage}
+                </p>
+                <div className="mb-5 space-y-2 text-sm text-gray-700">
+                  <p className="flex items-center gap-2 font-semibold">
+                    <Clock className="h-4 w-4 text-amber-600" />
+                    {inPersonOnlyNotice.serviceTimeLabel}
+                  </p>
+                  <p className="flex items-center gap-2 font-semibold">
+                    <MapPin className="h-4 w-4 text-amber-600" />
+                    {inPersonOnlyNotice.locationLabel}
+                  </p>
+                </div>
+                <Button asChild className="bg-amber-600 text-white hover:bg-amber-700">
+                  <a href={inPersonOnlyNotice.directionsUrl} target="_blank" rel="noopener noreferrer">
+                    <Navigation className="mr-2 h-4 w-4" />
+                    Get Directions
+                  </a>
+                </Button>
+              </div>
+            </div>
+          ) : isLive && liveSermon ? (
             <div className="relative rounded-3xl overflow-hidden bg-white shadow-2xl lg:flex lg:items-stretch border border-gray-100">
               <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 via-transparent to-red-500/5 pointer-events-none"></div>
               <div className="relative lg:w-1/2 lg:flex-shrink-0">

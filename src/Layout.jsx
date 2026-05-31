@@ -11,6 +11,7 @@ import SearchModal from "@/components/search/SearchModal";
 import { Button } from "@/components/ui/button";
 import { localApi } from '@/api/localApiClient';
 import { firebaseEnabled } from '@/lib/firebase';
+import { getActiveSpecialServiceNotice } from '@/lib/specialServiceNotice';
 
 export default function Layout({ children, currentPageName }) {
   const location = useLocation();
@@ -18,6 +19,19 @@ export default function Layout({ children, currentPageName }) {
   const [showBackToTop, setShowBackToTop] = useState(false);
   const [isSearchOpen, setSearchOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
+  const [now, setNow] = useState(new Date());
+  const activeSpecialServiceNotice = getActiveSpecialServiceNotice(now);
+  const inPersonOnlyNotice = activeSpecialServiceNotice?.liveStreamAvailable === false ? activeSpecialServiceNotice : null;
+  const LiveActionIcon = inPersonOnlyNotice ? Megaphone : Video;
+  const liveActionLabel = inPersonOnlyNotice ? "UPDATE" : "LIVE";
+  const liveActionTitle = inPersonOnlyNotice ? "No livestream today. View the united service update." : "Watch the live stream";
+  const resourcesDropdown = inPersonOnlyNotice
+    ? { name: 'No Livestream Today', href: createPageUrl('Resources') + '#live-stream', icon: Megaphone }
+    : { name: 'Live Stream', href: createPageUrl('Resources') + '#live-stream', icon: Video };
+  const worshipDirectionsUrl = inPersonOnlyNotice?.directionsUrl || "https://www.google.com/maps/search/?api=1&query=295+N+Brick+Church+Rd,+Mayesville,+SC+29104";
+  const worshipAddressLines = inPersonOnlyNotice
+    ? ["Second Presbyterian Church", "Sumter, SC"]
+    : ["295 N Brick Church Rd", "Mayesville, SC 29104"];
 
   // Scroll to top when page changes
   useEffect(() => {
@@ -40,6 +54,11 @@ export default function Layout({ children, currentPageName }) {
     };
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => setNow(new Date()), 30000);
+    return () => window.clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -80,7 +99,7 @@ export default function Layout({ children, currentPageName }) {
       href: createPageUrl('Resources'), 
       icon: BookOpen, 
       dropdown: [
-          { name: 'Live Stream', href: createPageUrl('Resources') + '#live-stream', icon: Video },
+          resourcesDropdown,
           { name: 'Latest Sermon', href: createPageUrl('Resources') + '#latest-sermon', icon: YoutubeIcon },
           { name: 'Sermon Archive', href: createPageUrl('Resources') + '#more-sermons', icon: PlaySquare },
           { name: 'Worship Bulletins', href: createPageUrl('Resources') + '#bulletins', icon: FileText },
@@ -295,9 +314,10 @@ export default function Layout({ children, currentPageName }) {
                 <a
                   href={createPageUrl("Resources") + "#live-stream"}
                   className="action-button action-button-live text-white"
+                  title={liveActionTitle}
                 >
-                  <Video className="w-4 h-4" />
-                  <span>LIVE</span>
+                  <LiveActionIcon className="w-4 h-4" />
+                  <span>{liveActionLabel}</span>
                 </a>
                 <Link
                   to={createPageUrl("Give")}
@@ -336,9 +356,10 @@ export default function Layout({ children, currentPageName }) {
               <a
                 href={createPageUrl("Resources") + "#live-stream"}
                 className="action-button action-button-live text-white"
+                title={liveActionTitle}
               >
-                <Video className="w-4 h-4" />
-                <span>LIVE</span>
+                <LiveActionIcon className="w-4 h-4" />
+                <span>{liveActionLabel}</span>
               </a>
               <Link
                 to={createPageUrl("Give")}
@@ -389,9 +410,10 @@ export default function Layout({ children, currentPageName }) {
                   <a
                     href={createPageUrl("Resources") + "#live-stream"}
                     className="action-button action-button-live text-white flex-1"
+                    title={liveActionTitle}
                   >
-                    <Video className="w-4 h-4" />
-                    <span>LIVE</span>
+                    <LiveActionIcon className="w-4 h-4" />
+                    <span>{liveActionLabel}</span>
                   </a>
                   <Link
                     to={createPageUrl("Give")}
@@ -484,11 +506,19 @@ export default function Layout({ children, currentPageName }) {
                 <div className="pl-0 md:pl-6">
                   <h4 className="font-bold text-sm text-amber-100 mb-3" style={{ textShadow: '1px 1px 3px rgba(0,0,0,0.7)' }}>Worship With Us</h4>
                   <div className="text-sm text-yellow-100/90 space-y-1" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.5)' }}>
-                      <p className="font-semibold">Sunday Service: 10:30 AM</p>
-                      <p>295 N Brick Church Rd</p>
-                      <p>Mayesville, SC 29104</p>
-                      <a href="https://www.google.com/maps/search/?api=1&query=295+N+Brick+Church+Rd,+Mayesville,+SC+29104" target="_blank" rel="noopener noreferrer" className="font-semibold text-amber-300 hover:text-amber-100 transition-colors inline-block mt-1">
-                        Get Directions →
+                      <p className="font-semibold">
+                        {inPersonOnlyNotice ? "United Service Today: 10:30 AM" : "Sunday Service: 10:30 AM"}
+                      </p>
+                      {inPersonOnlyNotice && (
+                        <p className="rounded bg-red-600 px-2 py-1 text-xs font-bold text-white">
+                          No service at Goodwill's main sanctuary and no livestream today.
+                        </p>
+                      )}
+                      {worshipAddressLines.map((line) => (
+                        <p key={line}>{line}</p>
+                      ))}
+                      <a href={worshipDirectionsUrl} target="_blank" rel="noopener noreferrer" className="font-semibold text-amber-300 hover:text-amber-100 transition-colors inline-block mt-1">
+                        Get Directions
                       </a>
                   </div>
                 </div>

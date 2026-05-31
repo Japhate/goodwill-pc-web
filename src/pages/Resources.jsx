@@ -238,11 +238,11 @@ export default function Resources() {
   const scrollTimeout = useRef(null);
 
   const subNavLinks = useMemo(() => [
-    { title: "Live Stream", href: "#live-stream", icon: Radio },
+    { title: inPersonOnlyNotice ? "No Livestream Today" : "Live Stream", href: "#live-stream", icon: Radio },
     { title: "Latest Sermon", href: "#latest-sermon", icon: Youtube },
     { title: "More Sermons", href: "#more-sermons", icon: PlaySquare },
     { title: "Worship Bulletins", href: "#bulletins", icon: FileText },
-  ], []);
+  ], [inPersonOnlyNotice]);
 
   // Check if user came from LIVE button or if autoplay is requested
   const shouldAutoplayLiveStream = useMemo(() => {

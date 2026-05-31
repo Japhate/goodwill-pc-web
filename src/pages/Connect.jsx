@@ -4,14 +4,18 @@ import { createPageUrl } from "@/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { MapPin, Phone, Mail, Clock, Car, Users, Heart, Copy, Check, Map, MailQuestion, Handshake, Video } from "lucide-react";
+import { getActiveSpecialServiceNotice } from "@/lib/specialServiceNotice";
 
 export default function Connect() {
   const location = useLocation();
   const [copiedItem, setCopiedItem] = useState(null);
   const [copyMessage, setCopyMessage] = useState("");
   const [activeSection, setActiveSection] = useState("");
+  const [now, setNow] = useState(new Date());
   const clickNavigating = useRef(false);
   const scrollTimeout = useRef(null);
+  const activeSpecialServiceNotice = getActiveSpecialServiceNotice(now);
+  const inPersonOnlyNotice = activeSpecialServiceNotice?.liveStreamAvailable === false ? activeSpecialServiceNotice : null;
 
   const subNavLinks = useMemo(() => [
     { title: "Plan a Visit", href: "#visit", icon: Map },
@@ -19,6 +23,11 @@ export default function Connect() {
     { title: "Volunteer", href: "#volunteer", icon: Handshake },
     { title: "Location & Directions", href: "#location", icon: MapPin },
   ], []);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => setNow(new Date()), 30000);
+    return () => window.clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     const handleHashNavigation = () => {
@@ -104,7 +113,17 @@ export default function Connect() {
   ];
 
   const serviceHours = [
-    { day: "Sunday", time: "10:30 AM", event: "Worship Service" },
+    inPersonOnlyNotice
+      ? {
+          day: "Today",
+          time: inPersonOnlyNotice.serviceTimeLabel,
+          event: "United Service at Second Presbyterian Church",
+          location: inPersonOnlyNotice.locationLabel,
+          directionsUrl: inPersonOnlyNotice.directionsUrl,
+          note: "No service at Goodwill's main sanctuary. No livestream today.",
+          urgent: true,
+        }
+      : { day: "Sunday", time: "10:30 AM", event: "Worship Service" },
     { day: "Wednesday", time: "6:30 PM", event: "Bible Study", zoomLink: "https://us02web.zoom.us/j/82827270338?pwd=9JhQLcH0WjX6Xvy7LqvNtZUE3UBr9C.1" }
   ];
   
@@ -277,6 +296,22 @@ export default function Connect() {
               </p>
             </div>
 
+            {inPersonOnlyNotice && (
+              <div className="mx-auto mb-8 max-w-4xl rounded-lg border border-red-200 bg-red-50 p-5 text-center shadow-sm">
+                <p className="text-sm font-bold uppercase tracking-widest text-red-700">Important Worship Update</p>
+                <h3 className="mt-1 text-2xl font-bold text-gray-900">United Service Today at 10:30 AM</h3>
+                <p className="mx-auto mt-2 max-w-2xl rounded-md bg-red-600 px-4 py-3 text-sm font-bold text-white">
+                  Today's service is at Second Presbyterian Church in Sumter. No service at Goodwill's main sanctuary. No livestream today.
+                </p>
+                <Button asChild className="mt-4 bg-amber-600 text-white hover:bg-amber-700">
+                  <a href={inPersonOnlyNotice.directionsUrl} target="_blank" rel="noopener noreferrer">
+                    <MapPin className="mr-2 h-4 w-4" />
+                    Get Directions
+                  </a>
+                </Button>
+              </div>
+            )}
+
             <div className="grid md:grid-cols-3 gap-8 mb-12">
               <div className="text-center">
                 <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -430,12 +465,22 @@ export default function Connect() {
                   <CardContent>
                     <div className="space-y-4">
                       {serviceHours.map((service, index) => (
-                        <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                        <div key={index} className={`flex flex-col gap-3 rounded-lg p-3 sm:flex-row sm:items-center sm:justify-between ${service.urgent ? "border border-red-200 bg-red-50" : "bg-gray-50"}`}>
                           <div className="flex-1">
-                            <p className="font-medium text-gray-900">{service.event}</p>
+                            <p className={`font-medium ${service.urgent ? "text-red-800" : "text-gray-900"}`}>{service.event}</p>
                             <p className="text-sm text-gray-600">{service.day}</p>
+                            {service.location && <p className="mt-1 text-sm font-semibold text-gray-800">{service.location}</p>}
+                            {service.note && <p className="mt-2 rounded bg-red-600 px-3 py-2 text-xs font-bold text-white">{service.note}</p>}
                           </div>
-                          <div className="flex items-center gap-3">
+                          <div className="flex flex-wrap items-center gap-3">
+                            {service.directionsUrl && (
+                              <Button asChild size="sm" className="bg-amber-600 text-white hover:bg-amber-700">
+                                <a href={service.directionsUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1">
+                                  <MapPin className="w-4 h-4" />
+                                  <span>Directions</span>
+                                </a>
+                              </Button>
+                            )}
                             {service.zoomLink && (
                               <Button asChild size="sm" className="bg-blue-600 hover:bg-blue-700 text-white">
                                 <a href={service.zoomLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1">
@@ -554,6 +599,26 @@ export default function Connect() {
                 We're located in the heart of Mayesville, South Carolina
               </p>
             </div>
+
+            {inPersonOnlyNotice && (
+              <div className="mx-auto mb-8 max-w-4xl rounded-lg border border-red-200 bg-white p-5 shadow-sm">
+                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <p className="text-sm font-bold uppercase tracking-widest text-red-700">Today's Worship Location</p>
+                    <h3 className="mt-1 text-xl font-bold text-gray-900">{inPersonOnlyNotice.locationLabel}</h3>
+                    <p className="mt-2 rounded-md bg-red-600 px-3 py-2 text-sm font-bold text-white">
+                      Goodwill's main sanctuary will not host today's 10:30 AM service.
+                    </p>
+                  </div>
+                  <Button asChild className="bg-amber-600 text-white hover:bg-amber-700">
+                    <a href={inPersonOnlyNotice.directionsUrl} target="_blank" rel="noopener noreferrer">
+                      <MapPin className="mr-2 h-4 w-4" />
+                      Get Directions
+                    </a>
+                  </Button>
+                </div>
+              </div>
+            )}
 
             <div className="grid lg:grid-cols-2 gap-12">
               <div>

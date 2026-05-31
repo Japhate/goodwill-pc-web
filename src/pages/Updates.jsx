@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import ReactMarkdown from "react-markdown";
 import { groupBy } from 'lodash';
 import { Badge } from "@/components/ui/badge";
+import { getActiveSpecialServiceNotice } from "@/lib/specialServiceNotice";
 
 // Helper to parse date string as local time to avoid timezone shifts
 // and handle potential invalid date values gracefully.
@@ -25,7 +26,10 @@ export default function Updates() {
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState("all");
   const [activeSection, setActiveSection] = useState("");
+  const [now, setNow] = useState(new Date());
   const location = useLocation();
+  const activeSpecialServiceNotice = getActiveSpecialServiceNotice(now);
+  const inPersonOnlyNotice = activeSpecialServiceNotice?.liveStreamAvailable === false ? activeSpecialServiceNotice : null;
 
   const clickNavigating = useRef(false);
   const scrollTimeoutRef = useRef(null);
@@ -38,6 +42,11 @@ export default function Updates() {
 
   useEffect(() => {
     loadData();
+  }, []);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => setNow(new Date()), 30000);
+    return () => window.clearInterval(interval);
   }, []);
 
   const loadData = async () => {
@@ -297,6 +306,30 @@ export default function Updates() {
             <p className="text-center text-gray-600 mb-8 max-w-2xl mx-auto">
               What's happening at Goodwill? Here are the latest updates for our church family and community.
             </p>
+
+            {inPersonOnlyNotice && (
+              <div className="mx-auto mb-8 max-w-4xl rounded-lg border border-red-200 bg-white p-5 shadow-md">
+                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <Badge className="mb-3 bg-red-600 text-white">Important Worship Update</Badge>
+                    <h3 className="text-2xl font-bold text-gray-900">United Service Today at {inPersonOnlyNotice.serviceTimeLabel}</h3>
+                    <p className="mt-2 rounded-md bg-red-600 px-4 py-3 text-sm font-bold leading-relaxed text-white">
+                      Today's service is at Second Presbyterian Church in Sumter. No service at Goodwill's main sanctuary. No livestream today.
+                    </p>
+                    <p className="mt-3 flex items-center gap-2 text-sm font-semibold text-gray-700">
+                      <MapPin className="h-4 w-4 text-amber-600" />
+                      {inPersonOnlyNotice.locationLabel}
+                    </p>
+                  </div>
+                  <Button asChild className="bg-amber-600 text-white hover:bg-amber-700">
+                    <a href={inPersonOnlyNotice.directionsUrl} target="_blank" rel="noopener noreferrer">
+                      <MapPin className="mr-2 h-4 w-4" />
+                      Get Directions
+                    </a>
+                  </Button>
+                </div>
+              </div>
+            )}
 
             <div className="flex flex-wrap justify-center gap-2 mb-10">
               <button
