@@ -358,6 +358,7 @@ export default function HeroSlideshow() {
 
     return baseSlides;
   }, [isBibleStudyPinnedTime, now, slides, specialServiceSlide]);
+  const currentSlide = activeSlides[current];
 
   useEffect(() => {
     setCurrent(0);
@@ -451,7 +452,7 @@ export default function HeroSlideshow() {
                   rel="noopener noreferrer"
                   className={
                     slide.is_priority_announcement
-                      ? "absolute bottom-1 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-amber-200/70 bg-amber-500/95 px-3 py-1.5 text-xs font-bold text-black shadow-lg transition-all hover:bg-amber-400 sm:bottom-2 sm:px-4 sm:py-2 sm:text-sm md:bottom-3 md:gap-2 md:px-6 md:py-3 md:text-base"
+                      ? "absolute bottom-3 left-1/2 hidden -translate-x-1/2 items-center gap-1.5 rounded-full border border-amber-200/70 bg-amber-500/95 px-6 py-3 text-base font-bold text-black shadow-lg transition-all hover:bg-amber-400 md:flex"
                       : "absolute bottom-8 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-blue-600/95 px-3 py-1.5 text-xs font-semibold text-white shadow-lg transition-all hover:bg-blue-700 sm:bottom-12 sm:px-4 sm:py-2 sm:text-sm md:bottom-16 md:gap-2 md:px-6 md:py-3 md:text-base"
                   }
                   onClick={(e) => e.stopPropagation()}
@@ -482,19 +483,33 @@ export default function HeroSlideshow() {
         </div>
       )}
 
+      {currentSlide?.is_priority_announcement && currentSlide.link_url && (
+        <div className="bg-[#3f2a1f] px-4 py-2 text-center md:hidden">
+          <a
+            href={currentSlide.link_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center gap-1.5 rounded-full border border-amber-200/70 bg-amber-500 px-4 py-2 text-xs font-bold text-black shadow-lg transition-all hover:bg-amber-400"
+          >
+            <Navigation className="h-4 w-4" />
+            {currentSlide.link_label || "Get Directions"}
+          </a>
+        </div>
+      )}
+
       {/* Prev / Next buttons */}
       {activeSlides.length > 1 && (
         <>
           <button
             onClick={handleBack}
-            className="absolute left-3 top-1/2 -translate-y-1/2 z-30 bg-black/40 hover:bg-black/70 text-white rounded-full p-2 transition-all"
+            className="absolute bottom-3 left-3 z-30 rounded-full bg-black/40 p-2 text-white transition-all hover:bg-black/70 md:bottom-auto md:top-1/2 md:-translate-y-1/2"
             aria-label="Previous slide"
           >
             <ChevronLeft className="w-6 h-6" />
           </button>
           <button
             onClick={handleNext}
-            className="absolute right-3 top-1/2 -translate-y-1/2 z-30 bg-black/40 hover:bg-black/70 text-white rounded-full p-2 transition-all"
+            className="absolute bottom-3 right-3 z-30 rounded-full bg-black/40 p-2 text-white transition-all hover:bg-black/70 md:bottom-auto md:top-1/2 md:-translate-y-1/2"
             aria-label="Next slide"
           >
             <ChevronRight className="w-6 h-6" />
