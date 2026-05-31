@@ -118,9 +118,20 @@ function firebaseEntity(entityName) {
           status: item.status || "active",
           created_date: item.created_date,
         };
+        const subscriptionRef = doc(firestore, entityName, emailKey);
 
         try {
-          await setDoc(doc(firestore, entityName, emailKey), subscription);
+          const existingSubscription = await getDoc(subscriptionRef);
+          if (existingSubscription.exists() && existingSubscription.data()?.status !== "unsubscribed") {
+            throw new Error("already-subscribed");
+          }
+        } catch (error) {
+          if (error?.message === "already-subscribed") throw error;
+          if (error?.code !== "permission-denied") throw error;
+        }
+
+        try {
+          await setDoc(subscriptionRef, subscription);
         } catch (error) {
           if (error?.code === "permission-denied") {
             throw new Error("already-subscribed");
