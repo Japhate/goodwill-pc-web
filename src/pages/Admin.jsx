@@ -139,7 +139,7 @@ function getInitials(profile = {}) {
 }
 
 function AdminAvatar({ profile, size = 'md' }) {
-  const dimensions = size === 'lg' ? 'h-16 w-16 text-xl' : 'h-10 w-10 text-sm';
+  const dimensions = size === 'lg' ? 'h-12 w-12 text-lg' : 'h-9 w-9 text-xs';
   return (
     <div className={`${dimensions} flex shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-amber-200 bg-amber-100 font-bold text-amber-900 shadow-sm`}>
       {profile?.photo_url ? (
@@ -1087,10 +1087,10 @@ export default function AdminPage() {
   if (!isAdmin) {
     if (firebaseEnabled) {
       return (
-        <div className="min-h-screen bg-gray-100 flex items-center justify-center pt-20 px-4">
-          <form onSubmit={handleSignIn} className="w-full max-w-md space-y-5 bg-white p-8 rounded-lg shadow-md">
+        <div className="min-h-screen bg-gray-100 flex items-start justify-center px-4 pt-8 pb-6">
+          <form onSubmit={handleSignIn} className="w-full max-w-md space-y-4 bg-white p-6 rounded-lg shadow-md">
             <h1 className="text-2xl font-bold text-gray-900">Admin Sign In</h1>
-            <div className="rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm">
+            <div className="rounded-md border border-red-300 bg-red-50 px-3 py-2.5 text-sm">
               <p className="font-bold text-red-700">This area is for site administrators only.</p>
               <p className="mt-1 font-semibold text-red-700">Please contact the main web developer for admin sign-in details.</p>
             </div>
@@ -1275,7 +1275,7 @@ export default function AdminPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 pt-20 pb-12">
+    <div className="min-h-screen bg-gray-100 pt-4 pb-12">
       {showAdminNamePrompt && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-8">
           <form onSubmit={handleSaveAdminName} className="w-full max-w-md rounded-lg bg-white p-6 shadow-2xl">
@@ -1316,7 +1316,7 @@ export default function AdminPage() {
         </div>
       )}
       {showPrivacyNotice && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/80 px-4 py-8 backdrop-blur-xl" role="dialog" aria-modal="true">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/65 px-4 py-8 backdrop-blur-md" role="dialog" aria-modal="true">
           <div className="flex max-h-[88vh] w-full max-w-2xl flex-col overflow-hidden rounded-lg bg-white shadow-2xl">
             <div className="border-b bg-[#4b342a] px-6 py-5 text-white">
               <p className="text-xs font-bold uppercase tracking-wide text-amber-200">Admin Privacy Notice</p>
@@ -1349,34 +1349,42 @@ export default function AdminPage() {
         </div>
       )}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mb-8 rounded-lg bg-white p-5 shadow-md">
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex items-center gap-4">
+        <div className="mb-5 overflow-hidden rounded-xl border border-amber-100 bg-white shadow-sm">
+          <div className="h-1 bg-gradient-to-r from-amber-500 via-amber-300 to-[#4b342a]" />
+          <div className="flex flex-col gap-4 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex min-w-0 items-center gap-4">
               <div className="relative">
-                <AdminAvatar profile={currentAdmin} size="lg" />
-                <label className="absolute -bottom-1 -right-1 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-amber-600 text-white shadow hover:bg-amber-700" title="Upload admin profile picture">
-                  {uploadingAdminPhoto ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+                <div className="rounded-full ring-2 ring-amber-200 ring-offset-2 ring-offset-white">
+                  <AdminAvatar profile={currentAdmin} size="lg" />
+                </div>
+                <label className="absolute -bottom-1 -right-1 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border-2 border-white bg-amber-600 text-white shadow-sm transition hover:bg-amber-700" title="Upload admin profile picture">
+                  {uploadingAdminPhoto ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
                   <input type="file" accept="image/*" className="hidden" onChange={handleAdminPhotoUpload} disabled={uploadingAdminPhoto} />
                 </label>
               </div>
-              <div>
-                <div className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-amber-700">
-                  <ShieldCheck className="h-4 w-4" />
-                  You are a site administrator
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="text-2xl font-bold leading-tight text-gray-950">Admin Panel</h1>
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-amber-800 ring-1 ring-amber-200">
+                    <ShieldCheck className="h-3.5 w-3.5" />
+                    Site Administrator
+                  </span>
                 </div>
-                <h1 className="mt-1 text-3xl font-bold text-gray-900">Admin Panel</h1>
-                <p className="mt-1 text-sm text-gray-600">
-                  You are signed in as <span className="font-semibold text-gray-900">{currentAdmin?.first_name}</span>
-                  {currentAdmin?.email ? <span> · {currentAdmin.email}</span> : null}
+                <p className="mt-1 truncate text-sm text-gray-600">
+                  Signed in as <span className="font-semibold text-gray-950">{currentAdmin?.first_name}</span>
+                  {currentAdmin?.email ? <span className="text-gray-500"> - {currentAdmin.email}</span> : null}
                 </p>
               </div>
             </div>
 
-            <div className="flex flex-col items-start gap-3 lg:items-end">
-              <div className="flex items-center gap-2">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center lg:justify-end">
+              <div className="flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2">
                 {otherAdminProfiles.length > 0 ? (
                   <>
-                    <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">Other admins</span>
+                    <div>
+                      <p className="text-[11px] font-bold uppercase tracking-wide text-gray-500">Admin Team</p>
+                      <p className="text-xs text-gray-600">{otherAdminProfiles.length} other admin{otherAdminProfiles.length === 1 ? '' : 's'}</p>
+                    </div>
                     <div className="flex -space-x-2">
                       {otherAdminProfiles.slice(0, 6).map((profile) => (
                         <div key={profile.id} title={`${profile.first_name || 'Admin'} ${profile.last_name || ''}`.trim()}>
@@ -1386,14 +1394,14 @@ export default function AdminPage() {
                     </div>
                   </>
                 ) : (
-                  <div className="flex items-center gap-2 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-600">
-                    <UserRound className="h-4 w-4" />
-                    No other admins shown
-                  </div>
+                  <>
+                    <UserRound className="h-4 w-4 text-gray-500" />
+                    <span className="text-sm font-medium text-gray-600">No other admins shown</span>
+                  </>
                 )}
               </div>
               {firebaseEnabled && (
-                <Button variant="outline" onClick={handleSignOut} className="gap-2">
+                <Button variant="outline" onClick={handleSignOut} className="gap-2 border-amber-200 bg-white hover:bg-amber-50">
                   <LogOut className="w-4 h-4" /> Sign Out
                 </Button>
               )}
