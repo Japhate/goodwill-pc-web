@@ -67,7 +67,11 @@ VITE_FIREBASE_PROJECT_ID
 VITE_FIREBASE_STORAGE_BUCKET
 VITE_FIREBASE_MESSAGING_SENDER_ID
 VITE_FIREBASE_APP_ID
+RESEND_API_KEY
+RESEND_FROM_EMAIL
 ```
+
+`RESEND_FROM_EMAIL` should be a verified sender in Resend, for example `Goodwill Presbyterian Church <news@goodwillpres.org>`.
 
 After those values are configured, use **Manual Deploy > Deploy latest commit** in Render and test `/Admin` on `https://www.goodwillpres.org/Admin`. Keep the IONOS DNS records for `goodwillpres.org` and `www.goodwillpres.org` pointing to Render.
 

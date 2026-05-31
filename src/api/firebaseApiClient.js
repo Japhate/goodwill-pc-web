@@ -5,6 +5,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  setDoc,
   updateDoc,
 } from "firebase/firestore";
 import {
@@ -105,6 +106,30 @@ function firebaseEntity(entityName) {
         ...data,
         created_date: data.created_date || new Date().toISOString(),
       };
+
+      if (entityName === "NewsletterSubscriptions") {
+        const email = item.email?.trim().toLowerCase();
+        const emailKey = item.email_key || encodeURIComponent(email);
+        const subscription = {
+          email,
+          email_key: emailKey,
+          unsubscribe_token: item.unsubscribe_token,
+          status: item.status || "active",
+          created_date: item.created_date,
+        };
+
+        try {
+          await setDoc(doc(firestore, entityName, emailKey), subscription);
+        } catch (error) {
+          if (error?.code === "permission-denied") {
+            throw new Error("already-subscribed");
+          }
+          throw error;
+        }
+
+        return { id: emailKey, ...subscription };
+      }
+
       const created = await addDoc(collection(firestore, entityName), item);
       return { id: created.id, ...item };
     },

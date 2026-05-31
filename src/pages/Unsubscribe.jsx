@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { NewsletterSubscriptions } from '@/entities/NewsletterSubscriptions';
 
 export default function Unsubscribe() {
   const [status, setStatus] = useState('loading');
@@ -11,6 +12,8 @@ export default function Unsubscribe() {
       try {
         const urlParams = new URLSearchParams(window.location.search);
         const email = urlParams.get('email');
+        const emailKey = urlParams.get('key');
+        const token = urlParams.get('token');
 
         if (!email) {
           setStatus('error');
@@ -18,21 +21,27 @@ export default function Unsubscribe() {
           return;
         }
 
-        // Call backend function
-        const response = await fetch('/api/functions/unsubscribeNewsletter', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email }),
-        });
+        if (emailKey && token) {
+          await NewsletterSubscriptions.update(emailKey, {
+            status: 'unsubscribed',
+            unsubscribed_date: new Date().toISOString(),
+          });
 
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error?.error || 'Failed to unsubscribe');
+          setStatus('success');
+          setMessage('You have been successfully unsubscribed from the Goodwill Presbyterian Church newsletter.');
+          return;
         }
 
-        const result = await response.json();
+        const response = await fetch('/api/unsubscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, emailKey, token }),
+        });
+
+        if (!response.ok) throw new Error('Failed to unsubscribe');
+
         setStatus('success');
-        setMessage(result.message || 'You have been successfully unsubscribed from the Goodwill Presbyterian Church newsletter.');
+        setMessage('You have been successfully unsubscribed from the Goodwill Presbyterian Church newsletter.');
       } catch (error) {
         console.error('Unsubscribe error:', error);
         setStatus('error');

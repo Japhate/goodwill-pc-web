@@ -51,6 +51,7 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isAdmin();
     }
+
     match /PrayerRequests/{documentId} {
       allow read, update, delete: if isAdmin();
       allow create: if request.resource.data.keys().hasOnly([
@@ -72,11 +73,42 @@ service cloud.firestore {
     }
 
     match /NewsletterSubscriptions/{documentId} {
-      allow read, update, delete: if isAdmin();
-      allow create: if request.resource.data.keys().hasOnly(['email', 'created_date'])
+      allow read, delete: if isAdmin();
+      allow create: if request.resource.data.keys().hasOnly([
+          'email', 'email_key', 'unsubscribe_token', 'status', 'created_date'
+        ])
         && request.resource.data.email is string
         && request.resource.data.email.size() > 3
-        && request.resource.data.email.size() <= 320;
+        && request.resource.data.email.size() <= 320
+        && request.resource.data.email_key == documentId
+        && request.resource.data.email_key is string
+        && request.resource.data.unsubscribe_token is string
+        && request.resource.data.unsubscribe_token.size() >= 24
+        && request.resource.data.status == 'active';
+      allow update: if isAdmin()
+        || (
+          resource.data.email_key == documentId
+          && request.resource.data.email == resource.data.email
+          && request.resource.data.email_key == resource.data.email_key
+          && request.resource.data.unsubscribe_token == resource.data.unsubscribe_token
+          && request.resource.data.status == 'unsubscribed'
+          && request.resource.data.unsubscribed_date is string
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'status', 'unsubscribed_date', 'updated_date'
+          ])
+        )
+        || (
+          resource.data.status == 'unsubscribed'
+          && request.resource.data.email == resource.data.email
+          && request.resource.data.email_key == resource.data.email_key
+          && request.resource.data.email_key == documentId
+          && request.resource.data.unsubscribe_token is string
+          && request.resource.data.unsubscribe_token.size() >= 24
+          && request.resource.data.status == 'active'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'unsubscribe_token', 'status', 'created_date', 'unsubscribed_date', 'updated_date'
+          ])
+        );
     }
   }
 }
