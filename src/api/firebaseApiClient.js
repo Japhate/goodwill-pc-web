@@ -102,6 +102,7 @@ function firebaseEntity(entityName) {
       return items.slice(0, limit || undefined);
     },
     create: async (data) => {
+      const templateId = entityName === "EmailTemplates" ? data?.id : null;
       const { id: _ignoredId, ...documentData } = data || {};
       const item = {
         ...documentData,
@@ -143,10 +144,9 @@ function firebaseEntity(entityName) {
       }
 
       if (entityName === "EmailTemplates") {
-        const templateId = item.id;
         if (!templateId) throw new Error("Email template id is required");
         await setDoc(doc(firestore, entityName, templateId), item);
-        return { ...item, id: templateId };
+        return { id: templateId, ...item };
       }
 
       const created = await addDoc(collection(firestore, entityName), item);
