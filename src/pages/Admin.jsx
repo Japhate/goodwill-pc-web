@@ -209,14 +209,26 @@ export default function AdminPage() {
   };
 
   const loadSitePopups = async () => {
-    const data = await SitePopups.list('priority', 100);
-    if (data.length > 0) {
-      setSitePopups(data);
-      return;
-    }
+    const fallbackPopup = createSpecialServicePopup();
 
-    const seededPopup = await SitePopups.create(createSpecialServicePopup());
-    setSitePopups([seededPopup]);
+    try {
+      const data = await SitePopups.list('priority', 100);
+      if (data.length > 0) {
+        setSitePopups(data);
+        return;
+      }
+
+      try {
+        const seededPopup = await SitePopups.create(fallbackPopup);
+        setSitePopups([seededPopup]);
+      } catch (error) {
+        console.error('Unable to create default homepage popup:', error);
+        setSitePopups([fallbackPopup]);
+      }
+    } catch (error) {
+      console.error('Unable to load homepage popups:', error);
+      setSitePopups([fallbackPopup]);
+    }
   };
 
   const handleAddNew = (type) => {
@@ -431,7 +443,7 @@ export default function AdminPage() {
 
     } catch (error) {
         console.error("Error in handleFormSubmit:", error);
-        // Here you could set an error state to show a message to the user
+        window.alert("Unable to save this item. Please check that Firestore rules have been deployed and try again.");
     }
   };
 
