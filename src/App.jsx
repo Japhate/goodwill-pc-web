@@ -10,6 +10,7 @@ import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import Unsubscribe from './pages/Unsubscribe';
+import AdminSetup from './pages/AdminSetup';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -61,6 +62,7 @@ const AuthenticatedApp = () => {
           }
         />
       ))}
+      <Route path="/AdminSetup" element={<AdminSetup />} />
       <Route path="/Unsubscribe" element={<Unsubscribe />} />
       <Route path="*" element={<PageNotFound />} />
       </Routes>

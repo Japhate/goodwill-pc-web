@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Activity, KeyRound, Mail, RefreshCw, ShieldCheck, Trash2, UserPlus, Users, Wand2 } from "lucide-react";
+import { Activity, Check, Copy, KeyRound, Mail, RefreshCw, ShieldCheck, Trash2, UserPlus, Users, Wand2 } from "lucide-react";
 
 function formatDate(value) {
   if (!value) return "Not recorded";
@@ -60,6 +60,7 @@ export default function DeveloperPanel({
   const [adminStatus, setAdminStatus] = useState("");
   const [sendingInvite, setSendingInvite] = useState(false);
   const [deletingAdminUid, setDeletingAdminUid] = useState("");
+  const [passwordCopied, setPasswordCopied] = useState(false);
   const latestLog = logs[0];
   const loginCount = logs.filter((log) => log.action === "signed_in").length;
   const contentCount = logs.filter((log) => ["created", "updated", "deleted", "duplicated"].includes(log.action)).length;
@@ -103,6 +104,13 @@ export default function DeveloperPanel({
     } finally {
       setSendingInvite(false);
     }
+  };
+
+  const handleCopyTemporaryPassword = async () => {
+    if (!temporaryPassword) return;
+    await navigator.clipboard.writeText(temporaryPassword);
+    setPasswordCopied(true);
+    window.setTimeout(() => setPasswordCopied(false), 1800);
   };
 
   const handleDeleteAdmin = async (admin) => {
@@ -306,6 +314,16 @@ export default function DeveloperPanel({
                   title="Generate temporary password"
                 >
                   <Wand2 className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleCopyTemporaryPassword}
+                  title="Copy temporary password"
+                  className="gap-2"
+                >
+                  {passwordCopied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                  {passwordCopied ? "Copied" : "Copy"}
                 </Button>
               </div>
               {errors.temporaryPassword && <p className="mt-1 text-xs font-semibold text-red-600">{errors.temporaryPassword}</p>}

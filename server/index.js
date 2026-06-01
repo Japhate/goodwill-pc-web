@@ -439,32 +439,28 @@ function buildAdminBroadcastNotificationEmail({ admin, subject, sent, failed, re
   };
 }
 
-function buildAdminInvitationEmail({ firstName, email, temporaryPassword, resetLink, invitedByName, siteUrl }) {
-  const recipientName = firstName || 'Administrator';
-  const escapedName = escapeHtml(recipientName);
+function buildAdminInvitationEmail({ email, temporaryPassword, setupLink, invitedByName }) {
   const escapedEmail = escapeHtml(email);
   const escapedPassword = escapeHtml(temporaryPassword);
-  const escapedResetLink = escapeHtml(resetLink);
-  const escapedInviter = escapeHtml(invitedByName || 'a developer administrator');
-  const escapedSiteUrl = escapeHtml(siteUrl);
+  const escapedSetupLink = escapeHtml(setupLink);
+  const inviterName = invitedByName || 'Japhate Neba';
+  const escapedInviter = escapeHtml(inviterName);
 
   return {
     subject: 'Your Goodwill Presbyterian Church admin access',
     text: [
-      `Hello ${recipientName},`,
+      'Hello Brethren,',
       '',
-      `You have been added as a site administrator for the Goodwill Presbyterian Church website by ${invitedByName || 'a developer administrator'}.`,
+      `You have been invited to act as site administrator for the Goodwill Presbyterian Church website by ${inviterName}.`,
+      'You have been provided a temporary password for your first login. Please change the temporary password to a password that you want.',
       '',
       `Admin email: ${email}`,
       `Temporary password: ${temporaryPassword}`,
       '',
-      'Please use the link below to change the temporary password to a password that only you know:',
-      resetLink,
+      'Change your password here:',
+      setupLink,
       '',
-      `After changing your password, you can sign in at: ${siteUrl}/Admin`,
-      'The first time you sign in, you will be asked to enter your first and last name before reviewing the admin privacy notice.',
-      '',
-      'If you did not expect this message, please contact the church website developer before signing in.',
+      'If you did not expect this message, please ignore it.',
       '',
       'Goodwill Presbyterian Church Website',
     ].join('\n'),
@@ -477,22 +473,26 @@ function buildAdminInvitationEmail({ firstName, email, temporaryPassword, resetL
               <h1 style="margin:0;font-size:24px;line-height:1.3;">Welcome to the Goodwill Presbyterian Church admin team</h1>
             </div>
             <div style="padding:28px;font-size:16px;line-height:1.6;">
-              <p style="margin:0 0 16px;">Hello ${escapedName},</p>
-              <p style="margin:0 0 16px;">You have been added as a site administrator for the Goodwill Presbyterian Church website by ${escapedInviter}.</p>
+              <p style="margin:0 0 16px;">Hello Brethren,</p>
+              <p style="margin:0 0 16px;">You have been invited to act as site administrator for the Goodwill Presbyterian Church website by ${escapedInviter}. You have been provided a temporary password for your first login. Please change the temporary password to a password that you want.</p>
               <div style="background:#fbf7f0;border:1px solid #eadcc7;border-radius:10px;padding:16px;margin:18px 0;">
                 <p style="margin:0 0 8px;"><strong>Admin email:</strong> ${escapedEmail}</p>
-                <p style="margin:0;"><strong>Temporary password:</strong> ${escapedPassword}</p>
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+                  <tr>
+                    <td style="padding:0;font-size:16px;line-height:1.6;">
+                      <strong>Temporary password:</strong>
+                      <span style="display:inline-block;margin-left:6px;border:1px solid #d6b98c;background:#ffffff;border-radius:6px;padding:3px 8px;font-family:Consolas,Monaco,monospace;font-weight:bold;letter-spacing:0.08em;color:#2f241c;">${escapedPassword}</span>
+                      <span style="display:inline-block;margin-left:8px;border:1px solid #d97706;background:#fff7ed;border-radius:6px;padding:3px 8px;font-size:12px;font-weight:bold;color:#9a4f00;text-transform:uppercase;">Copy this password</span>
+                    </td>
+                  </tr>
+                </table>
               </div>
-              <p style="margin:0 0 18px;">Please change the temporary password to a password that only you know before using the admin panel regularly.</p>
-              <p style="margin:0 0 22px;">
-                <a href="${escapedResetLink}" style="display:inline-block;background:#d97706;color:#ffffff;font-weight:bold;text-decoration:none;border-radius:8px;padding:12px 18px;">Change My Password</a>
+              <p style="margin:0 0 22px;text-align:center;">
+                <a href="${escapedSetupLink}" style="display:inline-block;background:#d97706;color:#ffffff;font-weight:bold;text-decoration:none;border-radius:8px;padding:12px 18px;">Change My Password</a>
               </p>
-              <p style="margin:0 0 10px;">After changing your password, sign in at:</p>
-              <p style="margin:0;"><a href="${escapedSiteUrl}/Admin" style="color:#8a5a16;font-weight:bold;">${escapedSiteUrl}/Admin</a></p>
-              <p style="margin:18px 0 0;">The first time you sign in, you will be asked to enter your first and last name before reviewing the admin privacy notice.</p>
             </div>
             <div style="border-top:1px solid #eadcc7;background:#fbf7f0;padding:18px 28px;color:#6f6258;font-size:12px;line-height:1.5;">
-              If you did not expect this message, please contact the church website developer before signing in.
+              If you did not expect this message, please ignore it.
             </div>
           </div>
         </div>
@@ -840,15 +840,12 @@ app.post('/api/admin/create-site-admin', async (req, res) => {
       updated_date: now,
     }, { merge: true });
 
-    const resetLink = await auth.generatePasswordResetLink(email, {
-      url: `${siteUrl}/Admin`,
-      handleCodeInApp: false,
-    });
+    const setupLink = `${siteUrl}/AdminSetup?email=${encodeURIComponent(email)}`;
     const invitedByName = [developerAdmin.firstName, developerAdmin.lastName].filter(Boolean).join(' ') || developerAdmin.email;
     const invitation = buildAdminInvitationEmail({
       email,
       temporaryPassword,
-      resetLink,
+      setupLink,
       invitedByName,
       siteUrl,
     });
