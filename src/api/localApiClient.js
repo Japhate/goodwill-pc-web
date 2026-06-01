@@ -297,6 +297,7 @@ const seedData = {
   NewsletterSubscriptions: [],
   EmailTemplates: DEFAULT_EMAIL_TEMPLATES,
   NewsletterBroadcasts: [],
+  AdminActivityLogs: [],
 };
 
 const memoryData = structuredClone(seedData);

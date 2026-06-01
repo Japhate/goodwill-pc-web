@@ -9,6 +9,7 @@ import { SitePopups } from '@/entities/SitePopups';
 import { NewsletterSubscriptions } from '@/entities/NewsletterSubscriptions';
 import { NewsletterBroadcasts } from '@/entities/NewsletterBroadcasts';
 import { EmailTemplates } from '@/entities/EmailTemplates';
+import { AdminActivityLogs } from '@/entities/AdminActivityLogs';
 import { User } from '@/entities/User';
 import AnnouncementList from '@/components/admin/AnnouncementList';
 import AnnouncementForm from '@/components/admin/AnnouncementForm';
@@ -25,6 +26,7 @@ import HeroSlideForm from '@/components/admin/HeroSlideForm';
 import SitePopupList from '@/components/admin/SitePopupList';
 import SitePopupForm from '@/components/admin/SitePopupForm';
 import NewsletterAdmin from '@/components/admin/NewsletterAdmin';
+import DeveloperPanel from '@/components/admin/DeveloperPanel';
 import { HeroSlide } from '@/entities/HeroSlide';
 import { firebaseAuth, firebaseEnabled } from '@/lib/firebase';
 import { localApi } from '@/api/localApiClient';
@@ -33,7 +35,7 @@ import { firestore } from '@/lib/firebase';
 import { DEFAULT_HOMEPAGE_BANNERS } from '@/lib/homepageBanners';
 import { DEFAULT_EMAIL_TEMPLATES, NEWSLETTER_TEMPLATE_IDS } from '@/lib/newsletterTemplates';
 import { createSpecialServicePopup } from '@/lib/specialServiceNotice';
-import { Camera, Loader2, ShieldAlert, Megaphone, CalendarHeart, Images, PlaySquare, FileText, MessageSquare, EyeOff, LayoutTemplate, LogOut, BellRing, Mail, ShieldCheck, UserRound } from 'lucide-react';
+import { Camera, Loader2, ShieldAlert, Megaphone, CalendarHeart, Images, PlaySquare, FileText, MessageSquare, EyeOff, LayoutTemplate, LogOut, BellRing, Mail, ShieldCheck, UserRound, Code2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -42,6 +44,16 @@ const AUTO_LOGOUT_NOTICE_KEY = 'goodwill-admin-auto-logout';
 const AUTO_LOGOUT_MESSAGE = 'You were logged out automatically due to inactivity.';
 const ACTIVITY_EVENTS = ['click', 'keydown', 'mousemove', 'scroll', 'touchstart'];
 const ADMIN_PRIVACY_NOTICE_VERSION = '2026-05-31';
+const SITE_DEVELOPER_EMAIL = 'nebajaphate@gmail.com';
+const FORM_LOG_META = {
+  announcement: { section: 'Announcements & Events', itemType: 'announcement' },
+  worshipEvent: { section: 'Calendar of Worship', itemType: 'worship event' },
+  sermon: { section: 'Sermons', itemType: 'sermon' },
+  bulletin: { section: 'Worship Bulletins', itemType: 'bulletin' },
+  banner: { section: 'Homepage Banner', itemType: 'homepage banner' },
+  heroSlide: { section: 'Hero Slideshow', itemType: 'hero slide' },
+  sitePopup: { section: 'Homepage Popups', itemType: 'homepage popup' },
+};
 const ADMIN_PRIVACY_NOTICE = [
   'As a Goodwill Presbyterian Church site administrator, you are trusted with access to information that may include names, email addresses, prayer requests, newsletter subscriber records, worship resources, and internal church communications.',
   'Use this admin panel only for legitimate church ministry and website management purposes. Do not download, copy, share, screenshot, export, or reuse personal information unless it is necessary for an approved church task.',
@@ -55,6 +67,11 @@ const KNOWN_ADMIN_PROFILES = {
     first_name: 'Japhate',
     last_name: 'Neba',
     email: 'nebajaphate@gmail.com',
+  },
+  'japhate.neba@gmail.com': {
+    first_name: 'Japhate',
+    last_name: 'Neba',
+    email: 'japhate.neba@gmail.com',
   },
 };
 
@@ -117,14 +134,16 @@ function deriveAdminProfile(user = {}, profile = {}) {
   const emailName = email ? email.split('@')[0].replace(/[._-]+/g, ' ') : '';
   const emailFallback = splitDisplayName(emailName);
   const knownAdminName = getKnownAdminNameFallback(email);
-  const firstName = profile.first_name || user.first_name || knownAdminName.firstName || fallbackName.firstName || emailFallback.firstName || 'Site';
-  const lastName = profile.last_name || user.last_name || knownAdminName.lastName || fallbackName.lastName || emailFallback.lastName || 'Admin';
+  const hasSavedProfileName = Boolean(profile.first_name && profile.last_name);
+  const shouldAwaitFirstLoginName = Boolean(profile.id || profile.email) && !hasSavedProfileName && !knownAdminName.firstName;
+  const firstName = shouldAwaitFirstLoginName ? '' : profile.first_name || user.first_name || knownAdminName.firstName || fallbackName.firstName || emailFallback.firstName || 'Site';
+  const lastName = shouldAwaitFirstLoginName ? '' : profile.last_name || user.last_name || knownAdminName.lastName || fallbackName.lastName || emailFallback.lastName || 'Admin';
 
   return {
     id: profile.id || user.id || firebaseAuth?.currentUser?.uid || '',
     first_name: firstName,
     last_name: lastName,
-    has_saved_name: Boolean(profile.first_name && profile.last_name),
+    has_saved_name: hasSavedProfileName,
     email,
     photo_url: profile.photo_url || user.photo_url || '',
   };
@@ -138,6 +157,15 @@ function getInitials(profile = {}) {
     .slice(0, 2) || 'SA';
 }
 
+function isDeveloperAdminEmail(email = '') {
+  return String(email || '').trim().toLowerCase() === SITE_DEVELOPER_EMAIL;
+}
+
+function getItemLabel(type, data = {}) {
+  if (Array.isArray(data)) return `${data.length} ${FORM_LOG_META[type]?.itemType || 'items'}`;
+  return data.title || data.message || data.subject || data.alt_text || data.email || data.name || FORM_LOG_META[type]?.itemType || 'item';
+}
+
 function AdminAvatar({ profile, size = 'md' }) {
   const dimensions = size === 'lg' ? 'h-12 w-12 text-lg' : 'h-9 w-9 text-xs';
   return (
@@ -149,6 +177,10 @@ function AdminAvatar({ profile, size = 'md' }) {
       )}
     </div>
   );
+}
+
+function RequiredStar() {
+  return <span className="ml-1 text-red-600">*</span>;
 }
 
 function consumeAutoLogoutNotice() {
@@ -170,7 +202,9 @@ export default function AdminPage() {
   const [newsletterSubscribers, setNewsletterSubscribers] = useState([]);
   const [emailTemplates, setEmailTemplates] = useState([]);
   const [newsletterBroadcasts, setNewsletterBroadcasts] = useState([]);
-  const [view, setView] = useState('announcements'); // 'announcements', 'worshipEvents', 'pastEvents', 'sermons', 'bulletins', 'banners', 'hiddenAnnouncements', 'heroSlides', 'sitePopups', 'newsletter'
+  const [adminActivityLogs, setAdminActivityLogs] = useState([]);
+  const [loadingDeveloperLogs, setLoadingDeveloperLogs] = useState(false);
+  const [view, setView] = useState('announcements'); // 'announcements', 'worshipEvents', 'pastEvents', 'sermons', 'bulletins', 'banners', 'hiddenAnnouncements', 'heroSlides', 'sitePopups', 'newsletter', 'developer'
   const [formView, setFormView] = useState(null); // 'announcement', 'worshipEvent', 'sermon', 'bulletin', 'banner', 'heroSlide', 'sitePopup', or null
   const [editingItem, setEditingItem] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -192,6 +226,65 @@ export default function AdminPage() {
   const [uploadingAdminPhoto, setUploadingAdminPhoto] = useState(false);
   const inactivityTimerRef = useRef(null);
   const privacyNoticeRef = useRef(null);
+  const canViewDeveloperPanel = isDeveloperAdminEmail(currentAdmin?.email);
+  const canManageSiteAdmins = canViewDeveloperPanel;
+  const adminRoleLabel = canManageSiteAdmins ? 'Site Developer' : 'Site Administrator';
+
+  const logAdminActivity = async ({
+    action,
+    section = 'Admin Panel',
+    itemType = '',
+    itemId = '',
+    itemLabel = '',
+    details = {},
+    actor = currentAdmin,
+  }) => {
+    const actorEmail = String(actor?.email || '').trim().toLowerCase();
+    const actorName = [actor?.first_name || actor?.firstName, actor?.last_name || actor?.lastName].filter(Boolean).join(' ')
+      || actor?.full_name
+      || actorEmail
+      || 'Unknown admin';
+
+    try {
+      const createdLog = await AdminActivityLogs.create({
+        action,
+        section,
+        item_type: itemType,
+        item_id: String(itemId || ''),
+        item_label: String(itemLabel || ''),
+        actor_uid: actor?.id || firebaseAuth?.currentUser?.uid || '',
+        actor_email: actorEmail,
+        actor_name: actorName,
+        details,
+        path: window.location.pathname,
+        user_agent: window.navigator.userAgent,
+        created_date: new Date().toISOString(),
+      });
+      if (isDeveloperAdminEmail(actorEmail)) {
+        setAdminActivityLogs((logs) => [createdLog, ...logs].slice(0, 300));
+      }
+    } catch (error) {
+      console.error('Unable to record admin activity:', error);
+    }
+  };
+
+  const loadAdminActivityLogs = async () => {
+    if (!canViewDeveloperPanel) {
+      setAdminActivityLogs([]);
+      return;
+    }
+
+    setLoadingDeveloperLogs(true);
+    try {
+      const logs = await AdminActivityLogs.list('-created_date', 300);
+      setAdminActivityLogs(logs);
+    } catch (error) {
+      console.error('Unable to load admin activity logs:', error);
+      setAdminActivityLogs([]);
+    } finally {
+      setLoadingDeveloperLogs(false);
+    }
+  };
 
   const loadAdminData = async () => {
     const loaders = [
@@ -320,6 +413,13 @@ export default function AdminPage() {
       }
 
       try {
+        await logAdminActivity({
+          action: 'auto_logged_out',
+          section: 'Authentication',
+          itemType: 'admin session',
+          itemLabel: 'Automatic inactivity logout',
+          details: { timeout_minutes: ADMIN_INACTIVITY_TIMEOUT_MS / 60000 },
+        });
         await User.logout();
       } catch (error) {
         console.error('Unable to auto logout inactive admin session:', error);
@@ -352,7 +452,7 @@ export default function AdminPage() {
         window.removeEventListener(eventName, resetInactivityTimer);
       });
     };
-  }, [isAdmin]);
+  }, [isAdmin, currentAdmin]);
 
   useEffect(() => {
     if (!showPrivacyNotice) return undefined;
@@ -400,6 +500,18 @@ export default function AdminPage() {
       window.scrollTo(0, scrollY);
     };
   }, [showPrivacyNotice, showAdminNamePrompt]);
+
+  useEffect(() => {
+    if (canViewDeveloperPanel) {
+      loadAdminActivityLogs();
+      return;
+    }
+
+    setAdminActivityLogs([]);
+    if (view === 'developer') {
+      setView('announcements');
+    }
+  }, [canViewDeveloperPanel, view]);
 
   const loadAnnouncements = async () => {
     // Fetch with a default sort, will be re-sorted in the component
@@ -522,6 +634,13 @@ export default function AdminPage() {
         unsubscribe_token: createUnsubscribeToken(),
         status: 'active',
       });
+      await logAdminActivity({
+        action: 'created',
+        section: 'Newsletter',
+        itemType: 'newsletter subscriber',
+        itemLabel: normalizedEmail,
+        details: { first_name: normalizedFirstName, last_name: normalizedLastName },
+      });
       await loadNewsletterAdmin();
     } catch (error) {
       console.error('Unable to add newsletter subscriber:', error);
@@ -538,6 +657,12 @@ export default function AdminPage() {
 
     try {
       await NewsletterSubscriptions.delete(id);
+      await logAdminActivity({
+        action: 'deleted',
+        section: 'Newsletter',
+        itemType: 'newsletter subscriber',
+        itemId: id,
+      });
       await loadNewsletterAdmin();
     } catch (error) {
       console.error('Unable to delete newsletter subscriber:', error);
@@ -558,6 +683,13 @@ export default function AdminPage() {
       } else {
         await EmailTemplates.create(preparedTemplate);
       }
+      await logAdminActivity({
+        action: 'updated',
+        section: 'Newsletter',
+        itemType: 'email template',
+        itemId: id,
+        itemLabel: templateData.name || templateData.subject || id,
+      });
       await loadNewsletterAdmin();
     } catch (error) {
       console.error('Unable to save email template:', error);
@@ -600,12 +732,19 @@ export default function AdminPage() {
       }
 
       window.alert('Test email sent.');
+      await logAdminActivity({
+        action: 'sent_test_email',
+        section: 'Newsletter',
+        itemType: 'email template',
+        itemId: templateId,
+        itemLabel: normalizedEmail,
+      });
     } catch (error) {
       window.alert(`Unable to send the test email: ${error.message}`);
     }
   };
 
-  const handleSendNewsletterBroadcast = async ({ subject, message, attachments, recipientIds }) => {
+  const handleSendNewsletterBroadcast = async ({ subject, message, attachments, recipientIds, notifyAdmins = false }) => {
     const selectedRecipientIds = new Set(recipientIds || []);
     const activeRecipients = newsletterSubscribers
       .filter((subscriber) => (subscriber.status || 'active') === 'active')
@@ -639,6 +778,16 @@ export default function AdminPage() {
         message,
         attachments,
         recipients: activeRecipients,
+        notifyAdmins,
+        adminRecipients: notifyAdmins
+          ? adminProfiles
+              .map((profile) => ({
+                email: profile.email,
+                firstName: profile.first_name || '',
+                lastName: profile.last_name || '',
+              }))
+              .filter((profile) => profile.email)
+          : [],
         host: window.location.host,
         protocol: window.location.protocol.replace(':', ''),
       }),
@@ -648,6 +797,18 @@ export default function AdminPage() {
     if (!response.ok) {
       throw new Error([body?.error, body?.detail].filter(Boolean).join(' ') || 'Unable to send the broadcast.');
     }
+
+    await logAdminActivity({
+      action: notifyAdmins ? 'scheduled_broadcast_sent' : 'broadcast_sent',
+      section: 'Newsletter',
+      itemType: 'newsletter broadcast',
+      itemLabel: subject,
+      details: {
+        recipient_count: activeRecipients.length,
+        attachment_count: attachments?.length || 0,
+        admin_notifications_sent: notifyAdmins,
+      },
+    });
 
     return body;
   };
@@ -662,6 +823,16 @@ export default function AdminPage() {
         const uploaded = await localApi.integrations.Core.UploadFile({
           file: attachment.file,
           destination: 'newsletterAttachment',
+        });
+        await logAdminActivity({
+          action: 'uploaded',
+          section: 'Newsletter',
+          itemType: 'newsletter attachment',
+          itemLabel: attachment.filename,
+          details: {
+            size: attachment.size || attachment.file.size || 0,
+            content_type: attachment.contentType || attachment.file.type || '',
+          },
         });
 
         return {
@@ -699,6 +870,14 @@ export default function AdminPage() {
     } else {
       await NewsletterBroadcasts.create({ ...record, created_date: new Date().toISOString() });
     }
+    await logAdminActivity({
+      action: 'saved_draft',
+      section: 'Newsletter',
+      itemType: 'newsletter broadcast',
+      itemId: data.id,
+      itemLabel: record.subject,
+      details: { recipient_count: record.recipient_count, attachment_count: record.attachments.length },
+    });
     await loadNewsletterAdmin();
   };
 
@@ -710,6 +889,18 @@ export default function AdminPage() {
     } else {
       await NewsletterBroadcasts.create({ ...record, created_date: new Date().toISOString() });
     }
+    await logAdminActivity({
+      action: 'scheduled',
+      section: 'Newsletter',
+      itemType: 'newsletter broadcast',
+      itemId: data.id,
+      itemLabel: record.subject,
+      details: {
+        scheduled_at: record.scheduled_at,
+        recipient_count: record.recipient_count,
+        attachment_count: record.attachments.length,
+      },
+    });
     await loadNewsletterAdmin();
   };
 
@@ -732,6 +923,14 @@ export default function AdminPage() {
         created_date: new Date().toISOString(),
       });
     }
+    await logAdminActivity({
+      action: sentFields.status === 'partial' ? 'marked_partially_sent' : 'marked_sent',
+      section: 'Newsletter',
+      itemType: 'newsletter broadcast',
+      itemId: id,
+      itemLabel: sentData.subject || '',
+      details: { sent_count: sentFields.sent_count, failed_count: sentFields.failed_count },
+    });
     await loadNewsletterAdmin();
   };
 
@@ -764,6 +963,12 @@ export default function AdminPage() {
     if (window.confirm(`Are you sure you want to delete this ${entityInfo.name}?`)) {
       try {
         await entityInfo.entity.delete(id);
+        await logAdminActivity({
+          action: 'deleted',
+          section: FORM_LOG_META[type]?.section || 'Admin Content',
+          itemType: entityInfo.name,
+          itemId: id,
+        });
         await refreshDataForType(type);
       } catch (error) {
         console.error(`Unable to delete ${entityInfo.name}:`, error);
@@ -790,6 +995,13 @@ export default function AdminPage() {
       return false;
     }
 
+    await logAdminActivity({
+      action: 'deleted',
+      section: 'Hero Slideshow',
+      itemType: slideLabel,
+      itemId: ids.join(', '),
+      itemLabel: `${ids.length} selected ${slideLabel}`,
+    });
     return true;
   };
 
@@ -826,7 +1038,15 @@ export default function AdminPage() {
           duplicatedItem.status = 'Inactive';
       }
         
-        await entityInfo.entity.create(duplicatedItem);
+        const duplicated = await entityInfo.entity.create(duplicatedItem);
+        await logAdminActivity({
+          action: 'duplicated',
+          section: FORM_LOG_META[type]?.section || 'Admin Content',
+          itemType: entityInfo.name,
+          itemId: duplicated?.id,
+          itemLabel: getItemLabel(type, duplicatedItem),
+          details: { source_id: item.id || '' },
+        });
         await refreshDataForType(type);
     }
   };
@@ -862,6 +1082,9 @@ export default function AdminPage() {
 
   const handleFormSubmit = async (formData) => {
     const isEditing = editingItem && editingItem.id && !editingItem.is_unsaved_fallback;
+    const logMeta = FORM_LOG_META[formView] || { section: 'Admin Content', itemType: formView || 'item' };
+    let savedItemId = isEditing ? editingItem.id : '';
+    let savedItemCount = Array.isArray(formData) ? formData.length : 1;
 
     try {
         switch (formView) {
@@ -869,21 +1092,24 @@ export default function AdminPage() {
                 if (isEditing) {
                     await AnnouncementsEvents.update(editingItem.id, formData);
                 } else {
-                    await AnnouncementsEvents.create(formData);
+                    const created = await AnnouncementsEvents.create(formData);
+                    savedItemId = created?.id || '';
                 }
                 break;
             case 'worshipEvent':
                 if (isEditing) {
                     await WorshipEvent.update(editingItem.id, formData);
                 } else {
-                    await WorshipEvent.create(formData);
+                    const created = await WorshipEvent.create(formData);
+                    savedItemId = created?.id || '';
                 }
                 break;
             case 'sermon':
                 if (isEditing) {
                     await Sermons.update(editingItem.id, formData);
                 } else {
-                    await Sermons.create(formData);
+                    const created = await Sermons.create(formData);
+                    savedItemId = created?.id || '';
                 }
                 break;
             case 'bulletin':
@@ -906,34 +1132,40 @@ export default function AdminPage() {
                 if (isEditing) {
                     await Bulletins.update(editingItem.id, formData);
                 } else {
-                    await Bulletins.create(formData);
+                    const created = await Bulletins.create(formData);
+                    savedItemId = created?.id || '';
                 }
                 break;
             case 'banner':
                 if (isEditing) {
                     await HomeBannerMessages.update(editingItem.id, formData);
                 } else {
-                    await HomeBannerMessages.create(formData);
+                    const created = await HomeBannerMessages.create(formData);
+                    savedItemId = created?.id || '';
                 }
                 break;
             case 'heroSlide':
                 if (isEditing && Array.isArray(formData)) {
                     const [firstSlide, ...additionalSlides] = formData;
                     await HeroSlide.update(editingItem.id, firstSlide);
-                    await Promise.all(additionalSlides.map((slideData) => HeroSlide.create(slideData)));
+                    const createdSlides = await Promise.all(additionalSlides.map((slideData) => HeroSlide.create(slideData)));
+                    savedItemId = [editingItem.id, ...createdSlides.map((slide) => slide?.id)].filter(Boolean).join(', ');
                 } else if (isEditing) {
                     await HeroSlide.update(editingItem.id, formData);
                 } else if (Array.isArray(formData)) {
-                    await Promise.all(formData.map((slideData) => HeroSlide.create(slideData)));
+                    const createdSlides = await Promise.all(formData.map((slideData) => HeroSlide.create(slideData)));
+                    savedItemId = createdSlides.map((slide) => slide?.id).filter(Boolean).join(', ');
                 } else {
-                    await HeroSlide.create(formData);
+                    const created = await HeroSlide.create(formData);
+                    savedItemId = created?.id || '';
                 }
                 break;
             case 'sitePopup':
                 if (isEditing) {
                     await SitePopups.update(editingItem.id, prepareSitePopupData(formData));
                 } else {
-                    await SitePopups.create(prepareSitePopupData(formData));
+                    const created = await SitePopups.create(prepareSitePopupData(formData));
+                    savedItemId = created?.id || '';
                 }
                 break;
             default:
@@ -941,6 +1173,18 @@ export default function AdminPage() {
                 return;
         }
 
+        await logAdminActivity({
+          action: isEditing ? 'updated' : 'created',
+          section: logMeta.section,
+          itemType: logMeta.itemType,
+          itemId: savedItemId,
+          itemLabel: getItemLabel(formView, formData),
+          details: {
+            item_count: savedItemCount,
+            status: Array.isArray(formData) ? '' : formData.status || '',
+            image_url: Array.isArray(formData) ? '' : formData.image_url || formData.image_upload || '',
+          },
+        });
         await refreshDataForType(formView);
         setFormView(null);
         setEditingItem(null);
@@ -962,7 +1206,14 @@ export default function AdminPage() {
     setLoginError('');
     setLoginNotice('');
     try {
-      await User.signIn(loginEmail, loginPassword);
+      const signedInUser = await User.signIn(loginEmail, loginPassword);
+      await logAdminActivity({
+        action: 'signed_in',
+        section: 'Authentication',
+        itemType: 'admin session',
+        itemLabel: String(loginEmail || signedInUser?.email || '').trim().toLowerCase(),
+        actor: signedInUser,
+      });
       await checkUserAndLoadData();
     } catch (error) {
       setLoginError(error.message || 'Unable to sign in.');
@@ -973,6 +1224,12 @@ export default function AdminPage() {
 
   const handleSignOut = async () => {
     window.clearTimeout(inactivityTimerRef.current);
+    await logAdminActivity({
+      action: 'signed_out',
+      section: 'Authentication',
+      itemType: 'admin session',
+      itemLabel: currentAdmin?.email || '',
+    });
     await User.logout();
     setIsAdmin(false);
     setCurrentAdmin(null);
@@ -983,6 +1240,48 @@ export default function AdminPage() {
     setFormView(null);
     setLoginNotice('');
     setAdminLoadError('');
+  };
+
+  const handleCreateSiteAdmin = async ({ email, temporaryPassword }) => {
+    const token = await firebaseAuth?.currentUser?.getIdToken();
+    if (!token) {
+      throw new Error('Please sign in again before creating a site administrator.');
+    }
+
+    const response = await fetch('/api/admin/create-site-admin', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email,
+        temporaryPassword,
+        host: window.location.host,
+        protocol: window.location.protocol.replace(':', ''),
+      }),
+    });
+
+    const body = await response.json().catch(() => null);
+    if (!response.ok) {
+      throw new Error([body?.error, body?.detail].filter(Boolean).join(' ') || 'Unable to create the site administrator.');
+    }
+
+    await logAdminActivity({
+      action: 'created_admin',
+      section: 'Developer Panel',
+      itemType: 'site administrator',
+      itemId: body.uid,
+      itemLabel: email,
+      details: {
+        invitation_email_sent: true,
+        existing_user: body.existingUser === true,
+        name_collected_on_first_sign_in: true,
+      },
+    });
+    await loadAdminProfiles(currentAdmin);
+    await loadAdminActivityLogs();
+    return body;
   };
 
   const handlePrivacyNoticeScroll = () => {
@@ -1028,6 +1327,13 @@ export default function AdminPage() {
       setShowAdminNamePrompt(false);
       setPrivacyNoticeRead(false);
       setShowPrivacyNotice(true);
+      await logAdminActivity({
+        action: 'updated',
+        section: 'Admin Profile',
+        itemType: 'admin profile',
+        itemId: currentAdmin.id,
+        itemLabel: `${firstName} ${lastName}`,
+      });
     } catch (error) {
       console.error('Unable to save admin name:', error);
       window.alert(getSaveErrorMessage(error));
@@ -1068,6 +1374,13 @@ export default function AdminPage() {
       setAdminProfiles((profiles) => profiles.map((profile) => (
         profile.id === updatedProfile.id ? updatedProfile : profile
       )));
+      await logAdminActivity({
+        action: 'uploaded',
+        section: 'Admin Profile',
+        itemType: 'admin profile photo',
+        itemId: currentAdmin.id,
+        itemLabel: file.name,
+      });
     } catch (error) {
       console.error('Unable to upload admin profile photo:', error);
       window.alert(getSaveErrorMessage(error));
@@ -1095,16 +1408,16 @@ export default function AdminPage() {
               <p className="mt-1 font-semibold text-red-700">Please contact the main web developer for admin sign-in details.</p>
             </div>
             {loginNotice && (
-              <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
                 {loginNotice}
               </div>
             )}
             <div>
-              <label htmlFor="admin_email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <label htmlFor="admin_email" className="block text-sm font-medium text-gray-700 mb-1">Email<RequiredStar /></label>
               <Input id="admin_email" type="email" autoComplete="email" value={loginEmail} onChange={(event) => setLoginEmail(event.target.value)} required />
             </div>
             <div>
-              <label htmlFor="admin_password" className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+              <label htmlFor="admin_password" className="block text-sm font-medium text-gray-700 mb-1">Password<RequiredStar /></label>
               <Input id="admin_password" type="password" autoComplete="current-password" value={loginPassword} onChange={(event) => setLoginPassword(event.target.value)} required />
             </div>
             {loginError && <p className="text-sm text-red-600">{loginError}</p>}
@@ -1171,7 +1484,21 @@ export default function AdminPage() {
       case 'banner':
         return <BannerForm banner={editingItem} onSubmit={handleFormSubmit} onCancel={handleCancelForm} />;
       case 'heroSlide':
-        return <HeroSlideForm slide={editingItem} onSubmit={handleFormSubmit} onCancel={handleCancelForm} />;
+        return <HeroSlideForm
+          slide={editingItem}
+          onSubmit={handleFormSubmit}
+          onCancel={handleCancelForm}
+          onImageUpload={(upload) => logAdminActivity({
+            action: 'uploaded',
+            section: 'Hero Slideshow',
+            itemType: 'hero image',
+            itemLabel: upload.filenames?.join(', ') || `${upload.count} hero image upload`,
+            details: {
+              count: upload.count,
+              filenames: upload.filenames || [],
+            },
+          })}
+        />;
       case 'sitePopup':
         return <SitePopupForm popup={editingItem} onSubmit={handleFormSubmit} onCancel={handleCancelForm} />;
       default:
@@ -1269,6 +1596,17 @@ export default function AdminPage() {
           onScheduleBroadcast={handleScheduleNewsletterBroadcast}
           onMarkBroadcastSent={handleMarkNewsletterBroadcastSent}
         />;
+      case 'developer':
+        return canViewDeveloperPanel
+          ? <DeveloperPanel
+              logs={adminActivityLogs}
+              admins={adminProfiles}
+              loading={loadingDeveloperLogs}
+              onRefresh={loadAdminActivityLogs}
+              onCreateAdmin={handleCreateSiteAdmin}
+              canManageAdmins={canManageSiteAdmins}
+            />
+          : null;
       default:
         return null;
     }
@@ -1288,7 +1626,7 @@ export default function AdminPage() {
             </div>
             <div className="space-y-4">
               <div>
-                <label htmlFor="admin_first_name" className="mb-1 block text-sm font-semibold text-gray-700">First Name</label>
+                <label htmlFor="admin_first_name" className="mb-1 block text-sm font-semibold text-gray-700">First Name<RequiredStar /></label>
                 <Input
                   id="admin_first_name"
                   value={adminFirstNameInput}
@@ -1298,7 +1636,7 @@ export default function AdminPage() {
                 />
               </div>
               <div>
-                <label htmlFor="admin_last_name" className="mb-1 block text-sm font-semibold text-gray-700">Last Name</label>
+                <label htmlFor="admin_last_name" className="mb-1 block text-sm font-semibold text-gray-700">Last Name<RequiredStar /></label>
                 <Input
                   id="admin_last_name"
                   value={adminLastNameInput}
@@ -1367,7 +1705,7 @@ export default function AdminPage() {
                   <h1 className="text-2xl font-bold leading-tight text-gray-950">Admin Panel</h1>
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-amber-800 ring-1 ring-amber-200">
                     <ShieldCheck className="h-3.5 w-3.5" />
-                    Site Administrator
+                    {adminRoleLabel}
                   </span>
                 </div>
                 <p className="mt-1 truncate text-sm text-gray-600">
@@ -1485,6 +1823,15 @@ export default function AdminPage() {
             >
               <Mail className="w-5 h-5" /> Newsletter
             </Button>
+            {canViewDeveloperPanel && (
+              <Button
+                variant={view === 'developer' ? 'default' : 'outline'}
+                onClick={() => { setView('developer'); setFormView(null); }}
+                className={`gap-2 ${view === 'developer' ? 'bg-amber-600 hover:bg-amber-700' : ''}`}
+              >
+                <Code2 className="w-5 h-5" /> Developer Panel
+              </Button>
+            )}
         </div>
         
         {renderContent()}

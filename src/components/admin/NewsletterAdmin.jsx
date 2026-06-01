@@ -19,17 +19,38 @@ function formatDate(value) {
   });
 }
 
+function FieldLabel({ children, required = false }) {
+  return (
+    <label className="mb-1 block text-sm font-semibold text-gray-700">
+      {children}
+      {required && <span className="ml-1 text-red-600">*</span>}
+    </label>
+  );
+}
+
 function TemplateEditor({ template, onSave, onSendTestEmail, testEmail }) {
   const [formData, setFormData] = useState(template);
   const [saving, setSaving] = useState(false);
   const [sendingTest, setSendingTest] = useState(false);
+  const [templateErrors, setTemplateErrors] = useState({});
 
   useEffect(() => {
     setFormData(template);
+    setTemplateErrors({});
   }, [template]);
 
   const handleChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+    setTemplateErrors((errors) => ({ ...errors, [field]: "" }));
+  };
+
+  const validateTemplate = () => {
+    const nextErrors = {};
+    if (!String(formData.subject || "").trim()) nextErrors.subject = "Enter a subject.";
+    if (!String(formData.heading || "").trim()) nextErrors.heading = "Enter a heading.";
+    if (!String(formData.body || "").trim()) nextErrors.body = "Enter the email body.";
+    setTemplateErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
   };
 
   const handleSendTest = async () => {
@@ -48,6 +69,7 @@ function TemplateEditor({ template, onSave, onSendTestEmail, testEmail }) {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    if (!validateTemplate()) return;
     setSaving(true);
     try {
       await onSave(formData.id, formData);
@@ -57,42 +79,63 @@ function TemplateEditor({ template, onSave, onSendTestEmail, testEmail }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 rounded-lg border bg-white p-5 shadow-sm">
+    <form onSubmit={handleSubmit} className="space-y-4 rounded-lg border bg-white p-5 shadow-sm" noValidate>
       <div>
         <h3 className="text-lg font-bold text-gray-900">{formData.name}</h3>
         <p className="text-xs text-gray-500">
           Available placeholders: [subscriber name], [first name], [last name], [subscriber email], [unsubscribe link], [support phone], [support email]
         </p>
       </div>
+      {Object.values(templateErrors).some(Boolean) && (
+        <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
+          Please complete the highlighted required fields before saving this template.
+        </p>
+      )}
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div>
-          <label className="mb-1 block text-sm font-semibold text-gray-700">Subject</label>
-          <Input value={formData.subject || ""} onChange={(event) => handleChange("subject", event.target.value)} required />
+          <FieldLabel required>Subject</FieldLabel>
+          <Input
+            value={formData.subject || ""}
+            onChange={(event) => handleChange("subject", event.target.value)}
+            className={templateErrors.subject ? "border-red-500 focus-visible:ring-red-500" : ""}
+          />
+          {templateErrors.subject && <p className="mt-1 text-xs font-semibold text-red-600">{templateErrors.subject}</p>}
         </div>
         <div>
-          <label className="mb-1 block text-sm font-semibold text-gray-700">Heading</label>
-          <Input value={formData.heading || ""} onChange={(event) => handleChange("heading", event.target.value)} required />
+          <FieldLabel required>Heading</FieldLabel>
+          <Input
+            value={formData.heading || ""}
+            onChange={(event) => handleChange("heading", event.target.value)}
+            className={templateErrors.heading ? "border-red-500 focus-visible:ring-red-500" : ""}
+          />
+          {templateErrors.heading && <p className="mt-1 text-xs font-semibold text-red-600">{templateErrors.heading}</p>}
         </div>
       </div>
 
       <div>
-        <label className="mb-1 block text-sm font-semibold text-gray-700">Email Body</label>
-        <Textarea value={formData.body || ""} onChange={(event) => handleChange("body", event.target.value)} rows={9} required />
+        <FieldLabel required>Email Body</FieldLabel>
+        <Textarea
+          value={formData.body || ""}
+          onChange={(event) => handleChange("body", event.target.value)}
+          rows={9}
+          className={templateErrors.body ? "border-red-500 focus-visible:ring-red-500" : ""}
+        />
+        {templateErrors.body && <p className="mt-1 text-xs font-semibold text-red-600">{templateErrors.body}</p>}
       </div>
 
       <div>
-        <label className="mb-1 block text-sm font-semibold text-gray-700">Footer / Unsubscribe Text</label>
+        <FieldLabel>Footer / Unsubscribe Text</FieldLabel>
         <Textarea value={formData.footer || ""} onChange={(event) => handleChange("footer", event.target.value)} rows={4} />
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div>
-          <label className="mb-1 block text-sm font-semibold text-gray-700">Support Phone</label>
+          <FieldLabel>Support Phone</FieldLabel>
           <Input value={formData.support_phone || ""} onChange={(event) => handleChange("support_phone", event.target.value)} />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-semibold text-gray-700">Support Email</label>
+          <FieldLabel>Support Email</FieldLabel>
           <Input type="email" value={formData.support_email || ""} onChange={(event) => handleChange("support_email", event.target.value)} />
         </div>
       </div>
@@ -169,6 +212,8 @@ export default function NewsletterAdmin({
   const [scheduledAt, setScheduledAt] = useState("");
   const [savingBroadcast, setSavingBroadcast] = useState(false);
   const [broadcastFilter, setBroadcastFilter] = useState("all");
+  const [broadcastErrors, setBroadcastErrors] = useState({});
+  const [subscriberErrors, setSubscriberErrors] = useState({});
   const processingScheduledIds = useRef(new Set());
 
   const normalizedTemplates = useMemo(() => {
@@ -236,6 +281,7 @@ export default function NewsletterAdmin({
             message: broadcast.message || "",
             attachments: broadcast.attachments || [],
             recipientIds: broadcast.recipient_ids || [],
+            notifyAdmins: true,
           });
           await onMarkBroadcastSent(broadcast.id, result, broadcast);
         } catch (error) {
@@ -256,7 +302,13 @@ export default function NewsletterAdmin({
     const normalizedFirstName = firstName.trim().replace(/\s+/g, " ");
     const normalizedLastName = lastName.trim().replace(/\s+/g, " ");
     const normalizedEmail = email.trim().toLowerCase();
-    if (!normalizedFirstName || !normalizedLastName || !normalizedEmail) return;
+    const nextErrors = {};
+    if (!normalizedFirstName) nextErrors.firstName = "Enter the first name.";
+    if (!normalizedLastName) nextErrors.lastName = "Enter the last name.";
+    if (!normalizedEmail) nextErrors.email = "Enter the email address.";
+    if (normalizedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) nextErrors.email = "Enter a valid email address.";
+    setSubscriberErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) return;
 
     setAdding(true);
     try {
@@ -268,6 +320,7 @@ export default function NewsletterAdmin({
       setFirstName("");
       setLastName("");
       setEmail("");
+      setSubscriberErrors({});
     } finally {
       setAdding(false);
     }
@@ -315,6 +368,7 @@ export default function NewsletterAdmin({
     setBroadcastAttachments([]);
     setScheduledAt("");
     setSelectedRecipientIds(activeRecipientIds);
+    setBroadcastErrors({});
   };
 
   const handleLoadBroadcast = (broadcast) => {
@@ -331,6 +385,7 @@ export default function NewsletterAdmin({
     const storedRecipients = broadcast.recipient_ids || [];
     setSelectedRecipientIds(storedRecipients.length > 0 ? storedRecipients.filter((id) => activeRecipientIds.includes(id)) : activeRecipientIds);
     setBroadcastStatus(`Loaded "${broadcast.subject || "Untitled broadcast"}" for editing.`);
+    setBroadcastErrors({});
   };
 
   const getBroadcastPayload = () => ({
@@ -341,6 +396,22 @@ export default function NewsletterAdmin({
     recipientIds: selectedActiveRecipientIds,
     scheduledAt,
   });
+
+  const validateBroadcast = ({ requireSchedule = false } = {}) => {
+    const nextErrors = {};
+    if (!broadcastSubject.trim()) nextErrors.subject = "Enter a subject.";
+    if (!broadcastMessage.trim()) nextErrors.message = "Enter the message.";
+    if (selectedRecipientCount === 0) nextErrors.recipients = "Select at least one recipient.";
+    if (requireSchedule && !scheduledAt) nextErrors.scheduledAt = "Choose a schedule date and time.";
+    setBroadcastErrors(nextErrors);
+
+    if (Object.keys(nextErrors).length > 0) {
+      setBroadcastStatus(`Please complete the highlighted required fields before ${requireSchedule ? "scheduling" : "sending"}.`);
+      return false;
+    }
+
+    return true;
+  };
 
   const handleSaveDraft = async () => {
     const payload = getBroadcastPayload();
@@ -362,11 +433,7 @@ export default function NewsletterAdmin({
 
   const handleSchedule = async () => {
     const payload = getBroadcastPayload();
-    if (!payload.subject || !payload.message || selectedRecipientCount === 0) return;
-    if (!scheduledAt) {
-      setBroadcastStatus("Choose a schedule date and time.");
-      return;
-    }
+    if (!validateBroadcast({ requireSchedule: true })) return;
     setSavingBroadcast(true);
     setBroadcastStatus("");
     try {
@@ -383,7 +450,7 @@ export default function NewsletterAdmin({
     event.preventDefault();
     const subject = broadcastSubject.trim();
     const message = broadcastMessage.trim();
-    if (!subject || !message || selectedRecipientCount === 0) return;
+    if (!validateBroadcast()) return;
 
     if (!window.confirm(`Send this broadcast to ${selectedRecipientCount} selected subscriber${selectedRecipientCount === 1 ? "" : "s"}?`)) return;
 
@@ -427,7 +494,7 @@ export default function NewsletterAdmin({
           <Badge className="bg-amber-600">{activeCount} active recipients</Badge>
         </div>
 
-        <form onSubmit={handleBroadcastSubmit} className="space-y-4">
+        <form onSubmit={handleBroadcastSubmit} className="space-y-4" noValidate>
           {editingBroadcastId && (
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-amber-200 bg-amber-50 px-4 py-3">
               <p className="text-sm font-semibold text-amber-900">Editing a saved broadcast.</p>
@@ -437,45 +504,58 @@ export default function NewsletterAdmin({
             </div>
           )}
           <div>
-            <label className="mb-1 block text-sm font-semibold text-gray-700">Subject</label>
+            <FieldLabel required>Subject</FieldLabel>
             <Input
               value={broadcastSubject}
-              onChange={(event) => setBroadcastSubject(event.target.value)}
+              onChange={(event) => {
+                setBroadcastSubject(event.target.value);
+                setBroadcastErrors((errors) => ({ ...errors, subject: "" }));
+              }}
               placeholder="Email subject"
               disabled={sendingBroadcast}
-              required
+              className={broadcastErrors.subject ? "border-red-500 focus-visible:ring-red-500" : ""}
             />
+            {broadcastErrors.subject && <p className="mt-1 text-xs font-semibold text-red-600">{broadcastErrors.subject}</p>}
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-semibold text-gray-700">Schedule Date and Time</label>
+            <FieldLabel>Schedule Date and Time</FieldLabel>
             <Input
               type="datetime-local"
               value={scheduledAt}
-              onChange={(event) => setScheduledAt(event.target.value)}
+              onChange={(event) => {
+                setScheduledAt(event.target.value);
+                setBroadcastErrors((errors) => ({ ...errors, scheduledAt: "" }));
+              }}
               disabled={sendingBroadcast || savingBroadcast}
+              className={broadcastErrors.scheduledAt ? "border-red-500 focus-visible:ring-red-500" : ""}
             />
             <p className="mt-1 text-xs text-gray-500">Save as scheduled when this message should be sent later.</p>
+            {broadcastErrors.scheduledAt && <p className="mt-1 text-xs font-semibold text-red-600">{broadcastErrors.scheduledAt}</p>}
           </div>
           <div>
-            <label className="mb-1 block text-sm font-semibold text-gray-700">Message</label>
+            <FieldLabel required>Message</FieldLabel>
             <Textarea
               value={broadcastMessage}
-              onChange={(event) => setBroadcastMessage(event.target.value)}
+              onChange={(event) => {
+                setBroadcastMessage(event.target.value);
+                setBroadcastErrors((errors) => ({ ...errors, message: "" }));
+              }}
               placeholder="Write the full message for subscribers..."
               rows={10}
               disabled={sendingBroadcast}
-              required
+              className={broadcastErrors.message ? "border-red-500 focus-visible:ring-red-500" : ""}
             />
+            {broadcastErrors.message && <p className="mt-1 text-xs font-semibold text-red-600">{broadcastErrors.message}</p>}
             <p className="mt-1 text-xs text-gray-500">
               Available placeholders: [subscriber name], [first name], [last name], [subscriber email], [unsubscribe link]
             </p>
           </div>
 
-          <div className="rounded-md border bg-white p-4">
+          <div className={`rounded-md border bg-white p-4 ${broadcastErrors.recipients ? "border-red-500" : ""}`}>
             <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
               <div>
-                <p className="text-sm font-semibold text-gray-800">Recipients</p>
+                <p className="text-sm font-semibold text-gray-800">Recipients<span className="ml-1 text-red-600">*</span></p>
                 <p className="text-xs text-gray-600">
                   {selectedRecipientCount} of {activeCount} active subscriber{activeCount === 1 ? "" : "s"} selected
                 </p>
@@ -484,7 +564,10 @@ export default function NewsletterAdmin({
                 <input
                   type="checkbox"
                   checked={allActiveSelected}
-                  onChange={(event) => handleToggleAllRecipients(event.target.checked)}
+                  onChange={(event) => {
+                    handleToggleAllRecipients(event.target.checked);
+                    setBroadcastErrors((errors) => ({ ...errors, recipients: "" }));
+                  }}
                   disabled={sendingBroadcast || activeRecipientIds.length === 0}
                   className="h-4 w-4 rounded border-gray-300 text-amber-600 focus:ring-amber-600"
                 />
@@ -504,7 +587,10 @@ export default function NewsletterAdmin({
                       <input
                         type="checkbox"
                         checked={selectedActiveRecipientIds.includes(subscriberId)}
-                        onChange={(event) => handleToggleRecipient(subscriberId, event.target.checked)}
+                        onChange={(event) => {
+                          handleToggleRecipient(subscriberId, event.target.checked);
+                          setBroadcastErrors((errors) => ({ ...errors, recipients: "" }));
+                        }}
                         disabled={sendingBroadcast}
                         className="h-4 w-4 rounded border-gray-300 text-amber-600 focus:ring-amber-600"
                       />
@@ -517,6 +603,7 @@ export default function NewsletterAdmin({
                 })
               )}
             </div>
+            {broadcastErrors.recipients && <p className="mt-2 text-xs font-semibold text-red-600">{broadcastErrors.recipients}</p>}
           </div>
 
           <div className="rounded-md border border-dashed border-amber-300 bg-amber-50/50 p-4">
@@ -551,7 +638,7 @@ export default function NewsletterAdmin({
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <Button type="submit" className="bg-amber-600 hover:bg-amber-700" disabled={sendingBroadcast || selectedRecipientCount === 0}>
+            <Button type="submit" className="bg-amber-600 hover:bg-amber-700" disabled={sendingBroadcast}>
               <Send className="mr-2 h-4 w-4" />
               {sendingBroadcast ? "Sending..." : `Send to ${selectedRecipientCount}`}
             </Button>
@@ -559,11 +646,11 @@ export default function NewsletterAdmin({
               <Save className="mr-2 h-4 w-4" />
               {savingBroadcast ? "Saving..." : "Save Draft"}
             </Button>
-            <Button type="button" variant="outline" onClick={handleSchedule} disabled={savingBroadcast || sendingBroadcast || selectedRecipientCount === 0}>
+            <Button type="button" variant="outline" onClick={handleSchedule} disabled={savingBroadcast || sendingBroadcast}>
               {savingBroadcast ? "Scheduling..." : "Schedule"}
             </Button>
             {broadcastStatus && (
-              <p className={`text-sm font-semibold ${broadcastStatus.includes("not sent") || broadcastStatus.includes("failed") ? "text-red-700" : "text-green-700"}`}>
+              <p className={`text-sm font-semibold ${Object.values(broadcastErrors).some(Boolean) || broadcastStatus.includes("not sent") || broadcastStatus.includes("failed") || broadcastStatus.includes("not scheduled") ? "text-red-700" : "text-green-700"}`}>
                 {broadcastStatus}
               </p>
             )}
@@ -660,31 +747,52 @@ export default function NewsletterAdmin({
           </div>
         </div>
 
-        <form onSubmit={handleAdd} className="mb-5 grid grid-cols-1 gap-3 md:grid-cols-[1fr_1fr_1.4fr_auto]">
-          <Input
-            type="text"
-            value={firstName}
-            onChange={(event) => setFirstName(event.target.value)}
-            placeholder="First name"
-            autoComplete="given-name"
-            required
-          />
-          <Input
-            type="text"
-            value={lastName}
-            onChange={(event) => setLastName(event.target.value)}
-            placeholder="Last name"
-            autoComplete="family-name"
-            required
-          />
-          <Input
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            placeholder="Add email address"
-            autoComplete="email"
-            required
-          />
+        <form onSubmit={handleAdd} className="mb-5 grid grid-cols-1 items-end gap-3 md:grid-cols-[1fr_1fr_1.4fr_auto]" noValidate>
+          <div>
+            <FieldLabel required>First Name</FieldLabel>
+            <Input
+              type="text"
+              value={firstName}
+              onChange={(event) => {
+                setFirstName(event.target.value);
+                setSubscriberErrors((errors) => ({ ...errors, firstName: "" }));
+              }}
+              placeholder="First name"
+              autoComplete="given-name"
+              className={subscriberErrors.firstName ? "border-red-500 focus-visible:ring-red-500" : ""}
+            />
+            {subscriberErrors.firstName && <p className="mt-1 text-xs font-semibold text-red-600">{subscriberErrors.firstName}</p>}
+          </div>
+          <div>
+            <FieldLabel required>Last Name</FieldLabel>
+            <Input
+              type="text"
+              value={lastName}
+              onChange={(event) => {
+                setLastName(event.target.value);
+                setSubscriberErrors((errors) => ({ ...errors, lastName: "" }));
+              }}
+              placeholder="Last name"
+              autoComplete="family-name"
+              className={subscriberErrors.lastName ? "border-red-500 focus-visible:ring-red-500" : ""}
+            />
+            {subscriberErrors.lastName && <p className="mt-1 text-xs font-semibold text-red-600">{subscriberErrors.lastName}</p>}
+          </div>
+          <div>
+            <FieldLabel required>Email Address</FieldLabel>
+            <Input
+              type="email"
+              value={email}
+              onChange={(event) => {
+                setEmail(event.target.value);
+                setSubscriberErrors((errors) => ({ ...errors, email: "" }));
+              }}
+              placeholder="Add email address"
+              autoComplete="email"
+              className={subscriberErrors.email ? "border-red-500 focus-visible:ring-red-500" : ""}
+            />
+            {subscriberErrors.email && <p className="mt-1 text-xs font-semibold text-red-600">{subscriberErrors.email}</p>}
+          </div>
           <Button type="submit" className="bg-amber-600 hover:bg-amber-700" disabled={adding}>
             <PlusCircle className="mr-2 h-4 w-4" />
             {adding ? "Adding..." : "Add Subscriber"}
@@ -745,7 +853,7 @@ export default function NewsletterAdmin({
           <p className="mt-1 text-sm text-gray-600">Edit the welcome email and the message sent when someone tries to subscribe again.</p>
         </div>
         <div className="mb-5 max-w-md">
-          <label className="mb-1 block text-sm font-semibold text-gray-700">Test Email Address</label>
+          <FieldLabel>Test Email Address</FieldLabel>
           <Input type="email" value={testEmail} onChange={(event) => setTestEmail(event.target.value)} placeholder="Send a test to..." />
         </div>
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">

@@ -20,6 +20,7 @@ export default function AnnouncementForm({ announcement, onSubmit, onCancel }) {
     status: 'Active'
   });
   const [isUploading, setIsUploading] = useState(false);
+  const [validationErrors, setValidationErrors] = useState({});
 
   useEffect(() => {
     // If an announcement is passed, format the date correctly for the input
@@ -34,11 +35,13 @@ export default function AnnouncementForm({ announcement, onSubmit, onCancel }) {
             }
         }
         setFormData(initialData);
+        setValidationErrors({});
     }
   }, [announcement]);
 
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+    setValidationErrors(prev => ({ ...prev, [field]: '' }));
   };
 
   const handleFileChange = async (e) => {
@@ -59,6 +62,11 @@ export default function AnnouncementForm({ announcement, onSubmit, onCancel }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    const nextErrors = {};
+    if (!String(formData.title || '').trim()) nextErrors.title = 'Enter the announcement title.';
+    if (!String(formData.content || '').trim()) nextErrors.content = 'Enter the announcement content.';
+    setValidationErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) return;
     onSubmit(formData);
   };
   
@@ -71,13 +79,24 @@ export default function AnnouncementForm({ announcement, onSubmit, onCancel }) {
   ];
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 bg-white p-8 rounded-lg shadow-md">
+    <form onSubmit={handleSubmit} className="space-y-6 bg-white p-8 rounded-lg shadow-md" noValidate>
       <h2 className="text-2xl font-bold text-gray-800">{announcement ? 'Edit' : 'Create'} Announcement</h2>
+      {Object.values(validationErrors).some(Boolean) && (
+        <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
+          Please complete the highlighted required fields before saving this announcement.
+        </p>
+      )}
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">Title</label>
-          <Input id="title" value={formData.title} onChange={e => handleChange('title', e.target.value)} required />
+          <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">Title<span className="ml-1 text-red-600">*</span></label>
+          <Input
+            id="title"
+            value={formData.title}
+            onChange={e => handleChange('title', e.target.value)}
+            className={validationErrors.title ? "border-red-500 focus-visible:ring-red-500" : ""}
+          />
+          {validationErrors.title && <p className="mt-1 text-xs font-semibold text-red-600">{validationErrors.title}</p>}
         </div>
 
         <div>
@@ -121,8 +140,15 @@ export default function AnnouncementForm({ announcement, onSubmit, onCancel }) {
       </div>
 
       <div>
-        <label htmlFor="content" className="block text-sm font-medium text-gray-700 mb-1">Content</label>
-        <Textarea id="content" value={formData.content} onChange={e => handleChange('content', e.target.value)} rows={5} required />
+        <label htmlFor="content" className="block text-sm font-medium text-gray-700 mb-1">Content<span className="ml-1 text-red-600">*</span></label>
+        <Textarea
+          id="content"
+          value={formData.content}
+          onChange={e => handleChange('content', e.target.value)}
+          rows={5}
+          className={validationErrors.content ? "border-red-500 focus-visible:ring-red-500" : ""}
+        />
+        {validationErrors.content && <p className="mt-1 text-xs font-semibold text-red-600">{validationErrors.content}</p>}
       </div>
 
       <div>

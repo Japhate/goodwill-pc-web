@@ -8,7 +8,7 @@ import { Loader2, Upload } from "lucide-react";
 
 const BIBLE_STUDY_ZOOM = "https://us06web.zoom.us/j/82013337566?pwd=mULnQC1Zjg5GWkoTTKGvx3PyAFaCeZ.1";
 
-export default function HeroSlideForm({ slide, onSubmit, onCancel }) {
+export default function HeroSlideForm({ slide, onSubmit, onCancel, onImageUpload }) {
   const [formData, setFormData] = useState({
     image_url: "",
     alt_text: "",
@@ -31,9 +31,11 @@ export default function HeroSlideForm({ slide, onSubmit, onCancel }) {
   const [uploading, setUploading] = useState(false);
   const [uploadedImages, setUploadedImages] = useState([]);
   const [uploadError, setUploadError] = useState("");
+  const [validationErrors, setValidationErrors] = useState({});
 
   const handleChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+    setValidationErrors((prev) => ({ ...prev, [field]: "" }));
   };
 
   const handleZoomSlideChange = (checked) => {
@@ -59,6 +61,11 @@ export default function HeroSlideForm({ slide, onSubmit, onCancel }) {
       const imageUrls = uploaded.map(({ file_url }) => file_url);
       setUploadedImages(imageUrls);
       handleChange("image_url", imageUrls[0] || "");
+      onImageUpload?.({
+        count: imageUrls.length,
+        filenames: files.map((file) => file.name),
+        imageUrls,
+      });
     } catch (error) {
       console.error("Hero image upload failed:", error);
       setUploadError("Upload failed. Please try again.");
@@ -70,6 +77,15 @@ export default function HeroSlideForm({ slide, onSubmit, onCancel }) {
   const handleSubmit = (e) => {
     e.preventDefault();
     const order = Number(formData.order);
+    const nextErrors = {};
+
+    if (!String(formData.image_url || "").trim()) nextErrors.image_url = "Upload an image or paste an image URL.";
+    if (formData.is_priority_announcement) {
+      if (!formData.priority_start) nextErrors.priority_start = "Choose when this priority slide starts.";
+      if (!formData.priority_end) nextErrors.priority_end = "Choose when this priority slide ends.";
+    }
+    setValidationErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) return;
 
     if (uploadedImages.length > 1) {
       onSubmit(uploadedImages.map((imageUrl, index) => ({
@@ -89,10 +105,15 @@ export default function HeroSlideForm({ slide, onSubmit, onCancel }) {
         <CardTitle>{slide ? "Edit Slide" : "Add New Slide"}</CardTitle>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+          {Object.values(validationErrors).some(Boolean) && (
+            <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
+              Please complete the highlighted required fields before saving this slide.
+            </p>
+          )}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1">
-              Images *
+              Images<span className="ml-1 text-red-600">*</span>
             </label>
             <div className="flex gap-2 mb-2">
               <label className="cursor-pointer flex items-center gap-2 bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded-md text-sm transition-colors">
@@ -111,8 +132,9 @@ export default function HeroSlideForm({ slide, onSubmit, onCancel }) {
                 handleChange("image_url", e.target.value);
               }}
               placeholder="https://..."
-              required
+              className={validationErrors.image_url ? "border-red-500 focus-visible:ring-red-500" : ""}
             />
+            {validationErrors.image_url && <p className="text-xs font-semibold text-red-600 mt-2">{validationErrors.image_url}</p>}
             {uploadError && <p className="text-xs text-red-600 mt-2">{uploadError}</p>}
             {uploadedImages.length > 1 ? (
               <>
@@ -211,20 +233,24 @@ export default function HeroSlideForm({ slide, onSubmit, onCancel }) {
             {formData.is_priority_announcement && (
               <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Starts</label>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Starts<span className="ml-1 text-red-600">*</span></label>
                   <Input
                     type="datetime-local"
                     value={formData.priority_start || ""}
                     onChange={(e) => handleChange("priority_start", e.target.value)}
+                    className={validationErrors.priority_start ? "border-red-500 focus-visible:ring-red-500" : ""}
                   />
+                  {validationErrors.priority_start && <p className="mt-1 text-xs font-semibold text-red-600">{validationErrors.priority_start}</p>}
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Ends</label>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Ends<span className="ml-1 text-red-600">*</span></label>
                   <Input
                     type="datetime-local"
                     value={formData.priority_end || ""}
                     onChange={(e) => handleChange("priority_end", e.target.value)}
+                    className={validationErrors.priority_end ? "border-red-500 focus-visible:ring-red-500" : ""}
                   />
+                  {validationErrors.priority_end && <p className="mt-1 text-xs font-semibold text-red-600">{validationErrors.priority_end}</p>}
                 </div>
               </div>
             )}

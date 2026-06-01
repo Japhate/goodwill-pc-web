@@ -3,8 +3,11 @@ import fs from 'fs';
 import path from 'path';
 import cors from 'cors';
 import { fileURLToPath } from 'url';
-import { initializeApp, getApps } from 'firebase/app';
-import { doc, getDoc, getFirestore } from 'firebase/firestore';
+import { initializeApp as initializeClientApp, getApps as getClientApps } from 'firebase/app';
+import { doc, getDoc, getFirestore as getClientFirestore } from 'firebase/firestore';
+import { applicationDefault, cert, getApps as getAdminApps, initializeApp as initializeAdminApp } from 'firebase-admin/app';
+import { getAuth as getAdminAuth } from 'firebase-admin/auth';
+import { getFirestore as getAdminFirestore } from 'firebase-admin/firestore';
 import {
   getDefaultEmailTemplate,
   mergeEmailTemplate,
@@ -18,6 +21,7 @@ const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, '..');
 const DIST_DIR = path.join(ROOT_DIR, 'dist');
 const CANONICAL_HOST = 'www.goodwillpres.org';
+const SITE_DEVELOPER_EMAIL = 'nebajaphate@gmail.com';
 const LEGACY_HOSTS = new Set([
   'goodwillpresch1867.com',
   'www.goodwillpresch1867.com',
@@ -90,8 +94,58 @@ function getServerFirestore() {
   const config = getFirebaseServerConfig();
   if (!config) return null;
 
-  const app = getApps().find((firebaseApp) => firebaseApp.name === 'server') || initializeApp(config, 'server');
-  return getFirestore(app);
+  const app = getClientApps().find((firebaseApp) => firebaseApp.name === 'server') || initializeClientApp(config, 'server');
+  return getClientFirestore(app);
+}
+
+function getFirebaseAdminConfig() {
+  const projectId = process.env.FIREBASE_PROJECT_ID || process.env.VITE_FIREBASE_PROJECT_ID;
+  if (!projectId) return null;
+
+  if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
+    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+    return {
+      projectId,
+      credential: cert({
+        ...serviceAccount,
+        private_key: String(serviceAccount.private_key || '').replace(/\\n/g, '\n'),
+      }),
+    };
+  }
+
+  if (process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY) {
+    return {
+      projectId,
+      credential: cert({
+        projectId,
+        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+        privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+      }),
+    };
+  }
+
+  if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+    return {
+      projectId,
+      credential: applicationDefault(),
+    };
+  }
+
+  return null;
+}
+
+function getFirebaseAdminApp() {
+  const existing = getAdminApps().find((firebaseApp) => firebaseApp.name === 'server-admin');
+  if (existing) return existing;
+
+  const adminConfig = getFirebaseAdminConfig();
+  if (!adminConfig) {
+    const error = new Error('Firebase Admin credentials are not configured on the server.');
+    error.status = 500;
+    throw error;
+  }
+
+  return initializeAdminApp(adminConfig, 'server-admin');
 }
 
 function decodeBase64UrlJson(value) {
@@ -143,6 +197,46 @@ async function assertAdminRequest(req) {
   }
 
   return { uid, email: payload.email || '' };
+}
+
+async function assertDeveloperAdminRequest(req) {
+  const token = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '').trim();
+  if (!token) {
+    const error = new Error('Developer administrator authorization is required.');
+    error.status = 401;
+    throw error;
+  }
+
+  const app = getFirebaseAdminApp();
+  const decoded = await getAdminAuth(app).verifyIdToken(token);
+  const uid = decoded?.uid;
+  if (!uid) {
+    const error = new Error('Invalid developer administrator token.');
+    error.status = 401;
+    throw error;
+  }
+
+  const adminSnapshot = await getAdminFirestore(app).collection('admins').doc(uid).get();
+  if (!adminSnapshot.exists) {
+    const error = new Error('This account is not a site administrator.');
+    error.status = 403;
+    throw error;
+  }
+
+  const adminData = adminSnapshot.data() || {};
+  const email = normalizeEmail(adminData.email || decoded.email);
+  if (email !== SITE_DEVELOPER_EMAIL) {
+    const error = new Error('This action is limited to developer administrators.');
+    error.status = 403;
+    throw error;
+  }
+
+  return {
+    uid,
+    email,
+    firstName: normalizePersonName(adminData.first_name),
+    lastName: normalizePersonName(adminData.last_name),
+  };
 }
 
 async function readEmailTemplate(templateId) {
@@ -293,6 +387,117 @@ function renderBroadcastHtml({ subject, message, recipient, unsubscribeUrl }) {
       </div>
     `,
     text,
+  };
+}
+
+function buildAdminBroadcastNotificationEmail({ admin, subject, sent, failed, recipientCount }) {
+  const adminName = normalizePersonName([admin.firstName, admin.lastName].filter(Boolean).join(' ')) || 'Site administrator';
+  const escapedSubject = escapeHtml(subject);
+  const escapedAdminName = escapeHtml(adminName);
+  const sentLine = `${sent} subscriber${sent === 1 ? '' : 's'}`;
+  const failedLine = `${failed} failed`;
+
+  return {
+    subject: `Scheduled newsletter broadcast sent: ${subject}`,
+    text: [
+      `Hello ${adminName},`,
+      '',
+      `A scheduled Goodwill Presbyterian Church newsletter broadcast has been processed.`,
+      '',
+      `Subject: ${subject}`,
+      `Recipients selected: ${recipientCount}`,
+      `Sent: ${sent}`,
+      `Failed: ${failed}`,
+      '',
+      'Please sign in to the admin panel if you need to review the broadcast history.',
+      '',
+      'Goodwill Presbyterian Church Website',
+    ].join('\n'),
+    html: `
+      <div style="margin:0;padding:0;background:#f8f3ea;font-family:Arial,Helvetica,sans-serif;color:#2f241c;">
+        <div style="max-width:620px;margin:0 auto;padding:28px 18px;">
+          <div style="background:#ffffff;border:1px solid #eadcc7;border-radius:12px;overflow:hidden;">
+            <div style="background:#4b342a;color:#ffffff;padding:22px 26px;">
+              <p style="margin:0 0 8px;color:#f4d78d;font-size:12px;font-weight:bold;letter-spacing:0.08em;text-transform:uppercase;">Admin Notification</p>
+              <h1 style="margin:0;font-size:22px;line-height:1.3;">Scheduled newsletter broadcast sent</h1>
+            </div>
+            <div style="padding:26px;font-size:16px;line-height:1.6;">
+              <p style="margin:0 0 16px;">Hello ${escapedAdminName},</p>
+              <p style="margin:0 0 16px;">A scheduled Goodwill Presbyterian Church newsletter broadcast has been processed.</p>
+              <div style="background:#fbf7f0;border:1px solid #eadcc7;border-radius:10px;padding:16px;margin:18px 0;">
+                <p style="margin:0 0 8px;"><strong>Subject:</strong> ${escapedSubject}</p>
+                <p style="margin:0 0 8px;"><strong>Recipients selected:</strong> ${recipientCount}</p>
+                <p style="margin:0 0 8px;"><strong>Sent:</strong> ${sentLine}</p>
+                <p style="margin:0;"><strong>Failed:</strong> ${failedLine}</p>
+              </div>
+              <p style="margin:0;">Please sign in to the admin panel if you need to review the broadcast history.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    `,
+  };
+}
+
+function buildAdminInvitationEmail({ firstName, email, temporaryPassword, resetLink, invitedByName, siteUrl }) {
+  const recipientName = firstName || 'Administrator';
+  const escapedName = escapeHtml(recipientName);
+  const escapedEmail = escapeHtml(email);
+  const escapedPassword = escapeHtml(temporaryPassword);
+  const escapedResetLink = escapeHtml(resetLink);
+  const escapedInviter = escapeHtml(invitedByName || 'a developer administrator');
+  const escapedSiteUrl = escapeHtml(siteUrl);
+
+  return {
+    subject: 'Your Goodwill Presbyterian Church admin access',
+    text: [
+      `Hello ${recipientName},`,
+      '',
+      `You have been added as a site administrator for the Goodwill Presbyterian Church website by ${invitedByName || 'a developer administrator'}.`,
+      '',
+      `Admin email: ${email}`,
+      `Temporary password: ${temporaryPassword}`,
+      '',
+      'Please use the link below to change the temporary password to a password that only you know:',
+      resetLink,
+      '',
+      `After changing your password, you can sign in at: ${siteUrl}/Admin`,
+      'The first time you sign in, you will be asked to enter your first and last name before reviewing the admin privacy notice.',
+      '',
+      'If you did not expect this message, please contact the church website developer before signing in.',
+      '',
+      'Goodwill Presbyterian Church Website',
+    ].join('\n'),
+    html: `
+      <div style="margin:0;padding:0;background:#f8f3ea;font-family:Arial,Helvetica,sans-serif;color:#2f241c;">
+        <div style="max-width:640px;margin:0 auto;padding:30px 18px;">
+          <div style="background:#ffffff;border:1px solid #eadcc7;border-radius:12px;overflow:hidden;">
+            <div style="background:#4b342a;color:#ffffff;padding:24px 28px;">
+              <p style="margin:0 0 8px;color:#f4d78d;font-size:12px;font-weight:bold;letter-spacing:0.08em;text-transform:uppercase;">Site Administrator Access</p>
+              <h1 style="margin:0;font-size:24px;line-height:1.3;">Welcome to the Goodwill Presbyterian Church admin team</h1>
+            </div>
+            <div style="padding:28px;font-size:16px;line-height:1.6;">
+              <p style="margin:0 0 16px;">Hello ${escapedName},</p>
+              <p style="margin:0 0 16px;">You have been added as a site administrator for the Goodwill Presbyterian Church website by ${escapedInviter}.</p>
+              <div style="background:#fbf7f0;border:1px solid #eadcc7;border-radius:10px;padding:16px;margin:18px 0;">
+                <p style="margin:0 0 8px;"><strong>Admin email:</strong> ${escapedEmail}</p>
+                <p style="margin:0;"><strong>Temporary password:</strong> ${escapedPassword}</p>
+              </div>
+              <p style="margin:0 0 18px;">Please change the temporary password to a password that only you know before using the admin panel regularly.</p>
+              <p style="margin:0 0 22px;">
+                <a href="${escapedResetLink}" style="display:inline-block;background:#d97706;color:#ffffff;font-weight:bold;text-decoration:none;border-radius:8px;padding:12px 18px;">Change My Password</a>
+              </p>
+              <p style="margin:0 0 10px;">After changing your password, sign in at:</p>
+              <p style="margin:0;"><a href="${escapedSiteUrl}/Admin" style="color:#8a5a16;font-weight:bold;">${escapedSiteUrl}/Admin</a></p>
+              <p style="margin:18px 0 0;">The first time you sign in, you will be asked to enter your first and last name before reviewing the admin privacy notice.</p>
+            </div>
+            <div style="border-top:1px solid #eadcc7;background:#fbf7f0;padding:18px 28px;color:#6f6258;font-size:12px;line-height:1.5;">
+              If you did not expect this message, please contact the church website developer before signing in.
+            </div>
+          </div>
+        </div>
+      </div>
+    `,
   };
 }
 
@@ -572,6 +777,110 @@ app.post('/api/send-duplicate-subscription-email', async (req, res) => {
   }
 });
 
+app.post('/api/admin/create-site-admin', async (req, res) => {
+  let developerAdmin;
+  try {
+    developerAdmin = await assertDeveloperAdminRequest(req);
+  } catch (error) {
+    console.error('Create site admin authorization error', error?.message || error);
+    return res.status(error.status || 401).json({ error: error.message });
+  }
+
+  if (developerAdmin.email !== SITE_DEVELOPER_EMAIL) {
+    return res.status(403).json({ error: 'Only the main site developer can create site administrator accounts.' });
+  }
+
+  const email = normalizeEmail(req.body?.email);
+  const temporaryPassword = String(req.body?.temporaryPassword || req.body?.temporary_password || '').trim();
+  const siteProtocol = req.body?.protocol || 'https';
+  const siteHost = req.body?.host || CANONICAL_HOST;
+  const siteUrl = `${siteProtocol}://${siteHost}`;
+
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'A valid email address is required.' });
+  if (temporaryPassword.length < 8) return res.status(400).json({ error: 'Temporary password must be at least 8 characters.' });
+
+  try {
+    const app = getFirebaseAdminApp();
+    const auth = getAdminAuth(app);
+    const db = getAdminFirestore(app);
+    let userRecord;
+    let existingUser = false;
+
+    try {
+      userRecord = await auth.getUserByEmail(email);
+      existingUser = true;
+      userRecord = await auth.updateUser(userRecord.uid, {
+        password: temporaryPassword,
+        disabled: false,
+      });
+    } catch (error) {
+      if (error?.code !== 'auth/user-not-found') throw error;
+      userRecord = await auth.createUser({
+        email,
+        password: temporaryPassword,
+        emailVerified: false,
+        disabled: false,
+      });
+    }
+
+    const now = new Date().toISOString();
+    await db.collection('admins').doc(userRecord.uid).set({
+      first_name: '',
+      last_name: '',
+      email,
+      photo_url: '',
+      has_saved_name: false,
+      invited_by_uid: developerAdmin.uid,
+      invited_by_email: developerAdmin.email,
+      temporary_password_assigned: true,
+      must_change_password: true,
+      created_date: now,
+      updated_date: now,
+    }, { merge: true });
+
+    const resetLink = await auth.generatePasswordResetLink(email, {
+      url: `${siteUrl}/Admin`,
+      handleCodeInApp: false,
+    });
+    const invitedByName = [developerAdmin.firstName, developerAdmin.lastName].filter(Boolean).join(' ') || developerAdmin.email;
+    const invitation = buildAdminInvitationEmail({
+      email,
+      temporaryPassword,
+      resetLink,
+      invitedByName,
+      siteUrl,
+    });
+    const fromEmail = process.env.RESEND_FROM_EMAIL || 'Goodwill Presbyterian Church <onboarding@resend.dev>';
+    const emailResponse = await sendResendEmail({
+      from: fromEmail,
+      to: email,
+      subject: invitation.subject,
+      html: invitation.html,
+      text: invitation.text,
+    });
+
+    if (!emailResponse.ok) {
+      console.error('Admin invitation email error', emailResponse.body);
+      return res.status(502).json({
+        error: 'The administrator account was created, but the invitation email was not sent.',
+        detail: emailResponse.body.slice(0, 500),
+        uid: userRecord.uid,
+        existingUser,
+      });
+    }
+
+    res.json({
+      success: true,
+      uid: userRecord.uid,
+      email,
+      existingUser,
+    });
+  } catch (error) {
+    console.error('Create site admin error', error?.message || error);
+    res.status(error.status || 500).json({ error: error?.message || 'Unable to create the administrator account.' });
+  }
+});
+
 app.post('/api/send-newsletter-broadcast', async (req, res) => {
   try {
     await assertAdminRequest(req);
@@ -579,7 +888,7 @@ app.post('/api/send-newsletter-broadcast', async (req, res) => {
     return res.status(error.status || 401).json({ error: error.message });
   }
 
-  const { subject, message, recipients = [], attachments = [], host, protocol } = req.body || {};
+  const { subject, message, recipients = [], attachments = [], notifyAdmins = false, adminRecipients = [], host, protocol } = req.body || {};
   const normalizedSubject = String(subject || '').trim();
   const normalizedMessage = String(message || '').trim();
   const activeRecipients = recipients
@@ -680,7 +989,42 @@ app.post('/api/send-newsletter-broadcast', async (req, res) => {
 
   const sent = results.filter((result) => result.success).length;
   const failed = results.length - sent;
-  res.json({ success: failed === 0, sent, failed, results });
+  const adminNotificationResults = [];
+
+  if (notifyAdmins) {
+    const uniqueAdmins = Array.from(new Map(adminRecipients
+      .map((admin) => ({
+        email: normalizeEmail(admin.email),
+        firstName: normalizePersonName(admin.firstName || admin.first_name),
+        lastName: normalizePersonName(admin.lastName || admin.last_name),
+      }))
+      .filter((admin) => admin.email)
+      .map((admin) => [admin.email, admin])).values());
+
+    for (const admin of uniqueAdmins) {
+      const notification = buildAdminBroadcastNotificationEmail({
+        admin,
+        subject: normalizedSubject,
+        sent,
+        failed,
+        recipientCount: activeRecipients.length,
+      });
+      const response = await sendResendEmail({
+        from: fromEmail,
+        to: admin.email,
+        subject: notification.subject,
+        html: notification.html,
+        text: notification.text,
+      });
+      adminNotificationResults.push({
+        email: admin.email,
+        success: response.ok,
+        detail: response.ok ? '' : response.body.slice(0, 300),
+      });
+    }
+  }
+
+  res.json({ success: failed === 0, sent, failed, results, adminNotifications: adminNotificationResults });
 });
 
 const useLocalViteServer = process.env.LOCAL_VITE_DEV === 'true';

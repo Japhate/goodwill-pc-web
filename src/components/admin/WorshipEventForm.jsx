@@ -14,9 +14,16 @@ export default function WorshipEventForm({ event, onSubmit, onCancel }) {
     description: "",
     is_completed: false
   });
+  const [validationErrors, setValidationErrors] = useState({});
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    const nextErrors = {};
+    if (!String(formData.title || "").trim()) nextErrors.title = "Enter the event title.";
+    if (!formData.event_date) nextErrors.event_date = "Choose the event date.";
+    if (!formData.month_group) nextErrors.month_group = "Choose the month group.";
+    setValidationErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) return;
     onSubmit(formData);
   };
 
@@ -25,6 +32,7 @@ export default function WorshipEventForm({ event, onSubmit, onCancel }) {
       ...prev,
       [field]: value
     }));
+    setValidationErrors(prev => ({ ...prev, [field]: "" }));
   };
 
   return (
@@ -33,41 +41,48 @@ export default function WorshipEventForm({ event, onSubmit, onCancel }) {
         <CardTitle>{event ? "Edit Worship Event" : "Add New Worship Event"}</CardTitle>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6" noValidate>
+          {Object.values(validationErrors).some(Boolean) && (
+            <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
+              Please complete the highlighted required fields before saving this event.
+            </p>
+          )}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Event Title *
+              Event Title<span className="ml-1 text-red-600">*</span>
             </label>
             <Input
               type="text"
               value={formData.title}
               onChange={(e) => handleChange("title", e.target.value)}
-              required
+              className={validationErrors.title ? "border-red-500 focus-visible:ring-red-500" : ""}
               placeholder="e.g., Bible Study"
             />
+            {validationErrors.title && <p className="mt-1 text-xs font-semibold text-red-600">{validationErrors.title}</p>}
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Event Date *
+              Event Date<span className="ml-1 text-red-600">*</span>
             </label>
             <Input
               type="date"
               value={formData.event_date}
               onChange={(e) => handleChange("event_date", e.target.value)}
-              required
+              className={validationErrors.event_date ? "border-red-500 focus-visible:ring-red-500" : ""}
             />
+            {validationErrors.event_date && <p className="mt-1 text-xs font-semibold text-red-600">{validationErrors.event_date}</p>}
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Month Group *
+              Month Group<span className="ml-1 text-red-600">*</span>
             </label>
             <Select
               value={formData.month_group}
               onValueChange={(value) => handleChange("month_group", value)}
             >
-              <SelectTrigger>
+              <SelectTrigger className={validationErrors.month_group ? "border-red-500 focus:ring-red-500" : ""}>
                 <SelectValue placeholder="Select month group" />
               </SelectTrigger>
               <SelectContent>
@@ -77,6 +92,7 @@ export default function WorshipEventForm({ event, onSubmit, onCancel }) {
                 <SelectItem value="December 2025">December 2025</SelectItem>
               </SelectContent>
             </Select>
+            {validationErrors.month_group && <p className="mt-1 text-xs font-semibold text-red-600">{validationErrors.month_group}</p>}
           </div>
 
           <div>

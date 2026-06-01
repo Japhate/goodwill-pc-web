@@ -24,17 +24,25 @@ const DEFAULT_POPUP = {
 
 export default function SitePopupForm({ popup, onSubmit, onCancel }) {
   const [formData, setFormData] = useState({ ...DEFAULT_POPUP, ...popup });
+  const [validationErrors, setValidationErrors] = useState({});
 
   useEffect(() => {
     setFormData({ ...DEFAULT_POPUP, ...popup });
+    setValidationErrors({});
   }, [popup]);
 
   const handleChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+    setValidationErrors((prev) => ({ ...prev, [field]: "" }));
   };
 
   const handleSubmit = (event) => {
     event.preventDefault();
+    const nextErrors = {};
+    if (!String(formData.title || "").trim()) nextErrors.title = "Enter the popup title.";
+    if (!String(formData.message || "").trim()) nextErrors.message = "Enter the key message.";
+    setValidationErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) return;
     onSubmit({
       ...formData,
       priority: Number(formData.priority) || 1,
@@ -42,11 +50,16 @@ export default function SitePopupForm({ popup, onSubmit, onCancel }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="mx-auto max-w-3xl space-y-5 rounded-lg bg-white p-8 shadow-md">
+    <form onSubmit={handleSubmit} className="mx-auto max-w-3xl space-y-5 rounded-lg bg-white p-8 shadow-md" noValidate>
       <div>
         <h2 className="text-2xl font-bold text-gray-900">{popup ? "Edit Popup" : "Create Popup"}</h2>
         <p className="mt-1 text-sm text-gray-600">Create a dismissible homepage alert that appears during a scheduled time window.</p>
       </div>
+      {Object.values(validationErrors).some(Boolean) && (
+        <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
+          Please complete the highlighted required fields before saving this popup.
+        </p>
+      )}
 
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
         <div>
@@ -54,14 +67,25 @@ export default function SitePopupForm({ popup, onSubmit, onCancel }) {
           <Input value={formData.eyebrow || ""} onChange={(event) => handleChange("eyebrow", event.target.value)} />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-semibold text-gray-700">Title</label>
-          <Input value={formData.title || ""} onChange={(event) => handleChange("title", event.target.value)} required />
+          <label className="mb-1 block text-sm font-semibold text-gray-700">Title<span className="ml-1 text-red-600">*</span></label>
+          <Input
+            value={formData.title || ""}
+            onChange={(event) => handleChange("title", event.target.value)}
+            className={validationErrors.title ? "border-red-500 focus-visible:ring-red-500" : ""}
+          />
+          {validationErrors.title && <p className="mt-1 text-xs font-semibold text-red-600">{validationErrors.title}</p>}
         </div>
       </div>
 
       <div>
-        <label className="mb-1 block text-sm font-semibold text-gray-700">Key Message</label>
-        <Textarea value={formData.message || ""} onChange={(event) => handleChange("message", event.target.value)} rows={3} required />
+        <label className="mb-1 block text-sm font-semibold text-gray-700">Key Message<span className="ml-1 text-red-600">*</span></label>
+        <Textarea
+          value={formData.message || ""}
+          onChange={(event) => handleChange("message", event.target.value)}
+          rows={3}
+          className={validationErrors.message ? "border-red-500 focus-visible:ring-red-500" : ""}
+        />
+        {validationErrors.message && <p className="mt-1 text-xs font-semibold text-red-600">{validationErrors.message}</p>}
       </div>
 
       <div>

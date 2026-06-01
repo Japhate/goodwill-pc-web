@@ -10,15 +10,21 @@ export default function BannerForm({ banner, onSubmit, onCancel }) {
     status: "inactive",
     ...banner,
   });
+  const [validationErrors, setValidationErrors] = useState({});
 
   useEffect(() => {
     if (banner) {
       setFormData(banner);
+      setValidationErrors({});
     }
   }, [banner]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    const nextErrors = {};
+    if (!String(formData.message || "").trim()) nextErrors.message = "Enter the banner message.";
+    setValidationErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) return;
     onSubmit(formData);
   };
 
@@ -28,16 +34,25 @@ export default function BannerForm({ banner, onSubmit, onCancel }) {
         <CardTitle>{banner ? "Edit Banner" : "Add New Banner"}</CardTitle>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+          {Object.values(validationErrors).some(Boolean) && (
+            <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
+              Please complete the highlighted required fields before saving this banner.
+            </p>
+          )}
           <div>
-            <label className="block text-sm font-medium mb-2">Banner Message</label>
+            <label className="block text-sm font-medium mb-2">Banner Message<span className="ml-1 text-red-600">*</span></label>
             <Input
               type="text"
               value={formData.message}
-              onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+              onChange={(e) => {
+                setFormData({ ...formData, message: e.target.value });
+                setValidationErrors((errors) => ({ ...errors, message: "" }));
+              }}
               placeholder="Enter banner message..."
-              required
+              className={validationErrors.message ? "border-red-500 focus-visible:ring-red-500" : ""}
             />
+            {validationErrors.message && <p className="mt-1 text-xs font-semibold text-red-600">{validationErrors.message}</p>}
           </div>
 
           <div>
@@ -64,7 +79,7 @@ export default function BannerForm({ banner, onSubmit, onCancel }) {
             <Button type="button" variant="outline" onClick={onCancel}>
               Cancel
             </Button>
-            <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
+            <Button type="submit" className="bg-amber-600 hover:bg-amber-700">
               {banner ? "Update" : "Create"} Banner
             </Button>
           </div>

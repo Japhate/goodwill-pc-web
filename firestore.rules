@@ -7,6 +7,11 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
 
+    function isDeveloperAdmin() {
+      return isAdmin()
+        && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.email == 'nebajaphate@gmail.com';
+    }
+
     match /admins/{userId} {
       allow get: if request.auth != null && (request.auth.uid == userId || isAdmin());
       allow list: if isAdmin();
@@ -85,6 +90,12 @@ service cloud.firestore {
 
     match /NewsletterBroadcasts/{documentId} {
       allow read, write: if isAdmin();
+    }
+
+    match /AdminActivityLogs/{documentId} {
+      allow read: if isDeveloperAdmin();
+      allow create: if isAdmin();
+      allow update, delete: if false;
     }
 
     match /PrayerRequests/{documentId} {
