@@ -886,62 +886,22 @@ app.post('/api/admin/create-site-admin', async (req, res) => {
 app.get('/api/admin/site-admins', async (req, res) => {
   try {
     await assertDeveloperAdminRequest(req);
-    const app = getFirebaseAdminApp();
-    const auth = getAdminAuth(app);
-    const db = getAdminFirestore(app);
+    const db = getAdminFirestore(getFirebaseAdminApp());
     const adminSnapshot = await db.collection('admins').get();
-    const adminRows = new Map();
-
-    adminSnapshot.docs.forEach((entry) => {
-      const data = entry.data() || {};
-      adminRows.set(entry.id, {
+    const rows = adminSnapshot.docs
+      .map((entry) => {
+        const data = entry.data() || {};
+        return {
         uid: entry.id,
         email: normalizeEmail(data.email),
         first_name: normalizePersonName(data.first_name),
         last_name: normalizePersonName(data.last_name),
-        firestore_exists: true,
-        auth_exists: false,
         has_saved_name: Boolean(data.first_name && data.last_name),
         created_date: data.created_date || '',
         updated_date: data.updated_date || '',
-      });
-    });
-
-    let pageToken;
-    do {
-      const authPage = await auth.listUsers(1000, pageToken);
-      authPage.users.forEach((user) => {
-        const existing = adminRows.get(user.uid) || {
-          uid: user.uid,
-          email: normalizeEmail(user.email),
-          first_name: '',
-          last_name: '',
-          firestore_exists: false,
-          auth_exists: false,
-          has_saved_name: false,
-          created_date: '',
-          updated_date: '',
         };
-
-        adminRows.set(user.uid, {
-          ...existing,
-          email: existing.email || normalizeEmail(user.email),
-          auth_email: normalizeEmail(user.email),
-          auth_exists: true,
-          email_verified: user.emailVerified === true,
-          disabled: user.disabled === true,
-          auth_created_at: user.metadata?.creationTime || '',
-          last_sign_in_at: user.metadata?.lastSignInTime || '',
-        });
-      });
-      pageToken = authPage.pageToken;
-    } while (pageToken);
-
-    const rows = Array.from(adminRows.values()).sort((a, b) => {
-      const aEmail = a.email || a.auth_email || '';
-      const bEmail = b.email || b.auth_email || '';
-      return aEmail.localeCompare(bEmail);
-    });
+      })
+      .sort((a, b) => a.email.localeCompare(b.email));
 
     res.json({ admins: rows });
   } catch (error) {

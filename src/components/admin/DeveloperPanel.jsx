@@ -106,8 +106,7 @@ export default function DeveloperPanel({
   };
 
   const handleDeleteAdmin = async (admin) => {
-    const adminEmail = admin.email || admin.auth_email || "this administrator";
-    if (!admin.firestore_exists) return;
+    const adminEmail = admin.email || "this administrator";
     if (!window.confirm(`Remove ${adminEmail} from the site administrators list? This deletes their Firestore admin record and revokes admin panel access. Their past activity logs will remain.`)) return;
 
     setDeletingAdminUid(admin.uid);
@@ -176,12 +175,6 @@ export default function DeveloperPanel({
           </div>
           <div>
             <h3 className="text-xl font-bold text-gray-950">Site Administrators</h3>
-            <p className="mt-1 text-sm text-gray-600">
-              Compare Firebase Auth accounts with the Firestore admin records used by the admin panel.
-            </p>
-            <p className="mt-1 text-xs font-semibold text-amber-800">
-              Removing an admin deletes their Firestore admin record, revokes admin panel access, and keeps their existing activity logs.
-            </p>
           </div>
         </div>
 
@@ -198,58 +191,45 @@ export default function DeveloperPanel({
               <tr>
                 <th className="px-4 py-3">Name</th>
                 <th className="px-4 py-3">Email</th>
-                <th className="px-4 py-3">Admin Panel</th>
-                <th className="px-4 py-3">Firebase Auth</th>
-                <th className="px-4 py-3">Last Sign In</th>
+                <th className="px-4 py-3">Profile Status</th>
                 <th className="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
               {admins.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-gray-500">No admin profiles found.</td>
+                  <td colSpan={4} className="px-4 py-8 text-center text-gray-500">No admin profiles found.</td>
                 </tr>
               ) : admins.map((admin) => {
                 const fullName = [admin.first_name, admin.last_name].filter(Boolean).join(" ");
                 const hasName = Boolean(admin.first_name && admin.last_name);
-                const adminEmail = admin.email || admin.auth_email || "";
+                const adminEmail = admin.email || "";
                 const isCurrentDeveloper = adminEmail.toLowerCase() === currentAdminEmail.toLowerCase();
                 return (
-                  <tr key={admin.uid || admin.id || admin.email} className="border-t hover:bg-gray-50">
+                  <tr key={admin.uid || admin.email} className="border-t hover:bg-gray-50">
                     <td className="px-4 py-4 font-semibold text-gray-900">{fullName || "Name not entered yet"}</td>
                     <td className="px-4 py-4">
                       <p className="font-medium text-gray-900">{adminEmail || "No email recorded"}</p>
-                      <p className="text-xs text-gray-500">{admin.uid || admin.id || "No UID recorded"}</p>
+                      <p className="text-xs text-gray-500">{admin.uid || "No UID recorded"}</p>
                     </td>
                     <td className="px-4 py-4">
-                      <Badge className={admin.firestore_exists ? (hasName ? "bg-green-600" : "bg-orange-600") : "bg-red-600"}>
-                        {admin.firestore_exists ? (hasName ? "Profile complete" : "Name pending") : "Missing admin record"}
+                      <Badge className={hasName ? "bg-green-600" : "bg-orange-600"}>
+                        {hasName ? "Profile complete" : "Name pending"}
                       </Badge>
                     </td>
-                    <td className="px-4 py-4">
-                      <Badge className={admin.auth_exists ? (admin.disabled ? "bg-red-600" : "bg-green-600") : "bg-red-600"}>
-                        {admin.auth_exists ? (admin.disabled ? "Disabled" : "Exists") : "Missing Auth user"}
-                      </Badge>
-                      {admin.email_verified === true && <p className="mt-1 text-xs text-gray-500">Email verified</p>}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-4 text-xs text-gray-600">{formatDate(admin.last_sign_in_at)}</td>
                     <td className="px-4 py-4 text-right">
-                      {admin.firestore_exists ? (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDeleteAdmin(admin)}
-                          disabled={!canManageAdmins || isCurrentDeveloper || deletingAdminUid === admin.uid}
-                          title={isCurrentDeveloper ? "The site developer cannot delete their own admin record" : "Remove Firestore admin access"}
-                          className="gap-2 border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800"
-                        >
-                          <Trash2 className="h-4 w-4 text-red-600" />
-                          {deletingAdminUid === admin.uid ? "Removing..." : "Remove Admin"}
-                        </Button>
-                      ) : (
-                        <span className="text-xs text-gray-500">No Firestore record</span>
-                      )}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDeleteAdmin(admin)}
+                        disabled={!canManageAdmins || isCurrentDeveloper || deletingAdminUid === admin.uid}
+                        title={isCurrentDeveloper ? "The site developer cannot delete their own admin record" : "Remove admin access"}
+                        className="gap-2 border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800"
+                      >
+                        <Trash2 className="h-4 w-4 text-red-600" />
+                        {deletingAdminUid === admin.uid ? "Removing..." : "Remove Admin"}
+                      </Button>
                     </td>
                   </tr>
                 );

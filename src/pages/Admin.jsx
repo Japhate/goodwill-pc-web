@@ -68,11 +68,6 @@ const KNOWN_ADMIN_PROFILES = {
     last_name: 'Neba',
     email: 'nebajaphate@gmail.com',
   },
-  'japhate.neba@gmail.com': {
-    first_name: 'Japhate',
-    last_name: 'Neba',
-    email: 'japhate.neba@gmail.com',
-  },
 };
 
 function getSaveErrorMessage(error) {
