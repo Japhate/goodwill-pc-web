@@ -797,7 +797,9 @@ app.post('/api/admin/create-site-admin', async (req, res) => {
   const siteUrl = `${siteProtocol}://${siteHost}`;
 
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'A valid email address is required.' });
-  if (temporaryPassword.length < 8) return res.status(400).json({ error: 'Temporary password must be at least 8 characters.' });
+  if (!/^GPC[A-Z0-9]{5}$/.test(temporaryPassword)) {
+    return res.status(400).json({ error: 'Temporary password must be 8 uppercase letters and digits, starting with GPC.' });
+  }
 
   try {
     const app = getFirebaseAdminApp();

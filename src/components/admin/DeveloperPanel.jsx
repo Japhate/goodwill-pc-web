@@ -27,9 +27,11 @@ function formatDetails(details = {}) {
 }
 
 function generateTemporaryPassword() {
-  const random = new Uint32Array(4);
+  const allowedCharacters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  const random = new Uint32Array(5);
   window.crypto.getRandomValues(random);
-  return `GPC-${Array.from(random, (value) => value.toString(36)).join("-").slice(0, 18)}!`;
+  const suffix = Array.from(random, (value) => allowedCharacters[value % allowedCharacters.length]).join("");
+  return `GPC${suffix}`;
 }
 
 function FieldLabel({ children, required = false }) {
@@ -64,8 +66,8 @@ export default function DeveloperPanel({ logs = [], admins = [], loading = false
     if (!normalizedEmail) nextErrors.email = "Enter the email address.";
     if (normalizedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) nextErrors.email = "Enter a valid email address.";
     if (!temporaryPassword.trim()) nextErrors.temporaryPassword = "Enter a temporary password.";
-    if (temporaryPassword.trim().length > 0 && temporaryPassword.trim().length < 8) {
-      nextErrors.temporaryPassword = "Use at least 8 characters.";
+    if (temporaryPassword.trim() && !/^GPC[A-Z0-9]{5}$/.test(temporaryPassword.trim())) {
+      nextErrors.temporaryPassword = "Use 8 uppercase letters and digits, starting with GPC.";
     }
 
     setErrors(nextErrors);
@@ -237,7 +239,7 @@ export default function DeveloperPanel({ logs = [], admins = [], loading = false
                   <Input
                     value={temporaryPassword}
                     onChange={(event) => {
-                      setTemporaryPassword(event.target.value);
+                      setTemporaryPassword(event.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8));
                       clearError("temporaryPassword");
                     }}
                     className={`pl-9 ${errors.temporaryPassword ? "border-red-500 focus-visible:ring-red-500" : ""}`}
