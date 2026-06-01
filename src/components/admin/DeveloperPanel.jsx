@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Activity, Check, Copy, KeyRound, Mail, RefreshCw, ShieldCheck, Trash2, UserPlus, Users, Wand2 } from "lucide-react";
+import { Activity, Mail, RefreshCw, ShieldCheck, Trash2, UserPlus, Users } from "lucide-react";
 
 function formatDate(value) {
   if (!value) return "Not recorded";
@@ -26,14 +26,6 @@ function formatDetails(details = {}) {
     .join(" | ");
 }
 
-function generateTemporaryPassword() {
-  const allowedCharacters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  const random = new Uint32Array(5);
-  window.crypto.getRandomValues(random);
-  const suffix = Array.from(random, (value) => allowedCharacters[value % allowedCharacters.length]).join("");
-  return `GPC${suffix}`;
-}
-
 function FieldLabel({ children, required = false }) {
   return (
     <label className="mb-1 block text-sm font-semibold text-gray-700">
@@ -54,13 +46,11 @@ export default function DeveloperPanel({
   currentAdminEmail = "",
 }) {
   const [email, setEmail] = useState("");
-  const [temporaryPassword, setTemporaryPassword] = useState(generateTemporaryPassword);
   const [errors, setErrors] = useState({});
   const [inviteStatus, setInviteStatus] = useState("");
   const [adminStatus, setAdminStatus] = useState("");
   const [sendingInvite, setSendingInvite] = useState(false);
   const [deletingAdminUid, setDeletingAdminUid] = useState("");
-  const [passwordCopied, setPasswordCopied] = useState(false);
   const latestLog = logs[0];
   const loginCount = logs.filter((log) => log.action === "signed_in").length;
   const contentCount = logs.filter((log) => ["created", "updated", "deleted", "duplicated"].includes(log.action)).length;
@@ -77,10 +67,6 @@ export default function DeveloperPanel({
     const nextErrors = {};
     if (!normalizedEmail) nextErrors.email = "Enter the email address.";
     if (normalizedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) nextErrors.email = "Enter a valid email address.";
-    if (!temporaryPassword.trim()) nextErrors.temporaryPassword = "Enter a temporary password.";
-    if (temporaryPassword.trim() && !/^GPC[A-Z0-9]{5}$/.test(temporaryPassword.trim())) {
-      nextErrors.temporaryPassword = "Use 8 uppercase letters and digits, starting with GPC.";
-    }
 
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) {
@@ -93,24 +79,15 @@ export default function DeveloperPanel({
     try {
       await onCreateAdmin({
         email: normalizedEmail,
-        temporaryPassword: temporaryPassword.trim(),
       });
       setInviteStatus(`Admin invitation sent to ${normalizedEmail}.`);
       setEmail("");
-      setTemporaryPassword(generateTemporaryPassword());
       setErrors({});
     } catch (error) {
       setInviteStatus(error.message || "Unable to send the admin invitation.");
     } finally {
       setSendingInvite(false);
     }
-  };
-
-  const handleCopyTemporaryPassword = async () => {
-    if (!temporaryPassword) return;
-    await navigator.clipboard.writeText(temporaryPassword);
-    setPasswordCopied(true);
-    window.setTimeout(() => setPasswordCopied(false), 1800);
   };
 
   const handleDeleteAdmin = async (admin) => {
@@ -255,9 +232,7 @@ export default function DeveloperPanel({
           </div>
           <div>
             <h3 className="text-xl font-bold text-gray-950">Add Site Administrator</h3>
-            <p className="mt-1 text-sm text-gray-600">
-              Add the admin email, assign a temporary password, and email a password-change link.
-            </p>
+            <p className="mt-1 text-sm text-gray-600">Add the admin email and send a one-time setup link.</p>
           </div>
         </div>
 
@@ -272,7 +247,7 @@ export default function DeveloperPanel({
             </p>
           )}
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-[1.2fr_1fr]">
+          <div className="max-w-xl">
             <div>
               <FieldLabel required>Email Address</FieldLabel>
               <div className="relative">
@@ -290,49 +265,11 @@ export default function DeveloperPanel({
               </div>
               {errors.email && <p className="mt-1 text-xs font-semibold text-red-600">{errors.email}</p>}
             </div>
-            <div>
-              <FieldLabel required>Temporary Password</FieldLabel>
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <KeyRound className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                  <Input
-                    value={temporaryPassword}
-                    onChange={(event) => {
-                      setTemporaryPassword(event.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8));
-                      clearError("temporaryPassword");
-                    }}
-                    className={`pl-9 ${errors.temporaryPassword ? "border-red-500 focus-visible:ring-red-500" : ""}`}
-                  />
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setTemporaryPassword(generateTemporaryPassword());
-                    clearError("temporaryPassword");
-                  }}
-                  title="Generate temporary password"
-                >
-                  <Wand2 className="h-4 w-4" />
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleCopyTemporaryPassword}
-                  title="Copy temporary password"
-                  className="gap-2"
-                >
-                  {passwordCopied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
-                  {passwordCopied ? "Copied" : "Copy"}
-                </Button>
-              </div>
-              {errors.temporaryPassword && <p className="mt-1 text-xs font-semibold text-red-600">{errors.temporaryPassword}</p>}
-            </div>
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-amber-200 bg-amber-50 px-4 py-3">
             <p className="text-xs text-amber-950">
-              The new admin will receive the temporary password and a secure link to choose their own password. Their name will be collected on first sign-in.
+              The new admin will receive a secure setup link. They will enter their name and create their own password before admin access is granted.
             </p>
             <Button type="submit" className="bg-amber-600 hover:bg-amber-700" disabled={sendingInvite}>
               {sendingInvite ? "Sending Invite..." : "Create Admin and Send Email"}

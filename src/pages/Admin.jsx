@@ -1269,7 +1269,7 @@ export default function AdminPage() {
     setAdminLoadError('');
   };
 
-  const handleCreateSiteAdmin = async ({ email, temporaryPassword }) => {
+  const handleCreateSiteAdmin = async ({ email }) => {
     const token = await firebaseAuth?.currentUser?.getIdToken();
     if (!token) {
       throw new Error('Please sign in again before creating a site administrator.');
@@ -1283,7 +1283,6 @@ export default function AdminPage() {
       },
       body: JSON.stringify({
         email,
-        temporaryPassword,
         host: window.location.host,
         protocol: window.location.protocol.replace(':', ''),
       }),
@@ -1302,11 +1301,10 @@ export default function AdminPage() {
       itemLabel: email,
       details: {
         invitation_email_sent: true,
-        existing_user: body.existingUser === true,
+        invitation_expires_at: body.expiresAt || '',
         name_collected_on_first_sign_in: true,
       },
     });
-    await loadAdminProfiles(currentAdmin);
     await loadSiteAdminComparison();
     await loadAdminActivityLogs();
     return body;

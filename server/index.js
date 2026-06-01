@@ -2,6 +2,7 @@ import express from 'express';
 import fs from 'fs';
 import path from 'path';
 import cors from 'cors';
+import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import { initializeApp as initializeClientApp, getApps as getClientApps } from 'firebase/app';
 import { doc, getDoc, getFirestore as getClientFirestore } from 'firebase/firestore';
@@ -66,6 +67,22 @@ function normalizeEmail(email) {
 
 function normalizePersonName(name) {
   return String(name || '').trim().replace(/\s+/g, ' ');
+}
+
+function createInvitationToken() {
+  return crypto.randomBytes(32).toString('base64url');
+}
+
+function hashInvitationToken(token) {
+  return crypto.createHash('sha256').update(String(token || '')).digest('hex');
+}
+
+function passwordMeetsAdminRules(password) {
+  return String(password || '').length >= 6
+    && /[a-z]/.test(password)
+    && /[A-Z]/.test(password)
+    && /\d/.test(password)
+    && /[^A-Za-z0-9]/.test(password);
 }
 
 function escapeHtml(value) {
@@ -439,30 +456,33 @@ function buildAdminBroadcastNotificationEmail({ admin, subject, sent, failed, re
   };
 }
 
-function buildAdminInvitationEmail({ email, temporaryPassword, setupLink, invitedByName }) {
+function buildAdminInvitationEmail({ email, setupLink, expiresAt }) {
   const escapedEmail = escapeHtml(email);
-  const escapedPassword = escapeHtml(temporaryPassword);
   const escapedSetupLink = escapeHtml(setupLink);
-  const inviterName = invitedByName || 'Japhate Neba';
-  const escapedInviter = escapeHtml(inviterName);
+  const expiresText = expiresAt ? new Date(expiresAt).toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZoneName: 'short',
+  }) : '';
 
   return {
     subject: 'Your Goodwill Presbyterian Church admin access',
     text: [
       'Hello Brethren,',
       '',
-      `You have been invited to act as site administrator for the Goodwill Presbyterian Church website by ${inviterName}.`,
-      'You have been provided a temporary password for your first login. Please change the temporary password to a password that you want.',
+      'You have been invited to act as site administrator for the Goodwill Presbyterian Church website by the site developer, Mr. Neba.',
+      'Please use the secure one-time setup link below to create your password.',
       '',
-      `Admin email: ${email}`,
-      `Temporary password: ${temporaryPassword}`,
+      `Email: ${email}`,
+      expiresText ? `Invitation expires: ${expiresText}` : '',
       '',
-      'Change your password here:',
+      'Create My Password:',
       setupLink,
       '',
       'If you did not expect this message, please ignore it.',
-      '',
-      'Goodwill Presbyterian Church Website',
     ].join('\n'),
     html: `
       <div style="margin:0;padding:0;background:#f8f3ea;font-family:Arial,Helvetica,sans-serif;color:#2f241c;">
@@ -474,21 +494,14 @@ function buildAdminInvitationEmail({ email, temporaryPassword, setupLink, invite
             </div>
             <div style="padding:28px;font-size:16px;line-height:1.6;">
               <p style="margin:0 0 16px;">Hello Brethren,</p>
-              <p style="margin:0 0 16px;">You have been invited to act as site administrator for the Goodwill Presbyterian Church website by ${escapedInviter}. You have been provided a temporary password for your first login. Please change the temporary password to a password that you want.</p>
+              <p style="margin:0 0 16px;">You have been invited to act as site administrator for the Goodwill Presbyterian Church website by the site developer, Mr. Neba.</p>
+              <p style="margin:0 0 16px;">Please use the secure one-time setup link below to create your password.</p>
               <div style="background:#fbf7f0;border:1px solid #eadcc7;border-radius:10px;padding:16px;margin:18px 0;">
-                <p style="margin:0 0 8px;"><strong>Admin email:</strong> ${escapedEmail}</p>
-                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
-                  <tr>
-                    <td style="padding:0;font-size:16px;line-height:1.6;">
-                      <strong>Temporary password:</strong>
-                      <span style="display:inline-block;margin-left:6px;border:1px solid #d6b98c;background:#ffffff;border-radius:6px;padding:3px 8px;font-family:Consolas,Monaco,monospace;font-weight:bold;letter-spacing:0.08em;color:#2f241c;">${escapedPassword}</span>
-                      <span style="display:inline-block;margin-left:8px;border:1px solid #d97706;background:#fff7ed;border-radius:6px;padding:3px 8px;font-size:12px;font-weight:bold;color:#9a4f00;text-transform:uppercase;">Copy this password</span>
-                    </td>
-                  </tr>
-                </table>
+                <p style="margin:0 0 8px;"><strong>Email:</strong> ${escapedEmail}</p>
+                ${expiresText ? `<p style="margin:0;"><strong>Invitation expires:</strong> ${escapeHtml(expiresText)}</p>` : ''}
               </div>
               <p style="margin:0 0 22px;text-align:center;">
-                <a href="${escapedSetupLink}" style="display:inline-block;background:#d97706;color:#ffffff;font-weight:bold;text-decoration:none;border-radius:8px;padding:12px 18px;">Change My Password</a>
+                <a href="${escapedSetupLink}" style="display:inline-block;background:#d97706;color:#ffffff;font-weight:bold;text-decoration:none;border-radius:8px;padding:12px 18px;">Create My Password</a>
               </p>
             </div>
             <div style="border-top:1px solid #eadcc7;background:#fbf7f0;padding:18px 28px;color:#6f6258;font-size:12px;line-height:1.5;">
@@ -791,63 +804,45 @@ app.post('/api/admin/create-site-admin', async (req, res) => {
   }
 
   const email = normalizeEmail(req.body?.email);
-  const temporaryPassword = String(req.body?.temporaryPassword || req.body?.temporary_password || '').trim();
   const siteProtocol = req.body?.protocol || 'https';
   const siteHost = req.body?.host || CANONICAL_HOST;
   const siteUrl = `${siteProtocol}://${siteHost}`;
 
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'A valid email address is required.' });
-  if (!/^GPC[A-Z0-9]{5}$/.test(temporaryPassword)) {
-    return res.status(400).json({ error: 'Temporary password must be 8 uppercase letters and digits, starting with GPC.' });
-  }
 
   try {
-    const app = getFirebaseAdminApp();
-    const auth = getAdminAuth(app);
-    const db = getAdminFirestore(app);
-    let userRecord;
-    let existingUser = false;
-
-    try {
-      userRecord = await auth.getUserByEmail(email);
-      existingUser = true;
-      userRecord = await auth.updateUser(userRecord.uid, {
-        password: temporaryPassword,
-        disabled: false,
-      });
-    } catch (error) {
-      if (error?.code !== 'auth/user-not-found') throw error;
-      userRecord = await auth.createUser({
-        email,
-        password: temporaryPassword,
-        emailVerified: false,
-        disabled: false,
-      });
-    }
-
+    const db = getAdminFirestore(getFirebaseAdminApp());
     const now = new Date().toISOString();
-    await db.collection('admins').doc(userRecord.uid).set({
-      first_name: '',
-      last_name: '',
+    const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
+    const token = createInvitationToken();
+    const tokenHash = hashInvitationToken(token);
+
+    const existingInvitations = await db.collection('AdminInvitations')
+      .where('email', '==', email)
+      .get();
+    const existingPending = existingInvitations.docs.filter((entry) => entry.data()?.status === 'pending');
+    await Promise.all(existingPending.map((entry) => entry.ref.update({
+      status: 'expired',
+      expired_date: now,
+      updated_date: now,
+    })));
+
+    const invitationRef = await db.collection('AdminInvitations').add({
       email,
-      photo_url: '',
-      has_saved_name: false,
+      token_hash: tokenHash,
+      status: 'pending',
       invited_by_uid: developerAdmin.uid,
       invited_by_email: developerAdmin.email,
-      temporary_password_assigned: true,
-      must_change_password: true,
+      expires_at: expiresAt,
       created_date: now,
       updated_date: now,
-    }, { merge: true });
+    });
 
-    const setupLink = `${siteUrl}/AdminSetup?email=${encodeURIComponent(email)}`;
-    const invitedByName = [developerAdmin.firstName, developerAdmin.lastName].filter(Boolean).join(' ') || developerAdmin.email;
+    const setupLink = `${siteUrl}/AdminSetup?token=${encodeURIComponent(token)}`;
     const invitation = buildAdminInvitationEmail({
       email,
-      temporaryPassword,
       setupLink,
-      invitedByName,
-      siteUrl,
+      expiresAt,
     });
     const fromEmail = process.env.RESEND_FROM_EMAIL || 'Goodwill Presbyterian Church <onboarding@resend.dev>';
     const emailResponse = await sendResendEmail({
@@ -861,22 +856,139 @@ app.post('/api/admin/create-site-admin', async (req, res) => {
     if (!emailResponse.ok) {
       console.error('Admin invitation email error', emailResponse.body);
       return res.status(502).json({
-        error: 'The administrator account was created, but the invitation email was not sent.',
+        error: 'The administrator invitation was created, but the invitation email was not sent.',
         detail: emailResponse.body.slice(0, 500),
-        uid: userRecord.uid,
-        existingUser,
+        invitationId: invitationRef.id,
       });
     }
 
     res.json({
       success: true,
-      uid: userRecord.uid,
+      invitationId: invitationRef.id,
       email,
-      existingUser,
+      expiresAt,
     });
   } catch (error) {
     console.error('Create site admin error', error?.message || error);
-    res.status(error.status || 500).json({ error: error?.message || 'Unable to create the administrator account.' });
+    res.status(error.status || 500).json({ error: error?.message || 'Unable to create the administrator invitation.' });
+  }
+});
+
+async function getPendingInvitationByToken(token) {
+  const tokenHash = hashInvitationToken(token);
+  const db = getAdminFirestore(getFirebaseAdminApp());
+  const snapshot = await db.collection('AdminInvitations')
+    .where('token_hash', '==', tokenHash)
+    .limit(1)
+    .get();
+
+  if (snapshot.empty) return null;
+  const entry = snapshot.docs[0];
+  const invitation = { id: entry.id, ref: entry.ref, ...entry.data() };
+  if (invitation.status !== 'pending') return null;
+  const expiresAt = new Date(invitation.expires_at || '');
+  if (Number.isNaN(expiresAt.getTime()) || expiresAt <= new Date()) {
+    await entry.ref.update({
+      status: 'expired',
+      expired_date: new Date().toISOString(),
+      updated_date: new Date().toISOString(),
+    });
+    return null;
+  }
+
+  return invitation;
+}
+
+app.get('/api/admin/setup-invitation', async (req, res) => {
+  try {
+    const token = String(req.query.token || '').trim();
+    if (!token) return res.status(400).json({ error: 'Invitation token is required.' });
+    const invitation = await getPendingInvitationByToken(token);
+    if (!invitation) return res.status(404).json({ error: 'This invitation is invalid or has expired.' });
+    res.json({
+      email: invitation.email,
+      expiresAt: invitation.expires_at,
+    });
+  } catch (error) {
+    console.error('Read admin setup invitation error', error?.message || error);
+    res.status(error.status || 500).json({ error: error?.message || 'Unable to read the administrator invitation.' });
+  }
+});
+
+app.post('/api/admin/complete-invitation', async (req, res) => {
+  const token = String(req.body?.token || '').trim();
+  const firstName = normalizePersonName(req.body?.firstName || req.body?.first_name);
+  const lastName = normalizePersonName(req.body?.lastName || req.body?.last_name);
+  const password = String(req.body?.password || '');
+
+  if (!token) return res.status(400).json({ error: 'Invitation token is required.' });
+  if (!firstName) return res.status(400).json({ error: 'First name is required.' });
+  if (!lastName) return res.status(400).json({ error: 'Last name is required.' });
+  if (!passwordMeetsAdminRules(password)) {
+    return res.status(400).json({ error: 'Password must be at least 6 characters with uppercase, lowercase, a number, and a special character.' });
+  }
+
+  try {
+    const invitation = await getPendingInvitationByToken(token);
+    if (!invitation) return res.status(404).json({ error: 'This invitation is invalid or has expired.' });
+
+    const app = getFirebaseAdminApp();
+    const auth = getAdminAuth(app);
+    const db = getAdminFirestore(app);
+    const email = normalizeEmail(invitation.email);
+    const displayName = `${firstName} ${lastName}`.trim();
+    let userRecord;
+    let existingUser = false;
+
+    try {
+      userRecord = await auth.getUserByEmail(email);
+      existingUser = true;
+      userRecord = await auth.updateUser(userRecord.uid, {
+        displayName,
+        password,
+        disabled: false,
+      });
+    } catch (error) {
+      if (error?.code !== 'auth/user-not-found') throw error;
+      userRecord = await auth.createUser({
+        email,
+        password,
+        displayName,
+        emailVerified: false,
+        disabled: false,
+      });
+    }
+
+    const now = new Date().toISOString();
+    await db.collection('admins').doc(userRecord.uid).set({
+      first_name: firstName,
+      last_name: lastName,
+      email,
+      photo_url: '',
+      has_saved_name: true,
+      invited_by_uid: invitation.invited_by_uid || '',
+      invited_by_email: invitation.invited_by_email || '',
+      invitation_id: invitation.id,
+      created_date: now,
+      updated_date: now,
+    }, { merge: true });
+
+    await invitation.ref.update({
+      status: 'used',
+      used_date: now,
+      completed_uid: userRecord.uid,
+      updated_date: now,
+    });
+
+    res.json({
+      success: true,
+      email,
+      uid: userRecord.uid,
+      existingUser,
+    });
+  } catch (error) {
+    console.error('Complete admin invitation error', error?.message || error);
+    res.status(error.status || 500).json({ error: error?.message || 'Unable to complete the administrator invitation.' });
   }
 });
 
