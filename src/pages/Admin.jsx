@@ -203,7 +203,9 @@ export default function AdminPage() {
   const [emailTemplates, setEmailTemplates] = useState([]);
   const [newsletterBroadcasts, setNewsletterBroadcasts] = useState([]);
   const [adminActivityLogs, setAdminActivityLogs] = useState([]);
+  const [siteAdminComparison, setSiteAdminComparison] = useState([]);
   const [loadingDeveloperLogs, setLoadingDeveloperLogs] = useState(false);
+  const [loadingSiteAdmins, setLoadingSiteAdmins] = useState(false);
   const [view, setView] = useState('announcements'); // 'announcements', 'worshipEvents', 'pastEvents', 'sermons', 'bulletins', 'banners', 'hiddenAnnouncements', 'heroSlides', 'sitePopups', 'newsletter', 'developer'
   const [formView, setFormView] = useState(null); // 'announcement', 'worshipEvent', 'sermon', 'bulletin', 'banner', 'heroSlide', 'sitePopup', or null
   const [editingItem, setEditingItem] = useState(null);
@@ -283,6 +285,34 @@ export default function AdminPage() {
       setAdminActivityLogs([]);
     } finally {
       setLoadingDeveloperLogs(false);
+    }
+  };
+
+  const loadSiteAdminComparison = async () => {
+    if (!canViewDeveloperPanel) {
+      setSiteAdminComparison([]);
+      return;
+    }
+
+    const token = await firebaseAuth?.currentUser?.getIdToken();
+    if (!token) {
+      setSiteAdminComparison([]);
+      return;
+    }
+
+    setLoadingSiteAdmins(true);
+    try {
+      const response = await fetch('/api/admin/site-admins', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const body = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(body?.error || 'Unable to load site administrators.');
+      setSiteAdminComparison(body?.admins || []);
+    } catch (error) {
+      console.error('Unable to compare site administrators:', error);
+      setSiteAdminComparison([]);
+    } finally {
+      setLoadingSiteAdmins(false);
     }
   };
 
@@ -504,10 +534,12 @@ export default function AdminPage() {
   useEffect(() => {
     if (canViewDeveloperPanel) {
       loadAdminActivityLogs();
+      loadSiteAdminComparison();
       return;
     }
 
     setAdminActivityLogs([]);
+    setSiteAdminComparison([]);
     if (view === 'developer') {
       setView('announcements');
     }
@@ -1280,6 +1312,39 @@ export default function AdminPage() {
       },
     });
     await loadAdminProfiles(currentAdmin);
+    await loadSiteAdminComparison();
+    await loadAdminActivityLogs();
+    return body;
+  };
+
+  const handleDeleteSiteAdmin = async (admin) => {
+    const token = await firebaseAuth?.currentUser?.getIdToken();
+    if (!token) {
+      throw new Error('Please sign in again before deleting a site administrator.');
+    }
+
+    const response = await fetch(`/api/admin/site-admins/${encodeURIComponent(admin.uid)}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const body = await response.json().catch(() => null);
+    if (!response.ok) {
+      throw new Error(body?.error || 'Unable to delete the site administrator.');
+    }
+
+    await logAdminActivity({
+      action: 'deleted_admin',
+      section: 'Developer Panel',
+      itemType: 'site administrator',
+      itemId: admin.uid,
+      itemLabel: body.email || admin.email || admin.auth_email || '',
+      details: {
+        removed_from_firestore: true,
+        auth_user_deleted: false,
+      },
+    });
+    await loadAdminProfiles(currentAdmin);
+    await loadSiteAdminComparison();
     await loadAdminActivityLogs();
     return body;
   };
@@ -1600,11 +1665,15 @@ export default function AdminPage() {
         return canViewDeveloperPanel
           ? <DeveloperPanel
               logs={adminActivityLogs}
-              admins={adminProfiles}
-              loading={loadingDeveloperLogs}
-              onRefresh={loadAdminActivityLogs}
+              admins={siteAdminComparison}
+              loading={loadingDeveloperLogs || loadingSiteAdmins}
+              onRefresh={async () => {
+                await Promise.all([loadAdminActivityLogs(), loadSiteAdminComparison()]);
+              }}
               onCreateAdmin={handleCreateSiteAdmin}
+              onDeleteAdmin={handleDeleteSiteAdmin}
               canManageAdmins={canManageSiteAdmins}
+              currentAdminEmail={currentAdmin?.email || ''}
             />
           : null;
       default:

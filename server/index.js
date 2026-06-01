@@ -883,6 +883,108 @@ app.post('/api/admin/create-site-admin', async (req, res) => {
   }
 });
 
+app.get('/api/admin/site-admins', async (req, res) => {
+  try {
+    await assertDeveloperAdminRequest(req);
+    const app = getFirebaseAdminApp();
+    const auth = getAdminAuth(app);
+    const db = getAdminFirestore(app);
+    const adminSnapshot = await db.collection('admins').get();
+    const adminRows = new Map();
+
+    adminSnapshot.docs.forEach((entry) => {
+      const data = entry.data() || {};
+      adminRows.set(entry.id, {
+        uid: entry.id,
+        email: normalizeEmail(data.email),
+        first_name: normalizePersonName(data.first_name),
+        last_name: normalizePersonName(data.last_name),
+        firestore_exists: true,
+        auth_exists: false,
+        has_saved_name: Boolean(data.first_name && data.last_name),
+        created_date: data.created_date || '',
+        updated_date: data.updated_date || '',
+      });
+    });
+
+    let pageToken;
+    do {
+      const authPage = await auth.listUsers(1000, pageToken);
+      authPage.users.forEach((user) => {
+        const existing = adminRows.get(user.uid) || {
+          uid: user.uid,
+          email: normalizeEmail(user.email),
+          first_name: '',
+          last_name: '',
+          firestore_exists: false,
+          auth_exists: false,
+          has_saved_name: false,
+          created_date: '',
+          updated_date: '',
+        };
+
+        adminRows.set(user.uid, {
+          ...existing,
+          email: existing.email || normalizeEmail(user.email),
+          auth_email: normalizeEmail(user.email),
+          auth_exists: true,
+          email_verified: user.emailVerified === true,
+          disabled: user.disabled === true,
+          auth_created_at: user.metadata?.creationTime || '',
+          last_sign_in_at: user.metadata?.lastSignInTime || '',
+        });
+      });
+      pageToken = authPage.pageToken;
+    } while (pageToken);
+
+    const rows = Array.from(adminRows.values()).sort((a, b) => {
+      const aEmail = a.email || a.auth_email || '';
+      const bEmail = b.email || b.auth_email || '';
+      return aEmail.localeCompare(bEmail);
+    });
+
+    res.json({ admins: rows });
+  } catch (error) {
+    console.error('List site admins error', error?.message || error);
+    res.status(error.status || 500).json({ error: error?.message || 'Unable to load site administrators.' });
+  }
+});
+
+app.delete('/api/admin/site-admins/:uid', async (req, res) => {
+  let developerAdmin;
+  try {
+    developerAdmin = await assertDeveloperAdminRequest(req);
+  } catch (error) {
+    return res.status(error.status || 401).json({ error: error.message });
+  }
+
+  const uid = String(req.params.uid || '').trim();
+  if (!uid) return res.status(400).json({ error: 'Administrator UID is required.' });
+  if (uid === developerAdmin.uid) {
+    return res.status(400).json({ error: 'The site developer account cannot delete itself.' });
+  }
+
+  try {
+    const db = getAdminFirestore(getFirebaseAdminApp());
+    const adminRef = db.collection('admins').doc(uid);
+    const snapshot = await adminRef.get();
+    if (!snapshot.exists) {
+      return res.status(404).json({ error: 'No Firestore admin record was found for this user.' });
+    }
+
+    const adminData = snapshot.data() || {};
+    await adminRef.delete();
+    res.json({
+      success: true,
+      uid,
+      email: normalizeEmail(adminData.email),
+    });
+  } catch (error) {
+    console.error('Delete site admin error', error?.message || error);
+    res.status(error.status || 500).json({ error: error?.message || 'Unable to delete the site administrator.' });
+  }
+});
+
 app.post('/api/send-newsletter-broadcast', async (req, res) => {
   try {
     await assertAdminRequest(req);

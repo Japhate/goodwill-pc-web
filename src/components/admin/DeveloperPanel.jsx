@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Activity, KeyRound, Mail, RefreshCw, ShieldCheck, UserPlus, Users, Wand2 } from "lucide-react";
+import { Activity, KeyRound, Mail, RefreshCw, ShieldCheck, Trash2, UserPlus, Users, Wand2 } from "lucide-react";
 
 function formatDate(value) {
   if (!value) return "Not recorded";
@@ -43,12 +43,23 @@ function FieldLabel({ children, required = false }) {
   );
 }
 
-export default function DeveloperPanel({ logs = [], admins = [], loading = false, onRefresh, onCreateAdmin, canManageAdmins = false }) {
+export default function DeveloperPanel({
+  logs = [],
+  admins = [],
+  loading = false,
+  onRefresh,
+  onCreateAdmin,
+  onDeleteAdmin,
+  canManageAdmins = false,
+  currentAdminEmail = "",
+}) {
   const [email, setEmail] = useState("");
   const [temporaryPassword, setTemporaryPassword] = useState(generateTemporaryPassword);
   const [errors, setErrors] = useState({});
   const [inviteStatus, setInviteStatus] = useState("");
+  const [adminStatus, setAdminStatus] = useState("");
   const [sendingInvite, setSendingInvite] = useState(false);
+  const [deletingAdminUid, setDeletingAdminUid] = useState("");
   const latestLog = logs[0];
   const loginCount = logs.filter((log) => log.action === "signed_in").length;
   const contentCount = logs.filter((log) => ["created", "updated", "deleted", "duplicated"].includes(log.action)).length;
@@ -91,6 +102,23 @@ export default function DeveloperPanel({ logs = [], admins = [], loading = false
       setInviteStatus(error.message || "Unable to send the admin invitation.");
     } finally {
       setSendingInvite(false);
+    }
+  };
+
+  const handleDeleteAdmin = async (admin) => {
+    const adminEmail = admin.email || admin.auth_email || "this administrator";
+    if (!admin.firestore_exists) return;
+    if (!window.confirm(`Remove ${adminEmail} from the site administrators list? This removes their Firestore admin access.`)) return;
+
+    setDeletingAdminUid(admin.uid);
+    setAdminStatus("");
+    try {
+      await onDeleteAdmin(admin);
+      setAdminStatus(`${adminEmail} was removed from the Firestore site administrators list.`);
+    } catch (error) {
+      setAdminStatus(error.message || "Unable to delete the site administrator.");
+    } finally {
+      setDeletingAdminUid("");
     }
   };
 
@@ -148,38 +176,76 @@ export default function DeveloperPanel({ logs = [], admins = [], loading = false
           </div>
           <div>
             <h3 className="text-xl font-bold text-gray-950">Site Administrators</h3>
-            <p className="mt-1 text-sm text-gray-600">View all approved administrator profiles currently stored in Firestore.</p>
+            <p className="mt-1 text-sm text-gray-600">
+              Compare Firebase Auth accounts with the Firestore admin records used by the admin panel.
+            </p>
           </div>
         </div>
 
         <div className="overflow-x-auto rounded-md border">
+          {adminStatus && (
+            <p className={`border-b px-4 py-3 text-sm font-semibold ${
+              adminStatus.includes("Unable") ? "bg-red-50 text-red-700" : "bg-green-50 text-green-700"
+            }`}>
+              {adminStatus}
+            </p>
+          )}
           <table className="w-full text-left text-sm">
             <thead className="bg-gray-50 text-xs uppercase text-gray-600">
               <tr>
                 <th className="px-4 py-3">Name</th>
                 <th className="px-4 py-3">Email</th>
-                <th className="px-4 py-3">Profile Status</th>
-                <th className="px-4 py-3">Admin UID</th>
+                <th className="px-4 py-3">Admin Panel</th>
+                <th className="px-4 py-3">Firebase Auth</th>
+                <th className="px-4 py-3">Last Sign In</th>
+                <th className="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
               {admins.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-gray-500">No admin profiles found.</td>
+                  <td colSpan={6} className="px-4 py-8 text-center text-gray-500">No admin profiles found.</td>
                 </tr>
               ) : admins.map((admin) => {
                 const fullName = [admin.first_name, admin.last_name].filter(Boolean).join(" ");
                 const hasName = Boolean(admin.first_name && admin.last_name);
+                const adminEmail = admin.email || admin.auth_email || "";
+                const isCurrentDeveloper = adminEmail.toLowerCase() === currentAdminEmail.toLowerCase();
                 return (
-                  <tr key={admin.id || admin.email} className="border-t hover:bg-gray-50">
+                  <tr key={admin.uid || admin.id || admin.email} className="border-t hover:bg-gray-50">
                     <td className="px-4 py-4 font-semibold text-gray-900">{fullName || "Name not entered yet"}</td>
-                    <td className="px-4 py-4 text-gray-700">{admin.email || "No email recorded"}</td>
                     <td className="px-4 py-4">
-                      <Badge className={hasName ? "bg-green-600" : "bg-orange-600"}>
-                        {hasName ? "Profile complete" : "Name pending"}
+                      <p className="font-medium text-gray-900">{adminEmail || "No email recorded"}</p>
+                      <p className="text-xs text-gray-500">{admin.uid || admin.id || "No UID recorded"}</p>
+                    </td>
+                    <td className="px-4 py-4">
+                      <Badge className={admin.firestore_exists ? (hasName ? "bg-green-600" : "bg-orange-600") : "bg-red-600"}>
+                        {admin.firestore_exists ? (hasName ? "Profile complete" : "Name pending") : "Missing admin record"}
                       </Badge>
                     </td>
-                    <td className="px-4 py-4 text-xs text-gray-500">{admin.id || "No UID recorded"}</td>
+                    <td className="px-4 py-4">
+                      <Badge className={admin.auth_exists ? (admin.disabled ? "bg-red-600" : "bg-green-600") : "bg-red-600"}>
+                        {admin.auth_exists ? (admin.disabled ? "Disabled" : "Exists") : "Missing Auth user"}
+                      </Badge>
+                      {admin.email_verified === true && <p className="mt-1 text-xs text-gray-500">Email verified</p>}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-4 text-xs text-gray-600">{formatDate(admin.last_sign_in_at)}</td>
+                    <td className="px-4 py-4 text-right">
+                      {admin.firestore_exists ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteAdmin(admin)}
+                          disabled={!canManageAdmins || isCurrentDeveloper || deletingAdminUid === admin.uid}
+                          title={isCurrentDeveloper ? "The site developer cannot delete their own admin record" : "Remove Firestore admin access"}
+                        >
+                          <Trash2 className="h-4 w-4 text-red-600" />
+                        </Button>
+                      ) : (
+                        <span className="text-xs text-gray-500">No Firestore record</span>
+                      )}
+                    </td>
                   </tr>
                 );
               })}
