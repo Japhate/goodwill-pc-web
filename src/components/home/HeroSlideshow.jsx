@@ -38,6 +38,7 @@ const FALLBACK_SLIDES = [
     alt_text: "Celebrating Achievements",
     link_url: "",
     link_label: "",
+    announcement_id: "celebrations-accomplishments-thanksgiving-recognition",
   },
   {
     image_url: "/images/hero/chancel-choir-spring-concert.png",
