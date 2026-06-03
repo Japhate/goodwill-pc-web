@@ -1226,6 +1226,37 @@ export default function AdminPage() {
     let savedItemCount = Array.isArray(formData) ? formData.length : 1;
 
     try {
+        const prepareHeroSlideData = async (submittedData) => {
+            const slides = Array.isArray(submittedData) ? submittedData : [submittedData];
+            const draftSource = slides.find((slide) => slide.related_announcement_draft?.create);
+            let createdAnnouncementId = '';
+
+            if (draftSource?.related_announcement_draft) {
+                const draft = draftSource.related_announcement_draft;
+                const createdAnnouncement = await AnnouncementsEvents.create({
+                    title: String(draft.title || '').trim(),
+                    content: String(draft.content || '').trim(),
+                    date: draft.date || '',
+                    time: draft.time || '',
+                    end_time: draft.end_time || '',
+                    location: draft.location || '',
+                    zoom_link: draft.zoom_link || '',
+                    category: draft.category || 'church_wide',
+                    status: draft.status || 'Active',
+                    image_upload: draftSource.image_url || '',
+                    created_date: new Date().toISOString(),
+                });
+                createdAnnouncementId = createdAnnouncement?.id || '';
+            }
+
+            const preparedSlides = slides.map(({ related_announcement_draft: _draft, ...slide }) => ({
+                ...slide,
+                announcement_id: createdAnnouncementId || slide.announcement_id || '',
+            }));
+
+            return Array.isArray(submittedData) ? preparedSlides : preparedSlides[0];
+        };
+
         switch (formView) {
             case 'announcement':
                 if (isEditing) {
@@ -1284,21 +1315,25 @@ export default function AdminPage() {
                 }
                 break;
             case 'heroSlide':
-                if (isEditing && Array.isArray(formData)) {
-                    const [firstSlide, ...additionalSlides] = formData;
+                {
+                const preparedHeroData = await prepareHeroSlideData(formData);
+                if (isEditing && Array.isArray(preparedHeroData)) {
+                    const [firstSlide, ...additionalSlides] = preparedHeroData;
                     await HeroSlide.update(editingItem.id, firstSlide);
                     const createdSlides = await Promise.all(additionalSlides.map((slideData) => HeroSlide.create(slideData)));
                     savedItemId = [editingItem.id, ...createdSlides.map((slide) => slide?.id)].filter(Boolean).join(', ');
                 } else if (isEditing) {
-                    await HeroSlide.update(editingItem.id, formData);
-                } else if (Array.isArray(formData)) {
-                    const createdSlides = await Promise.all(formData.map((slideData) => HeroSlide.create(slideData)));
+                    await HeroSlide.update(editingItem.id, preparedHeroData);
+                } else if (Array.isArray(preparedHeroData)) {
+                    const createdSlides = await Promise.all(preparedHeroData.map((slideData) => HeroSlide.create(slideData)));
                     savedItemId = createdSlides.map((slide) => slide?.id).filter(Boolean).join(', ');
                 } else {
-                    const created = await HeroSlide.create(formData);
+                    const created = await HeroSlide.create(preparedHeroData);
                     savedItemId = created?.id || '';
                 }
+                formData = preparedHeroData;
                 break;
+                }
             case 'sitePopup':
                 if (isEditing) {
                     await SitePopups.update(editingItem.id, prepareSitePopupData(formData));
