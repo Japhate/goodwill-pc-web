@@ -85,7 +85,7 @@ function SlideGrid({
                   <img
                     src={slide.image_url}
                     alt={slide.alt_text || "Slide"}
-                    className={`h-full w-full object-contain ${mode === "hidden" ? "grayscale" : ""}`}
+                    className="h-full w-full object-contain"
                   />
                 </div>
                 <div className="absolute bottom-2 left-2 rounded bg-white/95 p-2 shadow-sm">
