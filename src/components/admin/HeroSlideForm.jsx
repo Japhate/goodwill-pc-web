@@ -126,8 +126,10 @@ async function requestAiHeroImage(file) {
 }
 
 async function prepareHeroImageForUpload(file) {
-  const aiEditedFile = await requestAiHeroImage(file);
-  const image = await loadImageElement(aiEditedFile);
+  const originalImage = await loadImageElement(file);
+  const needsAiRedesign = originalImage.naturalWidth !== HERO_IMAGE_WIDTH || originalImage.naturalHeight !== HERO_IMAGE_HEIGHT;
+  const aiEditedFile = needsAiRedesign ? await requestAiHeroImage(file) : null;
+  const image = aiEditedFile ? await loadImageElement(aiEditedFile) : originalImage;
   const canvas = document.createElement("canvas");
   canvas.width = HERO_IMAGE_WIDTH;
   canvas.height = HERO_IMAGE_HEIGHT;
@@ -286,7 +288,7 @@ export default function HeroSlideForm({ slide, defaultOrder = 0, onSubmit, onCan
             {validationErrors.image_url && <p className="text-xs font-semibold text-red-600 mt-2">{validationErrors.image_url}</p>}
             {uploadError && <p className="text-xs text-red-600 mt-2">{uploadError}</p>}
             <p className="mt-2 text-xs text-gray-500">
-              Uploaded hero images are AI-redesigned, resized to 1920x760, and compressed before they are saved.
+              Uploaded hero images are compressed before they are saved. Images outside 1920x760 are AI-redesigned first.
             </p>
             {uploadedImages.length > 1 ? (
               <>
