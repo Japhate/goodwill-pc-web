@@ -142,6 +142,15 @@ const BIBLE_STUDY_START_MIN = 0;
 const BIBLE_STUDY_END_HOUR = 19;   // 7:00 PM
 const BIBLE_STUDY_END_MIN = 0;
 
+function getOptimizedHeroImageUrl(imageUrl) {
+  if (!imageUrl?.startsWith("/images/hero/") || !imageUrl.endsWith(".png")) {
+    return imageUrl;
+  }
+
+  const filename = imageUrl.split("/").pop().replace(/\.png$/i, ".jpg");
+  return `/images/hero/optimized/${filename}`;
+}
+
 function isZoomBibleStudySlide(slide) {
   if (!slide) return false;
 
@@ -362,6 +371,8 @@ export default function HeroSlideshow() {
   const nextSlide = activeSlides.length > 1
     ? activeSlides[(current + 1) % activeSlides.length]
     : null;
+  const currentImageUrl = getOptimizedHeroImageUrl(currentSlide?.image_url);
+  const nextImageUrl = getOptimizedHeroImageUrl(nextSlide?.image_url);
 
   useEffect(() => {
     setCurrent(0);
@@ -397,12 +408,12 @@ export default function HeroSlideshow() {
   }, [activeSlides.length]);
 
   useEffect(() => {
-    if (!nextSlide?.image_url) return;
+    if (!nextImageUrl) return;
 
     const image = new Image();
     image.decoding = "async";
-    image.src = nextSlide.image_url;
-  }, [nextSlide?.image_url]);
+    image.src = nextImageUrl;
+  }, [nextImageUrl]);
 
   const handleNext = () => {
     setCurrent(prev => (prev + 1) % activeSlides.length);
@@ -445,8 +456,8 @@ export default function HeroSlideshow() {
         <div className="relative aspect-[48/19] w-full overflow-hidden bg-black">
           <div className="relative h-full w-full transition-opacity duration-700">
             <img
-              key={currentSlide.image_url}
-              src={currentSlide.image_url}
+              key={currentImageUrl}
+              src={currentImageUrl}
               alt={currentSlide.alt_text || "Slide"}
               className="block h-full w-full object-contain"
               draggable={false}
