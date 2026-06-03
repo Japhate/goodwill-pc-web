@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { localApi } from "@/api/localApiClient";
+import { firebaseAuth } from "@/lib/firebase";
 import { Loader2, Upload } from "lucide-react";
 
 const BIBLE_STUDY_ZOOM = "https://us06web.zoom.us/j/82013337566?pwd=mULnQC1Zjg5GWkoTTKGvx3PyAFaCeZ.1";
@@ -69,8 +70,64 @@ function optimizedHeroFileName(fileName) {
   return `${baseName}-1920x760.jpg`;
 }
 
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error("Unable to read this image file."));
+    reader.readAsDataURL(file);
+  });
+}
+
+function dataUrlToFile(dataUrl, fileName) {
+  const [metadata, encoded] = String(dataUrl || "").split(",");
+  const mimeType = metadata?.match(/^data:([^;]+);base64$/)?.[1] || "image/png";
+  const binary = atob(encoded || "");
+  const bytes = new Uint8Array(binary.length);
+
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+
+  return new File([bytes], fileName, {
+    type: mimeType,
+    lastModified: Date.now(),
+  });
+}
+
+async function requestAiHeroImage(file) {
+  const token = await firebaseAuth?.currentUser?.getIdToken();
+  if (!token) {
+    throw new Error("Please sign in again before uploading hero images.");
+  }
+
+  const response = await fetch("/api/ai/hero-image", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      filename: file.name,
+      imageDataUrl: await fileToDataUrl(file),
+    }),
+  });
+
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(body?.error || "AI image editing failed.");
+  }
+
+  if (!body?.image_data_url) {
+    throw new Error("AI image editing did not return an image.");
+  }
+
+  return dataUrlToFile(body.image_data_url, file.name.replace(/\.[^.]+$/, "-ai-edited.png"));
+}
+
 async function prepareHeroImageForUpload(file) {
-  const image = await loadImageElement(file);
+  const aiEditedFile = await requestAiHeroImage(file);
+  const image = await loadImageElement(aiEditedFile);
   const canvas = document.createElement("canvas");
   canvas.width = HERO_IMAGE_WIDTH;
   canvas.height = HERO_IMAGE_HEIGHT;
@@ -160,7 +217,7 @@ export default function HeroSlideForm({ slide, defaultOrder = 0, onSubmit, onCan
       });
     } catch (error) {
       console.error("Hero image upload failed:", error);
-      setUploadError("Upload failed. Please try again.");
+      setUploadError(error?.message || "Upload failed. Please try again.");
     } finally {
       setUploading(false);
     }
@@ -229,7 +286,7 @@ export default function HeroSlideForm({ slide, defaultOrder = 0, onSubmit, onCan
             {validationErrors.image_url && <p className="text-xs font-semibold text-red-600 mt-2">{validationErrors.image_url}</p>}
             {uploadError && <p className="text-xs text-red-600 mt-2">{uploadError}</p>}
             <p className="mt-2 text-xs text-gray-500">
-              Uploaded hero images are automatically redesigned to 1920x760 and compressed before they are saved.
+              Uploaded hero images are AI-redesigned, resized to 1920x760, and compressed before they are saved.
             </p>
             {uploadedImages.length > 1 ? (
               <>

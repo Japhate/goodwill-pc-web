@@ -69,9 +69,12 @@ VITE_FIREBASE_MESSAGING_SENDER_ID
 VITE_FIREBASE_APP_ID
 RESEND_API_KEY
 RESEND_FROM_EMAIL
+OPENAI_API_KEY
+OPENAI_IMAGE_MODEL
 ```
 
 `RESEND_FROM_EMAIL` should be a verified sender in Resend, for example `Goodwill Presbyterian Church <news@goodwillpresch1867.com>`.
+`OPENAI_IMAGE_MODEL` is optional and defaults to `gpt-image-1`; `OPENAI_API_KEY` is required for AI hero image editing before Firebase upload.
 
 After those values are configured, use **Manual Deploy > Deploy latest commit** in Render and test `/Admin` on `https://www.goodwillpresch1867.com/Admin`. Keep the IONOS DNS records for `goodwillpresch1867.com` and `www.goodwillpresch1867.com` pointing to Render.
 

@@ -36,7 +36,7 @@ app.use((req, res, next) => {
 });
 
 app.use(cors());
-app.use(express.json({ limit: '15mb' }));
+app.use(express.json({ limit: '35mb' }));
 
 const DATA_DIR = path.join(ROOT_DIR, 'server', 'data');
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -209,6 +209,122 @@ async function assertAdminRequest(req) {
   }
 
   return { uid, email: payload.email || '' };
+}
+
+function parseImageDataUrl(dataUrl) {
+  const match = /^data:([^;]+);base64,(.+)$/i.exec(String(dataUrl || '').trim());
+  if (!match) {
+    const error = new Error('A valid image upload is required.');
+    error.status = 400;
+    throw error;
+  }
+
+  return {
+    mimeType: match[1],
+    buffer: Buffer.from(match[2], 'base64'),
+  };
+}
+
+function safeImageFilename(filename) {
+  const sanitized = String(filename || 'hero-image')
+    .replace(/[/\\?%*:|"<>]/g, '-')
+    .replace(/\s+/g, '-')
+    .slice(0, 120);
+  return sanitized || 'hero-image';
+}
+
+async function createOpenAiHeroEdit({ imageDataUrl, filename }) {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    const error = new Error('OpenAI image editing is not configured on the server.');
+    error.status = 503;
+    throw error;
+  }
+
+  const { mimeType, buffer } = parseImageDataUrl(imageDataUrl);
+  const supportedTypes = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/webp']);
+  if (!supportedTypes.has(mimeType.toLowerCase())) {
+    const error = new Error('Please upload a JPG, PNG, or WebP image.');
+    error.status = 400;
+    throw error;
+  }
+
+  if (buffer.length > 50 * 1024 * 1024) {
+    const error = new Error('Hero images must be smaller than 50 MB.');
+    error.status = 413;
+    throw error;
+  }
+
+  const model = process.env.OPENAI_IMAGE_MODEL || 'gpt-image-1';
+  const prompt = [
+    'Redesign this uploaded image as a polished church website hero image.',
+    'Preserve the same subject, content, style, and mood as much as possible.',
+    'Adapt the composition for a wide 1920 by 760 banner crop without blurred duplicate side extensions.',
+    'Do not add new text, logos, watermarks, or unrelated objects.',
+    'Keep faces, people, buildings, and important details natural and respectful.',
+  ].join(' ');
+
+  const formData = new FormData();
+  formData.append('model', model);
+  formData.append('prompt', prompt);
+  formData.append('image', new Blob([buffer], { type: mimeType }), safeImageFilename(filename));
+  if (model.startsWith('gpt-image-')) {
+    formData.append('size', '1536x1024');
+    formData.append('quality', 'medium');
+    formData.append('output_format', 'jpeg');
+  }
+
+  const response = await fetch('https://api.openai.com/v1/images/edits', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: formData,
+  });
+
+  const bodyText = await response.text();
+  let body;
+  try {
+    body = JSON.parse(bodyText || '{}');
+  } catch {
+    body = {};
+  }
+
+  if (!response.ok) {
+    const detail = body?.error?.message || bodyText || 'OpenAI could not edit this image.';
+    const error = new Error(detail);
+    error.status = response.status;
+    throw error;
+  }
+
+  const imageBase64 = body?.data?.[0]?.b64_json;
+  if (imageBase64) {
+    return {
+      imageDataUrl: `data:image/jpeg;base64,${imageBase64}`,
+      model,
+    };
+  }
+
+  const imageUrl = body?.data?.[0]?.url;
+  if (imageUrl) {
+    const imageResponse = await fetch(imageUrl);
+    if (!imageResponse.ok) {
+      const error = new Error('OpenAI edited the image, but the result could not be downloaded.');
+      error.status = 502;
+      throw error;
+    }
+
+    const outputType = imageResponse.headers.get('content-type') || 'image/png';
+    const outputBuffer = Buffer.from(await imageResponse.arrayBuffer());
+    return {
+      imageDataUrl: `data:${outputType};base64,${outputBuffer.toString('base64')}`,
+      model,
+    };
+  }
+
+  const error = new Error('OpenAI did not return an edited image.');
+  error.status = 502;
+  throw error;
 }
 
 async function assertDeveloperAdminRequest(req) {
@@ -1200,6 +1316,24 @@ app.post('/api/send-newsletter-broadcast', async (req, res) => {
   }
 
   res.json({ success: failed === 0, sent, failed, results, adminNotifications: adminNotificationResults });
+});
+
+app.post('/api/ai/hero-image', async (req, res) => {
+  try {
+    await assertAdminRequest(req);
+    const { imageDataUrl, filename } = req.body || {};
+    const result = await createOpenAiHeroEdit({ imageDataUrl, filename });
+    res.json({
+      success: true,
+      image_data_url: result.imageDataUrl,
+      model: result.model,
+    });
+  } catch (error) {
+    console.error('AI hero image edit error', error?.message || error);
+    res.status(error.status || 500).json({
+      error: error?.message || 'Unable to AI-edit this hero image.',
+    });
+  }
 });
 
 const useLocalViteServer = process.env.LOCAL_VITE_DEV === 'true';
