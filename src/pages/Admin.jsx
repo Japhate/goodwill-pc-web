@@ -1074,6 +1074,42 @@ export default function AdminPage() {
     return true;
   };
 
+  const handleReorderVisibleHeroSlides = async (orderedVisibleSlides) => {
+    const hiddenSlides = heroSlides.filter((slide) => slide.is_active === false);
+    const reorderedVisibleSlides = orderedVisibleSlides.map((slide, index) => ({
+      ...slide,
+      order: index + 1,
+    }));
+
+    setHeroSlides([...reorderedVisibleSlides, ...hiddenSlides]);
+
+    try {
+      await Promise.all(reorderedVisibleSlides.map((slide) => {
+        const { id, ...slideData } = slide;
+        return HeroSlide.update(id, slideData);
+      }));
+
+      await logAdminActivity({
+        action: 'reordered',
+        section: 'Hero Slideshow',
+        itemType: 'hero slides',
+        itemLabel: `${reorderedVisibleSlides.length} visible hero slides`,
+        details: {
+          order: reorderedVisibleSlides.map((slide) => ({
+            id: slide.id,
+            order: slide.order,
+            label: slide.alt_text || '',
+          })),
+        },
+      });
+      await loadHeroSlides();
+    } catch (error) {
+      console.error('Unable to reorder hero slides:', error);
+      window.alert('Unable to save the new hero slide order. Please try again.');
+      await loadHeroSlides();
+    }
+  };
+
   const handleDuplicate = async (item, type) => {
     if (type === 'pastEvent') type = 'announcement';
     
@@ -1676,6 +1712,7 @@ export default function AdminPage() {
           onDeleteSelected={handleDeleteSelectedHeroSlides}
           onHideSelected={(ids) => handleSetHeroSlideVisibility(ids, false)}
           onRestoreSelected={(ids) => handleSetHeroSlideVisibility(ids, true)}
+          onReorderVisible={handleReorderVisibleHeroSlides}
           onAddNew={() => handleAddNew('heroSlide')}
         />;
       case 'sitePopups':

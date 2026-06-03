@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { EyeOff, ExternalLink, Link, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
+import { EyeOff, ExternalLink, GripVertical, Link, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
 
 function SlideGrid({
   title,
@@ -19,9 +19,39 @@ function SlideGrid({
   onBulkHide,
   onBulkRestore,
   onBulkDelete,
+  onReorder,
   mode,
 }) {
   const allSelected = slides.length > 0 && selectedIds.length === slides.length;
+  const isDraggable = mode === "visible" && typeof onReorder === "function";
+
+  const handleDragStart = (event, slideId) => {
+    if (!isDraggable) return;
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", String(slideId));
+  };
+
+  const handleDragOver = (event) => {
+    if (!isDraggable) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+  };
+
+  const handleDrop = (event, targetId) => {
+    if (!isDraggable) return;
+    event.preventDefault();
+    const draggedId = event.dataTransfer.getData("text/plain");
+    if (!draggedId || draggedId === String(targetId)) return;
+
+    const fromIndex = slides.findIndex((slide) => String(slide.id) === draggedId);
+    const toIndex = slides.findIndex((slide) => String(slide.id) === String(targetId));
+    if (fromIndex < 0 || toIndex < 0) return;
+
+    const reorderedSlides = [...slides];
+    const [movedSlide] = reorderedSlides.splice(fromIndex, 1);
+    reorderedSlides.splice(toIndex, 0, movedSlide);
+    onReorder(reorderedSlides);
+  };
 
   return (
     <section className="space-y-4">
@@ -79,7 +109,14 @@ function SlideGrid({
       ) : (
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {slides.map((slide, index) => (
-            <Card key={slide.id} className={`overflow-hidden ${selectedIds.includes(slide.id) ? "ring-2 ring-amber-500" : ""}`}>
+            <Card
+              key={slide.id}
+              draggable={isDraggable}
+              onDragStart={(event) => handleDragStart(event, slide.id)}
+              onDragOver={handleDragOver}
+              onDrop={(event) => handleDrop(event, slide.id)}
+              className={`overflow-hidden ${isDraggable ? "cursor-grab active:cursor-grabbing" : ""} ${selectedIds.includes(slide.id) ? "ring-2 ring-amber-500" : ""}`}
+            >
               <div className="relative">
                 <div className="flex aspect-[48/19] w-full items-center justify-center bg-gray-950">
                   <img
@@ -106,6 +143,11 @@ function SlideGrid({
                 <div className="absolute left-2 top-2 rounded-full bg-black/60 px-2 py-1 text-xs text-white">
                   #{index + 1}
                 </div>
+                {isDraggable && (
+                  <div className="absolute bottom-2 right-2 rounded bg-white/95 p-2 text-gray-700 shadow-sm" title="Drag to reorder">
+                    <GripVertical className="h-4 w-4" />
+                  </div>
+                )}
               </div>
               <CardContent className="space-y-2 p-4">
                 <p className="truncate text-sm font-medium text-gray-800">{slide.alt_text || "No description"}</p>
@@ -154,6 +196,7 @@ export default function HeroSlideList({
   onAddNew,
   onHideSelected,
   onRestoreSelected,
+  onReorderVisible,
 }) {
   const [selectedVisibleIds, setSelectedVisibleIds] = useState([]);
   const [selectedHiddenIds, setSelectedHiddenIds] = useState([]);
@@ -243,6 +286,7 @@ export default function HeroSlideList({
         onBulkHide={() => hideSlides(selectedVisibleIds)}
         onBulkRestore={() => restoreSlides(selectedHiddenIds)}
         onBulkDelete={deleteVisibleSelected}
+        onReorder={onReorderVisible}
         mode="visible"
       />
 
