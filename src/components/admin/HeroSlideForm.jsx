@@ -240,12 +240,16 @@ export default function HeroSlideForm({ slide, onSubmit, onCancel, onImageUpload
                 </p>
                 <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {uploadedImages.map((imageUrl, index) => (
-                    <img key={imageUrl} src={imageUrl} alt={`Preview ${index + 1}`} className="w-full h-24 object-cover rounded-md border" />
+                    <div key={imageUrl} className="flex aspect-[48/19] w-full items-center justify-center rounded-md border bg-gray-950">
+                      <img src={imageUrl} alt={`Preview ${index + 1}`} className="h-full w-full object-contain" />
+                    </div>
                   ))}
                 </div>
               </>
             ) : formData.image_url && (
-              <img src={formData.image_url} alt="Preview" className="mt-2 w-full h-32 object-cover rounded-md border" />
+              <div className="mt-2 flex aspect-[48/19] w-full items-center justify-center rounded-md border bg-gray-950">
+                <img src={formData.image_url} alt="Preview" className="h-full w-full object-contain" />
+              </div>
             )}
           </div>
 

@@ -81,11 +81,13 @@ function SlideGrid({
           {slides.map((slide) => (
             <Card key={slide.id} className={`overflow-hidden ${selectedIds.includes(slide.id) ? "ring-2 ring-amber-500" : ""}`}>
               <div className="relative">
-                <img
-                  src={slide.image_url}
-                  alt={slide.alt_text || "Slide"}
-                  className={`h-40 w-full object-cover ${mode === "hidden" ? "grayscale" : ""}`}
-                />
+                <div className="flex aspect-[48/19] w-full items-center justify-center bg-gray-950">
+                  <img
+                    src={slide.image_url}
+                    alt={slide.alt_text || "Slide"}
+                    className={`h-full w-full object-contain ${mode === "hidden" ? "grayscale" : ""}`}
+                  />
+                </div>
                 <div className="absolute bottom-2 left-2 rounded bg-white/95 p-2 shadow-sm">
                   <Checkbox
                     checked={selectedIds.includes(slide.id)}
