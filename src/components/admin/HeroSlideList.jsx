@@ -1,108 +1,118 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Pencil, Trash2, Plus, Link, ExternalLink } from "lucide-react";
+import { EyeOff, ExternalLink, Link, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
 
-export default function HeroSlideList({ slides, onEdit, onDelete, onDeleteSelected, onAddNew }) {
-  const [selectedIds, setSelectedIds] = useState([]);
+function SlideGrid({
+  title,
+  emptyMessage,
+  slides,
+  selectedIds,
+  onToggleSelected,
+  onToggleAll,
+  onEdit,
+  onDelete,
+  onHide,
+  onRestore,
+  onBulkHide,
+  onBulkRestore,
+  onBulkDelete,
+  mode,
+}) {
   const allSelected = slides.length > 0 && selectedIds.length === slides.length;
 
-  useEffect(() => {
-    const displayedIds = new Set(slides.map((slide) => slide.id));
-    setSelectedIds((ids) => ids.filter((id) => displayedIds.has(id)));
-  }, [slides]);
-
-  const toggleSelected = (id, checked) => {
-    setSelectedIds((ids) => (
-      checked ? [...new Set([...ids, id])] : ids.filter((selectedId) => selectedId !== id)
-    ));
-  };
-
-  const toggleAll = (checked) => {
-    setSelectedIds(checked ? slides.map((slide) => slide.id) : []);
-  };
-
-  const deleteSelected = async () => {
-    const deleted = await onDeleteSelected(selectedIds);
-    if (deleted) setSelectedIds([]);
-  };
-
   return (
-    <div>
-      <div className="flex justify-between items-center gap-4 mb-6 flex-wrap">
-        <h2 className="text-2xl font-bold text-gray-900">Hero Slideshow Images</h2>
-        <div className="flex items-center gap-3 flex-wrap">
+    <section className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h3 className="text-xl font-bold text-gray-900">{title}</h3>
+          <p className="text-sm text-gray-500">{slides.length} {slides.length === 1 ? "slide" : "slides"}</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
           {slides.length > 0 && (
             <label className="flex items-center gap-2 text-sm text-gray-700">
               <Checkbox
                 checked={allSelected}
-                onCheckedChange={(checked) => toggleAll(checked === true)}
+                onCheckedChange={(checked) => onToggleAll(checked === true)}
               />
               Select all
             </label>
           )}
-          {selectedIds.length > 0 && (
+          {selectedIds.length > 0 && mode === "visible" && (
             <Button
               variant="outline"
-              onClick={deleteSelected}
-              className="text-red-600 border-red-300 hover:bg-red-50 gap-2"
+              onClick={onBulkHide}
+              className="gap-2 border-gray-300 text-gray-700 hover:bg-gray-50"
             >
-              <Trash2 className="w-4 h-4" /> Delete Selected ({selectedIds.length})
+              <EyeOff className="h-4 w-4" /> Hide Selected ({selectedIds.length})
             </Button>
           )}
-          <Button onClick={onAddNew} className="bg-amber-600 hover:bg-amber-700 gap-2">
-            <Plus className="w-4 h-4" /> Add Slide
-          </Button>
+          {selectedIds.length > 0 && mode === "hidden" && (
+            <>
+              <Button
+                variant="outline"
+                onClick={onBulkRestore}
+                className="gap-2 border-green-300 text-green-700 hover:bg-green-50"
+              >
+                <RotateCcw className="h-4 w-4" /> Restore Selected ({selectedIds.length})
+              </Button>
+              <Button
+                variant="outline"
+                onClick={onBulkDelete}
+                className="gap-2 border-red-300 text-red-600 hover:bg-red-50"
+              >
+                <Trash2 className="h-4 w-4" /> Delete Selected ({selectedIds.length})
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
       {slides.length === 0 ? (
         <Card>
-          <CardContent className="py-12 text-center text-gray-500">
-            No slides yet. Add one to get started.
+          <CardContent className="py-10 text-center text-gray-500">
+            {emptyMessage}
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {slides.map((slide) => (
             <Card key={slide.id} className={`overflow-hidden ${selectedIds.includes(slide.id) ? "ring-2 ring-amber-500" : ""}`}>
               <div className="relative">
                 <img
                   src={slide.image_url}
                   alt={slide.alt_text || "Slide"}
-                  className="w-full h-40 object-cover"
+                  className={`h-40 w-full object-cover ${mode === "hidden" ? "grayscale" : ""}`}
                 />
                 <div className="absolute bottom-2 left-2 rounded bg-white/95 p-2 shadow-sm">
                   <Checkbox
                     checked={selectedIds.includes(slide.id)}
-                    onCheckedChange={(checked) => toggleSelected(slide.id, checked === true)}
+                    onCheckedChange={(checked) => onToggleSelected(slide.id, checked === true)}
                     aria-label={`Select ${slide.alt_text || "slide"}`}
                   />
                 </div>
-                <div className="absolute top-2 right-2 flex gap-1">
+                <div className="absolute right-2 top-2 flex gap-1">
                   {slide.is_priority_announcement && (
-                    <Badge className="bg-red-600">
-                      Priority
-                    </Badge>
+                    <Badge className="bg-red-600">Priority</Badge>
                   )}
-                  <Badge className={slide.is_active ? "bg-green-600" : "bg-gray-400"}>
-                    {slide.is_active ? "Active" : "Inactive"}
+                  <Badge className={mode === "visible" ? "bg-green-600" : "bg-gray-500"}>
+                    {mode === "visible" ? "Visible" : "Hidden"}
                   </Badge>
                 </div>
-                <div className="absolute top-2 left-2 bg-black/60 text-white text-xs px-2 py-1 rounded-full">
+                <div className="absolute left-2 top-2 rounded-full bg-black/60 px-2 py-1 text-xs text-white">
                   #{slide.order ?? 0}
                 </div>
               </div>
-              <CardContent className="p-4 space-y-2">
-                <p className="text-sm font-medium text-gray-800 truncate">{slide.alt_text || "No description"}</p>
+              <CardContent className="space-y-2 p-4">
+                <p className="truncate text-sm font-medium text-gray-800">{slide.alt_text || "No description"}</p>
                 {slide.link_url ? (
-                  <div className="flex items-center gap-1 text-xs text-blue-600 truncate">
-                    <Link className="w-3 h-3 flex-shrink-0" />
+                  <div className="flex items-center gap-1 truncate text-xs text-blue-600">
+                    <Link className="h-3 w-3 flex-shrink-0" />
                     <span className="truncate">{slide.link_label || slide.link_url}</span>
                     <a href={slide.link_url} target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                      <ExternalLink className="h-3 w-3 flex-shrink-0" />
                     </a>
                   </div>
                 ) : (
@@ -110,10 +120,19 @@ export default function HeroSlideList({ slides, onEdit, onDelete, onDeleteSelect
                 )}
                 <div className="flex gap-2 pt-1">
                   <Button size="sm" variant="outline" onClick={() => onEdit(slide)} className="flex-1 gap-1">
-                    <Pencil className="w-3 h-3" /> Edit
+                    <Pencil className="h-3 w-3" /> Edit
                   </Button>
-                  <Button size="sm" variant="outline" onClick={() => onDelete(slide.id)} className="text-red-600 border-red-300 hover:bg-red-50">
-                    <Trash2 className="w-3 h-3" />
+                  {mode === "visible" ? (
+                    <Button size="sm" variant="outline" onClick={() => onHide([slide.id])} className="gap-1 border-gray-300 text-gray-700 hover:bg-gray-50">
+                      <EyeOff className="h-3 w-3" /> Hide
+                    </Button>
+                  ) : (
+                    <Button size="sm" variant="outline" onClick={() => onRestore([slide.id])} className="gap-1 border-green-300 text-green-700 hover:bg-green-50">
+                      <RotateCcw className="h-3 w-3" /> Restore
+                    </Button>
+                  )}
+                  <Button size="sm" variant="outline" onClick={() => onDelete(slide.id)} className="border-red-300 text-red-600 hover:bg-red-50">
+                    <Trash2 className="h-3 w-3" />
                   </Button>
                 </div>
               </CardContent>
@@ -121,6 +140,126 @@ export default function HeroSlideList({ slides, onEdit, onDelete, onDeleteSelect
           ))}
         </div>
       )}
+    </section>
+  );
+}
+
+export default function HeroSlideList({
+  slides,
+  onEdit,
+  onDelete,
+  onDeleteSelected,
+  onAddNew,
+  onHideSelected,
+  onRestoreSelected,
+}) {
+  const [selectedVisibleIds, setSelectedVisibleIds] = useState([]);
+  const [selectedHiddenIds, setSelectedHiddenIds] = useState([]);
+
+  const visibleSlides = useMemo(
+    () => slides.filter((slide) => slide.is_active !== false),
+    [slides]
+  );
+  const hiddenSlides = useMemo(
+    () => slides.filter((slide) => slide.is_active === false),
+    [slides]
+  );
+
+  useEffect(() => {
+    const visibleIds = new Set(visibleSlides.map((slide) => slide.id));
+    const hiddenIds = new Set(hiddenSlides.map((slide) => slide.id));
+    setSelectedVisibleIds((ids) => ids.filter((id) => visibleIds.has(id)));
+    setSelectedHiddenIds((ids) => ids.filter((id) => hiddenIds.has(id)));
+  }, [visibleSlides, hiddenSlides]);
+
+  const toggleVisibleSelected = (id, checked) => {
+    setSelectedVisibleIds((ids) => (
+      checked ? [...new Set([...ids, id])] : ids.filter((selectedId) => selectedId !== id)
+    ));
+  };
+
+  const toggleHiddenSelected = (id, checked) => {
+    setSelectedHiddenIds((ids) => (
+      checked ? [...new Set([...ids, id])] : ids.filter((selectedId) => selectedId !== id)
+    ));
+  };
+
+  const hideSlides = async (ids) => {
+    const changed = await onHideSelected(ids);
+    if (changed) setSelectedVisibleIds((selectedIds) => selectedIds.filter((id) => !ids.includes(id)));
+  };
+
+  const restoreSlides = async (ids) => {
+    const changed = await onRestoreSelected(ids);
+    if (changed) setSelectedHiddenIds((selectedIds) => selectedIds.filter((id) => !ids.includes(id)));
+  };
+
+  const deleteVisibleSelected = async () => {
+    const deleted = await onDeleteSelected(selectedVisibleIds);
+    if (deleted) setSelectedVisibleIds([]);
+  };
+
+  const deleteHiddenSelected = async () => {
+    const deleted = await onDeleteSelected(selectedHiddenIds);
+    if (deleted) setSelectedHiddenIds([]);
+  };
+
+  return (
+    <div className="space-y-10">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">Hero Slideshow Images</h2>
+          <p className="text-sm text-gray-500">Hide slides to keep them reusable without showing them on the homepage.</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          {selectedVisibleIds.length > 0 && (
+            <Button
+              variant="outline"
+              onClick={deleteVisibleSelected}
+              className="gap-2 border-red-300 text-red-600 hover:bg-red-50"
+            >
+              <Trash2 className="h-4 w-4" /> Delete Selected ({selectedVisibleIds.length})
+            </Button>
+          )}
+          <Button onClick={onAddNew} className="gap-2 bg-amber-600 hover:bg-amber-700">
+            <Plus className="h-4 w-4" /> Add Slide
+          </Button>
+        </div>
+      </div>
+
+      <SlideGrid
+        title="Visible Images"
+        emptyMessage="No visible slides. Restore a hidden slide or add a new one."
+        slides={visibleSlides}
+        selectedIds={selectedVisibleIds}
+        onToggleSelected={toggleVisibleSelected}
+        onToggleAll={(checked) => setSelectedVisibleIds(checked ? visibleSlides.map((slide) => slide.id) : [])}
+        onEdit={onEdit}
+        onDelete={onDelete}
+        onHide={hideSlides}
+        onRestore={restoreSlides}
+        onBulkHide={() => hideSlides(selectedVisibleIds)}
+        onBulkRestore={() => restoreSlides(selectedHiddenIds)}
+        onBulkDelete={deleteVisibleSelected}
+        mode="visible"
+      />
+
+      <SlideGrid
+        title="Hidden Images"
+        emptyMessage="No hidden hero images."
+        slides={hiddenSlides}
+        selectedIds={selectedHiddenIds}
+        onToggleSelected={toggleHiddenSelected}
+        onToggleAll={(checked) => setSelectedHiddenIds(checked ? hiddenSlides.map((slide) => slide.id) : [])}
+        onEdit={onEdit}
+        onDelete={onDelete}
+        onHide={hideSlides}
+        onRestore={restoreSlides}
+        onBulkHide={() => hideSlides(selectedVisibleIds)}
+        onBulkRestore={() => restoreSlides(selectedHiddenIds)}
+        onBulkDelete={deleteHiddenSelected}
+        mode="hidden"
+      />
     </div>
   );
 }

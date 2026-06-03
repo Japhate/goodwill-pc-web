@@ -1032,6 +1032,48 @@ export default function AdminPage() {
     return true;
   };
 
+  const handleSetHeroSlideVisibility = async (ids, isActive) => {
+    if (!ids.length) return false;
+
+    const slideLabel = ids.length === 1 ? 'hero slide' : 'hero slides';
+    const actionLabel = isActive ? 'restore' : 'hide';
+    const confirmMessage = isActive
+      ? `Restore ${ids.length} selected ${slideLabel} to the homepage slideshow?`
+      : `Hide ${ids.length} selected ${slideLabel} from the homepage slideshow? The images will stay saved for reuse.`;
+
+    if (!window.confirm(confirmMessage)) {
+      return false;
+    }
+
+    const slidesById = new Map(heroSlides.map((slide) => [String(slide.id), slide]));
+    const results = await Promise.allSettled(ids.map((id) => {
+      const slide = slidesById.get(String(id));
+      if (!slide) throw new Error(`Hero slide ${id} was not found.`);
+      const { id: _id, ...slideData } = slide;
+      return HeroSlide.update(id, { ...slideData, is_active: isActive });
+    }));
+
+    await loadHeroSlides();
+
+    const failedUpdates = results.filter((result) => result.status === 'rejected');
+    if (failedUpdates.length > 0) {
+      console.error(`Unable to ${actionLabel} some selected hero slides:`, failedUpdates);
+      window.alert(`${failedUpdates.length} selected ${failedUpdates.length === 1 ? 'hero slide was' : 'hero slides were'} not updated. Please try again.`);
+      return false;
+    }
+
+    await logAdminActivity({
+      action: isActive ? 'restored' : 'hidden',
+      section: 'Hero Slideshow',
+      itemType: slideLabel,
+      itemId: ids.join(', '),
+      itemLabel: `${ids.length} selected ${slideLabel}`,
+      details: { is_active: isActive },
+    });
+
+    return true;
+  };
+
   const handleDuplicate = async (item, type) => {
     if (type === 'pastEvent') type = 'announcement';
     
@@ -1630,6 +1672,8 @@ export default function AdminPage() {
           onEdit={(item) => handleEdit(item, 'heroSlide')}
           onDelete={(id) => handleDelete(id, 'heroSlide')}
           onDeleteSelected={handleDeleteSelectedHeroSlides}
+          onHideSelected={(ids) => handleSetHeroSlideVisibility(ids, false)}
+          onRestoreSelected={(ids) => handleSetHeroSlideVisibility(ids, true)}
           onAddNew={() => handleAddNew('heroSlide')}
         />;
       case 'sitePopups':
