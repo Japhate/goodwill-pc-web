@@ -258,7 +258,11 @@ export const firebaseApi = {
         if (!file) return { file_url: "" };
         await firebaseUser();
         const uploadRef = ref(firebaseStorage, uploadPath(file, destination));
-        await uploadBytes(uploadRef, file, { contentType: file.type });
+        const metadata = { contentType: file.type };
+        if (destination === "heroImage") {
+          metadata.cacheControl = "public,max-age=31536000";
+        }
+        await uploadBytes(uploadRef, file, metadata);
         return { file_url: await getDownloadURL(uploadRef) };
       },
       InvokeLLM: async () => null,

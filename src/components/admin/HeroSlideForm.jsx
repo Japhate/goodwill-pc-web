@@ -7,6 +7,96 @@ import { localApi } from "@/api/localApiClient";
 import { Loader2, Upload } from "lucide-react";
 
 const BIBLE_STUDY_ZOOM = "https://us06web.zoom.us/j/82013337566?pwd=mULnQC1Zjg5GWkoTTKGvx3PyAFaCeZ.1";
+const HERO_IMAGE_WIDTH = 1920;
+const HERO_IMAGE_HEIGHT = 760;
+const HERO_IMAGE_QUALITY = 0.82;
+
+function getCoverRect(sourceWidth, sourceHeight, targetWidth, targetHeight) {
+  const scale = Math.max(targetWidth / sourceWidth, targetHeight / sourceHeight);
+  const width = sourceWidth * scale;
+  const height = sourceHeight * scale;
+  return {
+    x: (targetWidth - width) / 2,
+    y: (targetHeight - height) / 2,
+    width,
+    height,
+  };
+}
+
+function getContainRect(sourceWidth, sourceHeight, targetWidth, targetHeight) {
+  const scale = Math.min(targetWidth / sourceWidth, targetHeight / sourceHeight);
+  const width = sourceWidth * scale;
+  const height = sourceHeight * scale;
+  return {
+    x: (targetWidth - width) / 2,
+    y: (targetHeight - height) / 2,
+    width,
+    height,
+  };
+}
+
+function canvasToBlob(canvas, type, quality) {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (blob) {
+        resolve(blob);
+        return;
+      }
+      reject(new Error("Unable to optimize this hero image."));
+    }, type, quality);
+  });
+}
+
+function loadImageElement(file) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    const objectUrl = URL.createObjectURL(file);
+
+    image.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve(image);
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error("Unable to read this image file."));
+    };
+    image.src = objectUrl;
+  });
+}
+
+function optimizedHeroFileName(fileName) {
+  const baseName = fileName.replace(/\.[^.]+$/, "").replace(/[^a-zA-Z0-9._-]/g, "-") || "hero-image";
+  return `${baseName}-1920x760.jpg`;
+}
+
+async function prepareHeroImageForUpload(file) {
+  const image = await loadImageElement(file);
+  const canvas = document.createElement("canvas");
+  canvas.width = HERO_IMAGE_WIDTH;
+  canvas.height = HERO_IMAGE_HEIGHT;
+
+  const context = canvas.getContext("2d");
+  if (!context) throw new Error("Unable to prepare this hero image.");
+
+  const coverRect = getCoverRect(image.naturalWidth, image.naturalHeight, HERO_IMAGE_WIDTH, HERO_IMAGE_HEIGHT);
+  context.save();
+  context.filter = "blur(28px)";
+  context.globalAlpha = 0.9;
+  context.drawImage(image, coverRect.x, coverRect.y, coverRect.width, coverRect.height);
+  context.restore();
+
+  context.fillStyle = "rgba(0, 0, 0, 0.08)";
+  context.fillRect(0, 0, HERO_IMAGE_WIDTH, HERO_IMAGE_HEIGHT);
+
+  const containRect = getContainRect(image.naturalWidth, image.naturalHeight, HERO_IMAGE_WIDTH, HERO_IMAGE_HEIGHT);
+  context.drawImage(image, containRect.x, containRect.y, containRect.width, containRect.height);
+
+  const blob = await canvasToBlob(canvas, "image/jpeg", HERO_IMAGE_QUALITY);
+  return new File([blob], optimizedHeroFileName(file.name), {
+    type: "image/jpeg",
+    lastModified: Date.now(),
+  });
+}
 
 export default function HeroSlideForm({ slide, onSubmit, onCancel, onImageUpload }) {
   const [formData, setFormData] = useState({
@@ -55,15 +145,17 @@ export default function HeroSlideForm({ slide, onSubmit, onCancel, onImageUpload
     setUploading(true);
     setUploadError("");
     try {
+      const preparedFiles = await Promise.all(files.map(prepareHeroImageForUpload));
       const uploaded = await Promise.all(
-        files.map((file) => localApi.integrations.Core.UploadFile({ file, destination: "heroImage" }))
+        preparedFiles.map((file) => localApi.integrations.Core.UploadFile({ file, destination: "heroImage" }))
       );
       const imageUrls = uploaded.map(({ file_url }) => file_url);
       setUploadedImages(imageUrls);
       handleChange("image_url", imageUrls[0] || "");
       onImageUpload?.({
         count: imageUrls.length,
-        filenames: files.map((file) => file.name),
+        filenames: preparedFiles.map((file) => file.name),
+        originalFilenames: files.map((file) => file.name),
         imageUrls,
       });
     } catch (error) {
@@ -136,6 +228,9 @@ export default function HeroSlideForm({ slide, onSubmit, onCancel, onImageUpload
             />
             {validationErrors.image_url && <p className="text-xs font-semibold text-red-600 mt-2">{validationErrors.image_url}</p>}
             {uploadError && <p className="text-xs text-red-600 mt-2">{uploadError}</p>}
+            <p className="mt-2 text-xs text-gray-500">
+              Uploaded hero images are automatically redesigned to 1920x760 and compressed before they are saved.
+            </p>
             {uploadedImages.length > 1 ? (
               <>
                 <p className="text-xs text-green-700 mt-2">

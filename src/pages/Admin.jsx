@@ -1596,6 +1596,8 @@ export default function AdminPage() {
             details: {
               count: upload.count,
               filenames: upload.filenames || [],
+              original_filenames: upload.originalFilenames || [],
+              processed_dimensions: '1920x760',
             },
           })}
         />;
