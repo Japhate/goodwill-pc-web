@@ -212,9 +212,11 @@ function SlideGrid({
                       <RotateCcw className="h-3 w-3" /> Restore
                     </Button>
                   )}
-                  <Button size="sm" variant="outline" onClick={() => onDelete(slide.id)} className="border-red-300 text-red-600 hover:bg-red-50">
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
+                  {mode === "hidden" && (
+                    <Button size="sm" variant="outline" onClick={() => onDelete(slide.id)} className="border-red-300 text-red-600 hover:bg-red-50">
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -311,9 +313,11 @@ function SlideGrid({
                       <RotateCcw className="h-3 w-3" /> Restore
                     </Button>
                   )}
-                  <Button size="sm" variant="outline" onClick={() => onDelete(slide.id)} className="border-red-300 text-red-600 hover:bg-red-50">
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
+                  {mode === "hidden" && (
+                    <Button size="sm" variant="outline" onClick={() => onDelete(slide.id)} className="border-red-300 text-red-600 hover:bg-red-50">
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -376,9 +380,8 @@ export default function HeroSlideList({
     if (changed) setSelectedHiddenIds((selectedIds) => selectedIds.filter((id) => !ids.includes(id)));
   };
 
-  const deleteVisibleSelected = async () => {
-    const deleted = await onDeleteSelected(selectedVisibleIds);
-    if (deleted) setSelectedVisibleIds([]);
+  const hideVisibleSelected = async () => {
+    await hideSlides(selectedVisibleIds);
   };
 
   const deleteHiddenSelected = async () => {
@@ -415,10 +418,10 @@ export default function HeroSlideList({
           {selectedVisibleIds.length > 0 && (
             <Button
               variant="outline"
-              onClick={deleteVisibleSelected}
-              className="gap-2 border-red-300 text-red-600 hover:bg-red-50"
+              onClick={hideVisibleSelected}
+              className="gap-2 border-gray-300 text-gray-700 hover:bg-gray-50"
             >
-              <Trash2 className="h-4 w-4" /> Delete Selected ({selectedVisibleIds.length})
+              <EyeOff className="h-4 w-4" /> Move Selected to Hidden ({selectedVisibleIds.length})
             </Button>
           )}
           <Button onClick={onAddNew} className="gap-2 bg-amber-600 hover:bg-amber-700">
@@ -440,7 +443,7 @@ export default function HeroSlideList({
         onRestore={restoreSlides}
         onBulkHide={() => hideSlides(selectedVisibleIds)}
         onBulkRestore={() => restoreSlides(selectedHiddenIds)}
-        onBulkDelete={deleteVisibleSelected}
+        onBulkDelete={hideVisibleSelected}
         onReorder={onReorderVisible}
         viewMode={viewMode}
         mode="visible"
