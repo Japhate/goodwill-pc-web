@@ -30,6 +30,9 @@ export default function Updates() {
   const location = useLocation();
   const activeSpecialServiceNotice = getActiveSpecialServiceNotice(now);
   const inPersonOnlyNotice = activeSpecialServiceNotice?.liveStreamAvailable === false ? activeSpecialServiceNotice : null;
+  const selectedAnnouncementId = location.hash.startsWith("#announcement-")
+    ? location.hash.replace("#announcement-", "")
+    : "";
 
   const clickNavigating = useRef(false);
   const scrollTimeoutRef = useRef(null);
@@ -356,7 +359,13 @@ export default function Updates() {
                   const itemDate = parseDateAsLocal(item.date);
                   const isFarFuture = itemDate && itemDate.getFullYear() > 2090;
                   return (
-                  <div id={`announcement-${item.id}`} key={item.id} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow duration-300 flex flex-col scroll-mt-[160px] md:scroll-mt-[140px]">
+                  <div
+                    id={`announcement-${item.id}`}
+                    key={item.id}
+                    className={`bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow duration-300 flex flex-col scroll-mt-[160px] md:scroll-mt-[140px] ${
+                      selectedAnnouncementId === String(item.id) ? "ring-4 ring-amber-400 ring-offset-4" : ""
+                    }`}
+                  >
                     {item.image_upload ? (
                       <div className="h-48 w-full overflow-hidden">
                         <img src={item.image_upload} alt={item.title} className="w-full h-full object-cover" />
@@ -478,7 +487,13 @@ export default function Updates() {
                 {sortedPastEvents.map((item) => {
                   const itemDate = parseDateAsLocal(item.date);
                   return (
-                  <div id={`announcement-${item.id}`} key={item.id} className="bg-white border-l-4 border-amber-400 p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow scroll-mt-[160px] md:scroll-mt-[140px]">
+                  <div
+                    id={`announcement-${item.id}`}
+                    key={item.id}
+                    className={`bg-white border-l-4 border-amber-400 p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow scroll-mt-[160px] md:scroll-mt-[140px] ${
+                      selectedAnnouncementId === String(item.id) ? "ring-4 ring-amber-400 ring-offset-4" : ""
+                    }`}
+                  >
                     <div className="flex gap-6">
                       {item.image_upload && (
                         <div className="w-32 h-32 flex-shrink-0 overflow-hidden rounded-lg">

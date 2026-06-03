@@ -365,6 +365,10 @@ export default function HeroSlideshow() {
     : null;
   const currentImageUrl = currentSlide?.image_url;
   const nextImageUrl = nextSlide?.image_url;
+  const relatedAnnouncementUrl = currentSlide?.announcement_id
+    ? `/Updates#announcement-${currentSlide.announcement_id}`
+    : "";
+  const externalSlideUrl = currentSlide?.link_url || (isZoomBibleStudySlide(currentSlide) ? BIBLE_STUDY_ZOOM : "");
 
   useEffect(() => {
     setCurrent(0);
@@ -464,26 +468,50 @@ export default function HeroSlideshow() {
                 fetchPriority="high"
                 loading="eager"
               />
-              {/* Link overlay button */}
-              {(currentSlide.link_url || isZoomBibleStudySlide(currentSlide)) && (
-                <a
-                  href={currentSlide.link_url || BIBLE_STUDY_ZOOM}
-                  target="_blank"
-                  rel="noopener noreferrer"
+              {/* Link overlay buttons */}
+              {(relatedAnnouncementUrl || externalSlideUrl) && (
+                <div
                   className={
                     currentSlide.is_priority_announcement
-                      ? "absolute bottom-3 left-1/2 hidden -translate-x-1/2 items-center gap-1.5 rounded-full border border-amber-200/70 bg-amber-500/95 px-6 py-3 text-base font-bold text-black shadow-lg transition-all hover:bg-amber-400 md:flex"
-                      : "absolute bottom-8 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-blue-600/95 px-3 py-1.5 text-xs font-semibold text-white shadow-lg transition-all hover:bg-blue-700 sm:bottom-12 sm:px-4 sm:py-2 sm:text-sm md:bottom-16 md:gap-2 md:px-6 md:py-3 md:text-base"
+                      ? "absolute bottom-3 left-1/2 hidden -translate-x-1/2 flex-wrap items-center justify-center gap-2 md:flex"
+                      : "absolute bottom-8 left-1/2 flex -translate-x-1/2 flex-wrap items-center justify-center gap-2 sm:bottom-12 md:bottom-16"
                   }
-                  onClick={(e) => e.stopPropagation()}
                 >
-                  {currentSlide.is_priority_announcement ? (
-                    <Navigation className="w-4 h-4" />
-                  ) : (
-                    <ExternalLink className="w-4 h-4" />
+                  {relatedAnnouncementUrl && (
+                    <a
+                      href={relatedAnnouncementUrl}
+                      className={
+                        currentSlide.is_priority_announcement
+                          ? "inline-flex items-center gap-1.5 rounded-full border border-amber-200/70 bg-white/95 px-6 py-3 text-base font-bold text-black shadow-lg transition-all hover:bg-amber-100"
+                          : "inline-flex items-center gap-1.5 rounded-full bg-white/95 px-3 py-1.5 text-xs font-semibold text-gray-950 shadow-lg transition-all hover:bg-amber-100 sm:px-4 sm:py-2 sm:text-sm md:gap-2 md:px-6 md:py-3 md:text-base"
+                      }
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      Read More
+                    </a>
                   )}
-                  {currentSlide.link_label || (isZoomBibleStudySlide(currentSlide) ? "Join Zoom" : "Learn More")}
-                </a>
+                  {externalSlideUrl && (
+                    <a
+                      href={externalSlideUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={
+                        currentSlide.is_priority_announcement
+                          ? "inline-flex items-center gap-1.5 rounded-full border border-amber-200/70 bg-amber-500/95 px-6 py-3 text-base font-bold text-black shadow-lg transition-all hover:bg-amber-400"
+                          : "inline-flex items-center gap-1.5 rounded-full bg-blue-600/95 px-3 py-1.5 text-xs font-semibold text-white shadow-lg transition-all hover:bg-blue-700 sm:px-4 sm:py-2 sm:text-sm md:gap-2 md:px-6 md:py-3 md:text-base"
+                      }
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {currentSlide.is_priority_announcement ? (
+                        <Navigation className="w-4 h-4" />
+                      ) : (
+                        <ExternalLink className="w-4 h-4" />
+                      )}
+                      {currentSlide.link_label || (isZoomBibleStudySlide(currentSlide) ? "Join Zoom" : "Learn More")}
+                    </a>
+                  )}
+                </div>
               )}
             </motion.div>
           </AnimatePresence>
@@ -503,17 +531,28 @@ export default function HeroSlideshow() {
         </div>
       )}
 
-      {currentSlide?.is_priority_announcement && currentSlide.link_url && (
-        <div className="bg-[#3f2a1f] px-4 py-2 text-center md:hidden">
-          <a
-            href={currentSlide.link_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center justify-center gap-1.5 rounded-full border border-amber-200/70 bg-amber-500 px-4 py-2 text-xs font-bold text-black shadow-lg transition-all hover:bg-amber-400"
-          >
-            <Navigation className="h-4 w-4" />
-            {currentSlide.link_label || "Get Directions"}
-          </a>
+      {currentSlide?.is_priority_announcement && (relatedAnnouncementUrl || externalSlideUrl) && (
+        <div className="flex flex-wrap items-center justify-center gap-2 bg-[#3f2a1f] px-4 py-2 text-center md:hidden">
+          {relatedAnnouncementUrl && (
+            <a
+              href={relatedAnnouncementUrl}
+              className="inline-flex items-center justify-center gap-1.5 rounded-full border border-amber-200/70 bg-white px-4 py-2 text-xs font-bold text-black shadow-lg transition-all hover:bg-amber-100"
+            >
+              <ExternalLink className="h-4 w-4" />
+              Read More
+            </a>
+          )}
+          {externalSlideUrl && (
+            <a
+              href={externalSlideUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-1.5 rounded-full border border-amber-200/70 bg-amber-500 px-4 py-2 text-xs font-bold text-black shadow-lg transition-all hover:bg-amber-400"
+            >
+              <Navigation className="h-4 w-4" />
+              {currentSlide.link_label || "Get Directions"}
+            </a>
+          )}
         </div>
       )}
 

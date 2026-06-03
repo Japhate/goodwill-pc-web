@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -110,6 +110,7 @@ export default function HeroSlideForm({ slide, defaultOrder = 0, onSubmit, onCan
     alt_text: "",
     link_url: "",
     link_label: "",
+    announcement_id: "",
     is_zoom_bible_study: false,
     is_priority_announcement: false,
     priority_start: "",
@@ -128,6 +129,37 @@ export default function HeroSlideForm({ slide, defaultOrder = 0, onSubmit, onCan
   const [uploadedImages, setUploadedImages] = useState([]);
   const [uploadError, setUploadError] = useState("");
   const [validationErrors, setValidationErrors] = useState({});
+  const [announcementOptions, setAnnouncementOptions] = useState([]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadAnnouncements = async () => {
+      try {
+        const announcements = await localApi.entities.AnnouncementsEvents.list("-created_date", 200);
+        if (!isMounted) return;
+
+        setAnnouncementOptions(
+          announcements
+            .filter((announcement) => announcement.status !== "Hidden")
+            .map((announcement) => ({
+              id: announcement.id,
+              title: announcement.title || "Untitled announcement",
+              status: announcement.status || "Active",
+            }))
+        );
+      } catch (error) {
+        console.error("Unable to load announcement options:", error);
+        if (isMounted) setAnnouncementOptions([]);
+      }
+    };
+
+    loadAnnouncements();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -285,6 +317,25 @@ export default function HeroSlideForm({ slide, defaultOrder = 0, onSubmit, onCan
               onChange={(e) => handleChange("link_label", e.target.value)}
               placeholder="e.g. Join Zoom Meeting"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">Related Announcement (optional)</label>
+            <select
+              value={formData.announcement_id || ""}
+              onChange={(e) => handleChange("announcement_id", e.target.value)}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              <option value="">No related announcement</option>
+              {announcementOptions.map((announcement) => (
+                <option key={announcement.id} value={announcement.id}>
+                  {announcement.title} ({announcement.status})
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-gray-500">
+              Adds a Read More button that opens this announcement on the Updates page.
+            </p>
           </div>
 
           <div>
