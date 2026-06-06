@@ -39,6 +39,8 @@ const formatTimeRange = (startTime, endTime) => {
   return startTime || endTime || "";
 };
 
+const getLocationType = (item) => item.location_type || (item.virtual_platform || item.zoom_link ? "virtual" : "physical");
+
 const SHOW_PAST_EVENTS_GALLERY = false;
 
 export default function Updates() {
@@ -394,6 +396,7 @@ export default function Updates() {
                   const isFarFuture = itemDate && itemDate.getFullYear() > 2090;
                   const dateLabel = !isFarFuture ? formatDateRange(itemDate, itemEndDate) : "";
                   const timeLabel = formatTimeRange(item.time, item.end_time);
+                  const locationType = getLocationType(item);
                   return (
                   <div
                     id={`announcement-${item.id}`}
@@ -429,13 +432,23 @@ export default function Updates() {
                         {dateLabel && <div className="flex items-start gap-2"><Calendar className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Date:</strong> {dateLabel}</span></div>}
                         {timeLabel && <div className="flex items-start gap-2"><Clock className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Time:</strong> {timeLabel}</span></div>}
                         {item.frequency && <div className="flex items-start gap-2"><Clock className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Frequency:</strong> {item.frequency}</span></div>}
-                        {item.location && <div className="flex items-start gap-2"><MapPin className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Location:</strong> {item.location}</span></div>}
-                        {(item.zoom_link || item.file_upload) && (
+                        {locationType === "virtual" ? (
+                          item.virtual_platform && <div className="flex items-start gap-2"><ExternalLink className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Platform:</strong> {item.virtual_platform}</span></div>
+                        ) : (
+                          item.location && <div className="flex items-start gap-2"><MapPin className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Location:</strong> {item.location}</span></div>
+                        )}
+                        {(item.zoom_link || item.directions_url || item.file_upload) && (
                           <div className="flex flex-wrap gap-2 pt-2">
-                            {item.zoom_link && (
+                            {locationType === "virtual" && item.zoom_link && (
                               <a href={item.zoom_link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-md bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700">
                                 <ExternalLink className="h-3.5 w-3.5" />
                                 Open Link
+                              </a>
+                            )}
+                            {locationType !== "virtual" && item.directions_url && (
+                              <a href={item.directions_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-md bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700">
+                                <MapPin className="h-3.5 w-3.5" />
+                                Get Directions
                               </a>
                             )}
                             {item.file_upload && (
@@ -545,6 +558,7 @@ export default function Updates() {
                   const itemEndDate = parseDateAsLocal(item.end_date);
                   const dateLabel = formatDateRange(itemDate, itemEndDate);
                   const timeLabel = formatTimeRange(item.time, item.end_time);
+                  const locationType = getLocationType(item);
                   return (
                   <div
                     id={`announcement-${item.id}`}
@@ -576,14 +590,24 @@ export default function Updates() {
                           {dateLabel && <div className="flex items-start gap-2"><Calendar className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Date:</strong> {dateLabel}</span></div>}
                           {timeLabel && <div className="flex items-start gap-2"><Clock className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Time:</strong> {timeLabel}</span></div>}
                           {item.frequency && <div className="flex items-start gap-2"><Clock className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Frequency:</strong> {item.frequency}</span></div>}
-                          {item.location && <div className="flex items-start gap-2"><MapPin className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Location:</strong> {item.location}</span></div>}
+                          {locationType === "virtual" ? (
+                            item.virtual_platform && <div className="flex items-start gap-2"><ExternalLink className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Platform:</strong> {item.virtual_platform}</span></div>
+                          ) : (
+                            item.location && <div className="flex items-start gap-2"><MapPin className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Location:</strong> {item.location}</span></div>
+                          )}
                         </div>
-                        {(item.zoom_link || item.file_upload) && (
+                        {(item.zoom_link || item.directions_url || item.file_upload) && (
                           <div className="mt-4 flex flex-wrap gap-2">
-                            {item.zoom_link && (
+                            {locationType === "virtual" && item.zoom_link && (
                               <a href={item.zoom_link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-md bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700">
                                 <ExternalLink className="h-3.5 w-3.5" />
                                 Open Link
+                              </a>
+                            )}
+                            {locationType !== "virtual" && item.directions_url && (
+                              <a href={item.directions_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-md bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700">
+                                <MapPin className="h-3.5 w-3.5" />
+                                Get Directions
                               </a>
                             )}
                             {item.file_upload && (

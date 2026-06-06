@@ -18,8 +18,11 @@ const DEFAULT_RELATED_ANNOUNCEMENT = {
   time: "",
   end_time: "",
   frequency: "",
+  location_type: "physical",
   location: "",
+  virtual_platform: "",
   zoom_link: "",
+  directions_url: "",
   file_upload: "",
   file_label: "",
   category: "church_wide",
@@ -456,10 +459,6 @@ export default function HeroSlideForm({ slide, defaultOrder = 0, onSubmit, onCan
                     <Input type="date" value={relatedAnnouncementDraft.end_date} onChange={(e) => handleRelatedAnnouncementChange("end_date", e.target.value)} />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Location</label>
-                    <Input value={relatedAnnouncementDraft.location} onChange={(e) => handleRelatedAnnouncementChange("location", e.target.value)} />
-                  </div>
-                  <div>
                     <label className="block text-xs font-semibold text-gray-700 mb-1">Start Time</label>
                     <Input type="time" value={relatedAnnouncementDraft.time} onChange={(e) => handleRelatedAnnouncementChange("time", e.target.value)} />
                   </div>
@@ -472,9 +471,39 @@ export default function HeroSlideForm({ slide, defaultOrder = 0, onSubmit, onCan
                     <Input placeholder="e.g. Daily, Weekly, Every evening" value={relatedAnnouncementDraft.frequency} onChange={(e) => handleRelatedAnnouncementChange("frequency", e.target.value)} />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Link</label>
-                    <Input type="url" value={relatedAnnouncementDraft.zoom_link} onChange={(e) => handleRelatedAnnouncementChange("zoom_link", e.target.value)} />
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">Location Type</label>
+                    <select
+                      value={relatedAnnouncementDraft.location_type || "physical"}
+                      onChange={(e) => handleRelatedAnnouncementChange("location_type", e.target.value)}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    >
+                      <option value="physical">Physical</option>
+                      <option value="virtual">Virtual</option>
+                    </select>
                   </div>
+                  {(relatedAnnouncementDraft.location_type || "physical") === "virtual" ? (
+                    <>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 mb-1">Platform</label>
+                        <Input placeholder="e.g. Zoom, Teams, YouTube" value={relatedAnnouncementDraft.virtual_platform} onChange={(e) => handleRelatedAnnouncementChange("virtual_platform", e.target.value)} />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 mb-1">Link</label>
+                        <Input type="url" value={relatedAnnouncementDraft.zoom_link} onChange={(e) => handleRelatedAnnouncementChange("zoom_link", e.target.value)} />
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 mb-1">Place Name</label>
+                        <Input placeholder="e.g. Goodwill Presbyterian Church" value={relatedAnnouncementDraft.location} onChange={(e) => handleRelatedAnnouncementChange("location", e.target.value)} />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 mb-1">Google Maps Directions</label>
+                        <Input type="url" placeholder="https://maps.google.com/..." value={relatedAnnouncementDraft.directions_url} onChange={(e) => handleRelatedAnnouncementChange("directions_url", e.target.value)} />
+                      </div>
+                    </>
+                  )}
                   <div>
                     <label className="block text-xs font-semibold text-gray-700 mb-1">Status</label>
                     <select

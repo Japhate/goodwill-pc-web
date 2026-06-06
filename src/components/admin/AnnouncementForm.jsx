@@ -15,8 +15,11 @@ export default function AnnouncementForm({ announcement, onSubmit, onCancel }) {
     time: '',
     end_time: '',
     frequency: '',
+    location_type: 'physical',
     location: '',
+    virtual_platform: '',
     zoom_link: '',
+    directions_url: '',
     file_upload: '',
     file_label: '',
     category: 'church_wide',
@@ -153,14 +156,41 @@ export default function AnnouncementForm({ announcement, onSubmit, onCancel }) {
         </div>
 
         <div>
-          <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-1">Location</label>
-          <Input id="location" value={formData.location} onChange={e => handleChange('location', e.target.value)} />
+          <label htmlFor="location_type" className="block text-sm font-medium text-gray-700 mb-1">Location Type</label>
+          <Select value={formData.location_type || 'physical'} onValueChange={(value) => handleChange('location_type', value)}>
+            <SelectTrigger id="location_type">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="physical">Physical</SelectItem>
+              <SelectItem value="virtual">Virtual</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
-        <div>
-          <label htmlFor="zoom_link" className="block text-sm font-medium text-gray-700 mb-1">Link</label>
-          <Input id="zoom_link" type="url" placeholder="https://..." value={formData.zoom_link} onChange={e => handleChange('zoom_link', e.target.value)} />
-        </div>
+        {(formData.location_type || 'physical') === 'virtual' ? (
+          <>
+            <div>
+              <label htmlFor="virtual_platform" className="block text-sm font-medium text-gray-700 mb-1">Platform</label>
+              <Input id="virtual_platform" placeholder="e.g. Zoom, Teams, YouTube" value={formData.virtual_platform || ''} onChange={e => handleChange('virtual_platform', e.target.value)} />
+            </div>
+            <div>
+              <label htmlFor="zoom_link" className="block text-sm font-medium text-gray-700 mb-1">Link</label>
+              <Input id="zoom_link" type="url" placeholder="https://..." value={formData.zoom_link} onChange={e => handleChange('zoom_link', e.target.value)} />
+            </div>
+          </>
+        ) : (
+          <>
+            <div>
+              <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-1">Place Name</label>
+              <Input id="location" placeholder="e.g. Goodwill Presbyterian Church" value={formData.location} onChange={e => handleChange('location', e.target.value)} />
+            </div>
+            <div>
+              <label htmlFor="directions_url" className="block text-sm font-medium text-gray-700 mb-1">Google Maps Directions</label>
+              <Input id="directions_url" type="url" placeholder="https://maps.google.com/..." value={formData.directions_url || ''} onChange={e => handleChange('directions_url', e.target.value)} />
+            </div>
+          </>
+        )}
       </div>
       
       <div>
