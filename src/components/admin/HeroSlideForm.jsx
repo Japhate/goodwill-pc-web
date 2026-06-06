@@ -128,7 +128,7 @@ export default function HeroSlideForm({ slide, announcement, announcementMode = 
   const isLinkedPairEdit = Boolean(slide?.id && announcement?.id);
   const [formData, setFormData] = useState({
     image_url: "",
-    alt_text: "",
+    alt_text: slide?.alt_text || announcement?.title || "",
     link_url: "",
     link_label: "More",
     details_button_label: "More",
@@ -233,11 +233,11 @@ export default function HeroSlideForm({ slide, announcement, announcementMode = 
   const buildSubmissionPayload = ({ asDraft = false } = {}) => {
     const order = Number(formData.order);
     const hasHeroImage = String(formData.image_url || "").trim() !== "";
-    const description = String(formData.alt_text || "").trim();
+    const announcementTitle = String(formData.alt_text || relatedAnnouncementDraft.title || "").trim();
     const fullAnnouncement = String(relatedAnnouncementDraft.content || "").trim();
     const hasRelatedAnnouncement = Boolean(fullAnnouncement) || isAnnouncementWorkflow || isLinkedPairEdit;
     const relatedAnnouncementPayload = hasRelatedAnnouncement
-      ? { ...relatedAnnouncementDraft, content: fullAnnouncement, create: true, status: asDraft ? "Hidden" : relatedAnnouncementDraft.status || "Active" }
+      ? { ...relatedAnnouncementDraft, title: announcementTitle, content: fullAnnouncement, create: true, status: asDraft ? "Hidden" : relatedAnnouncementDraft.status || "Active" }
       : null;
     const slideData = {
       ...(hasRelatedAnnouncement ? { ...formData, announcement_id: "" } : formData),
@@ -245,12 +245,12 @@ export default function HeroSlideForm({ slide, announcement, announcementMode = 
     };
     const announcementData = {
       ...relatedAnnouncementDraft,
-      title: String(relatedAnnouncementDraft.title || "").trim() || (asDraft ? "Draft announcement" : ""),
+      title: announcementTitle || (asDraft ? "Draft announcement" : ""),
       content: fullAnnouncement || (asDraft ? "Draft saved from the admin panel." : ""),
       status: asDraft ? "Hidden" : relatedAnnouncementDraft.status || "Active",
     };
 
-    if (asDraft && !hasHeroImage && !description && !hasRelatedAnnouncement) return null;
+    if (asDraft && !hasHeroImage && !announcementTitle && !hasRelatedAnnouncement) return null;
 
     if ((isAnnouncementWorkflow || isLinkedPairEdit) && (hasHeroImage || asDraft)) {
       return {
@@ -315,15 +315,15 @@ export default function HeroSlideForm({ slide, announcement, announcementMode = 
     const nextErrors = {};
 
     const hasHeroImage = String(formData.image_url || "").trim() !== "";
-    const description = String(formData.alt_text || "").trim();
+    const title = String(formData.alt_text || "").trim();
     const fullAnnouncement = String(relatedAnnouncementDraft.content || "").trim();
     const hasRelatedAnnouncement = Boolean(fullAnnouncement) || isAnnouncementWorkflow || isLinkedPairEdit;
     if (!hasHeroImage && !hasRelatedAnnouncement) {
       nextErrors.image_url = "Add a hero image, full announcement details, or both.";
       nextErrors.related_content = "Enter the full announcement details if this should be an announcement only.";
     }
-    if (hasHeroImage && !description) {
-      nextErrors.alt_text = "Enter a description.";
+    if ((hasHeroImage || hasRelatedAnnouncement) && !title) {
+      nextErrors.alt_text = "Enter a title.";
     }
     if (isAnnouncementWorkflow && !fullAnnouncement) {
       nextErrors.related_content = "Enter the full announcement details.";
@@ -332,7 +332,6 @@ export default function HeroSlideForm({ slide, announcement, announcementMode = 
       nextErrors.link_url = "Upload or enter a hero image before adding a virtual or external button link.";
     }
     if (hasRelatedAnnouncement) {
-      if (!String(relatedAnnouncementDraft.title || "").trim()) nextErrors.related_title = "Enter the related announcement title.";
       if (!fullAnnouncement) nextErrors.related_content = "Enter the full announcement details.";
     }
     setValidationErrors(nextErrors);
@@ -343,7 +342,7 @@ export default function HeroSlideForm({ slide, announcement, announcementMode = 
 
   const fullAnnouncementDetails = String(relatedAnnouncementDraft.content || "").trim();
   const hasHeroImage = String(formData.image_url || "").trim() !== "";
-  const isAnnouncementTitleRequired = isAnnouncementWorkflow || isLinkedPairEdit || Boolean(fullAnnouncementDetails);
+  const isTitleRequired = hasHeroImage || isAnnouncementWorkflow || isLinkedPairEdit || Boolean(fullAnnouncementDetails);
   const canEditDetailsButtonLabel = Boolean(hasHeroImage && fullAnnouncementDetails);
 
   return (
@@ -364,7 +363,7 @@ export default function HeroSlideForm({ slide, announcement, announcementMode = 
             <div className="space-y-4 rounded-md border border-gray-200 bg-white p-4">
               <div className="border-b border-gray-200 pb-2">
                 <h3 className="text-lg font-bold text-gray-900">Hero Slide</h3>
-                <p className="text-sm text-gray-600">Create or edit the selected hero slide. The description is required for hero slides, announcements, and linked slide announcements.</p>
+                <p className="text-sm text-gray-600">Create or edit the selected hero slide. The title is required for hero slides, announcements, and linked slide announcements.</p>
               </div>
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1">
@@ -418,7 +417,7 @@ export default function HeroSlideForm({ slide, announcement, announcementMode = 
 
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1">
-              Slide/Announcement Title{hasHeroImage && <span className="ml-1 text-red-600">*</span>}
+              Slide/Announcement Title{isTitleRequired && <span className="ml-1 text-red-600">*</span>}
             </label>
             <Input
               value={formData.alt_text}
@@ -546,18 +545,6 @@ export default function HeroSlideForm({ slide, announcement, announcementMode = 
                   <p className="mt-1 text-xs text-gray-500">
                     This button appears on the hero image and opens the full announcement. It becomes available after a hero image and full announcement details are both added.
                   </p>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">
-                    Announcement Title{isAnnouncementTitleRequired && <span className="ml-1 text-red-600">*</span>}
-                  </label>
-                  <Input
-                    value={relatedAnnouncementDraft.title}
-                    onChange={(e) => handleRelatedAnnouncementChange("title", e.target.value)}
-                    className={validationErrors.related_title ? "border-red-500 focus-visible:ring-red-500" : ""}
-                    placeholder="e.g. Celebrations, Accomplishments & Thanksgiving Recognition"
-                  />
-                  {validationErrors.related_title && <p className="mt-1 text-xs font-semibold text-red-600">{validationErrors.related_title}</p>}
                 </div>
                 <div className="rounded-md border border-amber-200 bg-white/70 p-3">
                   <label className="block text-xs font-semibold text-gray-700 mb-2">Form / PDF Attachment</label>
