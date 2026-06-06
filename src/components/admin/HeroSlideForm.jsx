@@ -14,10 +14,14 @@ const DEFAULT_RELATED_ANNOUNCEMENT = {
   title: "",
   content: "",
   date: "",
+  end_date: "",
   time: "",
   end_time: "",
+  frequency: "",
   location: "",
   zoom_link: "",
+  file_upload: "",
+  file_label: "",
   category: "church_wide",
   status: "Active",
 };
@@ -143,6 +147,7 @@ export default function HeroSlideForm({ slide, defaultOrder = 0, onSubmit, onCan
   const [announcementOptions, setAnnouncementOptions] = useState([]);
   const [createRelatedAnnouncement, setCreateRelatedAnnouncement] = useState(false);
   const [relatedAnnouncementDraft, setRelatedAnnouncementDraft] = useState(DEFAULT_RELATED_ANNOUNCEMENT);
+  const [relatedFileUploading, setRelatedFileUploading] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -182,6 +187,26 @@ export default function HeroSlideForm({ slide, defaultOrder = 0, onSubmit, onCan
   const handleRelatedAnnouncementChange = (field, value) => {
     setRelatedAnnouncementDraft((prev) => ({ ...prev, [field]: value }));
     setValidationErrors((prev) => ({ ...prev, [`related_${field}`]: "" }));
+  };
+
+  const handleRelatedAttachmentUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setRelatedFileUploading(true);
+    try {
+      const { file_url } = await localApi.integrations.Core.UploadFile({ file, destination: "announcementFile" });
+      setRelatedAnnouncementDraft((prev) => ({
+        ...prev,
+        file_upload: file_url,
+        file_label: prev.file_label || file.name.replace(/\.[^.]+$/, ""),
+      }));
+    } catch (error) {
+      console.error("Related announcement attachment upload failed:", error);
+      setUploadError(error?.message || "Attachment upload failed. Please try again.");
+    } finally {
+      setRelatedFileUploading(false);
+    }
   };
 
   const handleCreateRelatedAnnouncementChange = (checked) => {
@@ -423,8 +448,12 @@ export default function HeroSlideForm({ slide, defaultOrder = 0, onSubmit, onCan
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Date</label>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">Start Date</label>
                     <Input type="date" value={relatedAnnouncementDraft.date} onChange={(e) => handleRelatedAnnouncementChange("date", e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">End Date</label>
+                    <Input type="date" value={relatedAnnouncementDraft.end_date} onChange={(e) => handleRelatedAnnouncementChange("end_date", e.target.value)} />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-gray-700 mb-1">Location</label>
@@ -439,7 +468,11 @@ export default function HeroSlideForm({ slide, defaultOrder = 0, onSubmit, onCan
                     <Input type="time" value={relatedAnnouncementDraft.end_time} onChange={(e) => handleRelatedAnnouncementChange("end_time", e.target.value)} />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Zoom Link</label>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">Frequency</label>
+                    <Input placeholder="e.g. Daily, Weekly, Every evening" value={relatedAnnouncementDraft.frequency} onChange={(e) => handleRelatedAnnouncementChange("frequency", e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">Link</label>
                     <Input type="url" value={relatedAnnouncementDraft.zoom_link} onChange={(e) => handleRelatedAnnouncementChange("zoom_link", e.target.value)} />
                   </div>
                   <div>
@@ -455,6 +488,29 @@ export default function HeroSlideForm({ slide, defaultOrder = 0, onSubmit, onCan
                       <option value="Hidden">Hidden</option>
                     </select>
                   </div>
+                </div>
+                <div className="rounded-md border border-amber-200 bg-white/70 p-3">
+                  <label className="block text-xs font-semibold text-gray-700 mb-2">Form / PDF Attachment</label>
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <Input
+                      type="file"
+                      accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+                      onChange={handleRelatedAttachmentUpload}
+                      disabled={relatedFileUploading}
+                      className="max-w-xs"
+                    />
+                    {relatedFileUploading && <Loader2 className="w-4 h-4 animate-spin text-gray-500" />}
+                  </div>
+                  {relatedAnnouncementDraft.file_upload && (
+                    <div className="mt-3 space-y-2">
+                      <Input
+                        value={relatedAnnouncementDraft.file_label}
+                        onChange={(e) => handleRelatedAnnouncementChange("file_label", e.target.value)}
+                        placeholder="Attachment button label"
+                      />
+                      <p className="text-xs text-gray-500 truncate">Current attachment: {relatedAnnouncementDraft.file_upload}</p>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

@@ -229,6 +229,7 @@ const UPLOAD_FOLDERS = {
   bulletinPdf: "bulletins-pdfs",
   bulletinThumbnail: "bulletin-thumbnails",
   announcementImage: "announcement-images",
+  announcementFile: "announcement-files",
   newsletterAttachment: "newsletter-attachments",
   adminProfilePhoto: "admin-profile-images",
 };

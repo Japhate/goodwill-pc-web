@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import { AnnouncementsEvents } from "@/entities/AnnouncementsEvents";
 import { WorshipEvent } from "@/entities/WorshipEvent";
-import { Calendar, Clock, MapPin, Image, CheckCircle } from "lucide-react";
+import { Calendar, Clock, MapPin, Image, CheckCircle, ExternalLink, FileText } from "lucide-react";
 import { format, isBefore, startOfDay, parseISO, isValid } from "date-fns";
 import { Button } from "@/components/ui/button";
 import ReactMarkdown from "react-markdown";
@@ -18,6 +18,25 @@ const parseDateAsLocal = (dateString) => {
   // parseISO will handle YYYY-MM-DD and return a Date object.
   // We check if it's a valid date to prevent errors.
   return isValid(date) ? date : null;
+};
+
+const formatDateRange = (startDate, endDate) => {
+  if (!startDate && !endDate) return "";
+  if (startDate && !endDate) return format(startDate, "MMMM d, yyyy");
+  if (!startDate && endDate) return `Through ${format(endDate, "MMMM d, yyyy")}`;
+  if (startDate.getTime() === endDate.getTime()) return format(startDate, "MMMM d, yyyy");
+  if (startDate.getFullYear() === endDate.getFullYear() && startDate.getMonth() === endDate.getMonth()) {
+    return `${format(startDate, "MMMM d")} - ${format(endDate, "d, yyyy")}`;
+  }
+  if (startDate.getFullYear() === endDate.getFullYear()) {
+    return `${format(startDate, "MMMM d")} - ${format(endDate, "MMMM d, yyyy")}`;
+  }
+  return `${format(startDate, "MMMM d, yyyy")} - ${format(endDate, "MMMM d, yyyy")}`;
+};
+
+const formatTimeRange = (startTime, endTime) => {
+  if (startTime && endTime) return `${startTime} - ${endTime}`;
+  return startTime || endTime || "";
 };
 
 export default function Updates() {
@@ -83,9 +102,11 @@ export default function Updates() {
     return currentEvents.filter(item => {
       // Timeless items always show regardless of date
       if (item.status === 'Timeless') return true;
-      const itemDate = parseDateAsLocal(item.date);
-      if (!itemDate) return true; // Keep items without a valid date
-      return !isBefore(itemDate, today);
+      const itemStartDate = parseDateAsLocal(item.date);
+      const itemEndDate = parseDateAsLocal(item.end_date);
+      const relevantDate = itemEndDate || itemStartDate;
+      if (!relevantDate) return true; // Keep items without a valid date
+      return !isBefore(relevantDate, today);
     }).sort((a, b) => {
       const aDate = parseDateAsLocal(a.date);
       const bDate = parseDateAsLocal(b.date);
@@ -357,7 +378,10 @@ export default function Updates() {
               {filteredFeed.length > 0 ? (
                 filteredFeed.map((item) => {
                   const itemDate = parseDateAsLocal(item.date);
+                  const itemEndDate = parseDateAsLocal(item.end_date);
                   const isFarFuture = itemDate && itemDate.getFullYear() > 2090;
+                  const dateLabel = !isFarFuture ? formatDateRange(itemDate, itemEndDate) : "";
+                  const timeLabel = formatTimeRange(item.time, item.end_time);
                   return (
                   <div
                     id={`announcement-${item.id}`}
@@ -388,9 +412,26 @@ export default function Updates() {
                         </div>
                       </div>
                       <div className="mt-4 pt-4 border-t text-sm text-gray-500 space-y-2">
-                        {itemDate && !isFarFuture && <div className="flex items-center gap-2"><Calendar className="w-4 h-4 flex-shrink-0" /><strong className="font-semibold">Date:</strong> {format(itemDate, "MMMM d, yyyy")}</div>}
-                        {item.time && <div className="flex items-center gap-2"><Clock className="w-4 h-4 flex-shrink-0" /><strong className="font-semibold">Time:</strong> {item.time}</div>}
+                        {dateLabel && <div className="flex items-center gap-2"><Calendar className="w-4 h-4 flex-shrink-0" /><strong className="font-semibold">Date:</strong> {dateLabel}</div>}
+                        {timeLabel && <div className="flex items-center gap-2"><Clock className="w-4 h-4 flex-shrink-0" /><strong className="font-semibold">Time:</strong> {timeLabel}</div>}
+                        {item.frequency && <div className="flex items-center gap-2"><Clock className="w-4 h-4 flex-shrink-0" /><strong className="font-semibold">Frequency:</strong> {item.frequency}</div>}
                         {item.location && <div className="flex items-center gap-2"><MapPin className="w-4 h-4 flex-shrink-0" /><strong className="font-semibold">Location:</strong> {item.location}</div>}
+                        {(item.zoom_link || item.file_upload) && (
+                          <div className="flex flex-wrap gap-2 pt-2">
+                            {item.zoom_link && (
+                              <a href={item.zoom_link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-md bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700">
+                                <ExternalLink className="h-3.5 w-3.5" />
+                                Open Link
+                              </a>
+                            )}
+                            {item.file_upload && (
+                              <a href={item.file_upload} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-md bg-gray-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-gray-800">
+                                <FileText className="h-3.5 w-3.5" />
+                                {item.file_label || "Open Form"}
+                              </a>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -486,6 +527,9 @@ export default function Updates() {
               <div className="max-w-4xl mx-auto space-y-6">
                 {sortedPastEvents.map((item) => {
                   const itemDate = parseDateAsLocal(item.date);
+                  const itemEndDate = parseDateAsLocal(item.end_date);
+                  const dateLabel = formatDateRange(itemDate, itemEndDate);
+                  const timeLabel = formatTimeRange(item.time, item.end_time);
                   return (
                   <div
                     id={`announcement-${item.id}`}
@@ -514,10 +558,27 @@ export default function Updates() {
                           </div>
                         )}
                         <div className="flex flex-wrap gap-4 text-sm text-gray-500">
-                          {itemDate && <div className="flex items-center gap-1"><Calendar className="w-4 h-4" />{format(itemDate, "MMMM d, yyyy")}</div>}
-                          {item.time && <div className="flex items-center gap-1"><Clock className="w-4 h-4" />{item.time}</div>}
+                          {dateLabel && <div className="flex items-center gap-1"><Calendar className="w-4 h-4" />{dateLabel}</div>}
+                          {timeLabel && <div className="flex items-center gap-1"><Clock className="w-4 h-4" />{timeLabel}</div>}
+                          {item.frequency && <div className="flex items-center gap-1"><Clock className="w-4 h-4" />{item.frequency}</div>}
                           {item.location && <div className="flex items-center gap-1"><MapPin className="w-4 h-4" />{item.location}</div>}
                         </div>
+                        {(item.zoom_link || item.file_upload) && (
+                          <div className="mt-4 flex flex-wrap gap-2">
+                            {item.zoom_link && (
+                              <a href={item.zoom_link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-md bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700">
+                                <ExternalLink className="h-3.5 w-3.5" />
+                                Open Link
+                              </a>
+                            )}
+                            {item.file_upload && (
+                              <a href={item.file_upload} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-md bg-gray-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-gray-800">
+                                <FileText className="h-3.5 w-3.5" />
+                                {item.file_label || "Open Form"}
+                              </a>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>

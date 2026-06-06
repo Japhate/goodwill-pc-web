@@ -39,6 +39,7 @@ homepage-hero-images/
 bulletins-pdfs/
 bulletin-thumbnails/
 announcement-images/
+announcement-files/
 ```
 
 The existing local image files, JSON records, and previously uploaded Firebase files are not automatically moved. Existing URLs remain usable; future admin uploads use the organized folders above.

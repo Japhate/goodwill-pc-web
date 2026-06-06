@@ -39,6 +39,19 @@ service firebase.storage {
       allow delete: if isAdmin();
     }
 
+    match /announcement-files/{allPaths=**} {
+      allow read: if true;
+      allow create, update: if isAdmin()
+        && request.resource.size < 20 * 1024 * 1024
+        && (
+          request.resource.contentType == 'application/pdf'
+          || request.resource.contentType.matches('application/vnd.openxmlformats-officedocument.*')
+          || request.resource.contentType == 'application/msword'
+          || request.resource.contentType.matches('image/.*')
+        );
+      allow delete: if isAdmin();
+    }
+
     match /newsletter-attachments/{allPaths=**} {
       allow read: if true;
       allow create, update: if isAdmin()

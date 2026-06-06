@@ -11,10 +11,14 @@ export default function AnnouncementForm({ announcement, onSubmit, onCancel }) {
     title: '',
     content: '',
     date: '',
+    end_date: '',
     time: '',
     end_time: '',
+    frequency: '',
     location: '',
     zoom_link: '',
+    file_upload: '',
+    file_label: '',
     category: 'church_wide',
     image_upload: '',
     status: 'Active'
@@ -32,6 +36,14 @@ export default function AnnouncementForm({ announcement, onSubmit, onCancel }) {
             } catch {
                 console.error("Invalid date format", announcement.date);
                 initialData.date = '';
+            }
+        }
+        if (announcement.end_date) {
+            try {
+                initialData.end_date = new Date(announcement.end_date).toISOString().split('T')[0];
+            } catch {
+                console.error("Invalid end date format", announcement.end_date);
+                initialData.end_date = '';
             }
         }
         setFormData(initialData);
@@ -55,6 +67,22 @@ export default function AnnouncementForm({ announcement, onSubmit, onCancel }) {
     } catch (error) {
       console.error("File upload failed:", error);
       // You could add some user-facing error state here
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleAttachmentChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    try {
+      const { file_url } = await UploadFile({ file, destination: "announcementFile" });
+      handleChange('file_upload', file_url);
+      if (!formData.file_label) handleChange('file_label', file.name.replace(/\.[^.]+$/, ''));
+    } catch (error) {
+      console.error("Attachment upload failed:", error);
     } finally {
       setIsUploading(false);
     }
@@ -100,8 +128,13 @@ export default function AnnouncementForm({ announcement, onSubmit, onCancel }) {
         </div>
 
         <div>
-          <label htmlFor="date" className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+          <label htmlFor="date" className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
           <Input id="date" type="date" value={formData.date} onChange={e => handleChange('date', e.target.value)} />
+        </div>
+
+        <div>
+          <label htmlFor="end_date" className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+          <Input id="end_date" type="date" value={formData.end_date || ''} onChange={e => handleChange('end_date', e.target.value)} />
         </div>
 
         <div>
@@ -115,13 +148,18 @@ export default function AnnouncementForm({ announcement, onSubmit, onCancel }) {
         </div>
 
         <div>
+          <label htmlFor="frequency" className="block text-sm font-medium text-gray-700 mb-1">Frequency</label>
+          <Input id="frequency" placeholder="e.g. Daily, Weekly, Every evening" value={formData.frequency || ''} onChange={e => handleChange('frequency', e.target.value)} />
+        </div>
+
+        <div>
           <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-1">Location</label>
           <Input id="location" value={formData.location} onChange={e => handleChange('location', e.target.value)} />
         </div>
 
         <div>
-          <label htmlFor="zoom_link" className="block text-sm font-medium text-gray-700 mb-1">Zoom Link</label>
-          <Input id="zoom_link" type="url" placeholder="https://zoom.us/j/..." value={formData.zoom_link} onChange={e => handleChange('zoom_link', e.target.value)} />
+          <label htmlFor="zoom_link" className="block text-sm font-medium text-gray-700 mb-1">Link</label>
+          <Input id="zoom_link" type="url" placeholder="https://..." value={formData.zoom_link} onChange={e => handleChange('zoom_link', e.target.value)} />
         </div>
       </div>
       
@@ -161,6 +199,25 @@ export default function AnnouncementForm({ announcement, onSubmit, onCancel }) {
           <div className="mt-4">
             <img src={formData.image_upload} alt="Preview" className="h-32 w-auto rounded-md object-cover border p-1" />
             <p className="text-xs text-gray-500 mt-1 truncate">Current image: {formData.image_upload}</p>
+          </div>
+        )}
+      </div>
+
+      <div>
+        <label htmlFor="file_upload" className="block text-sm font-medium text-gray-700 mb-1">Form / PDF Attachment</label>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <Input id="file_upload" type="file" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" onChange={handleAttachmentChange} className="max-w-xs" />
+            {isUploading && <Loader2 className="w-6 h-6 animate-spin text-gray-500" />}
+        </div>
+        {formData.file_upload && !isUploading && (
+          <div className="mt-3 space-y-2">
+            <Input
+              value={formData.file_label || ''}
+              onChange={e => handleChange('file_label', e.target.value)}
+              placeholder="Attachment button label"
+              className="max-w-sm"
+            />
+            <p className="text-xs text-gray-500 truncate">Current attachment: {formData.file_upload}</p>
           </div>
         )}
       </div>
