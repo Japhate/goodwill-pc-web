@@ -3,7 +3,73 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowDown, ArrowUp, EyeOff, ExternalLink, GripVertical, Grid2X2, Link, List, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, CalendarDays, Clock, EyeOff, ExternalLink, GripVertical, Grid2X2, Link, List, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
+
+function formatDateLabel(value) {
+  if (!value) return "";
+  const [year, month, day] = String(value).split("-").map(Number);
+  if (!year || !month || !day) return value;
+  return new Date(year, month - 1, day).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function formatTimeLabel(value) {
+  if (!value) return "";
+  const [hourValue, minuteValue = "0"] = String(value).split(":").map(Number);
+  if (Number.isNaN(hourValue) || Number.isNaN(minuteValue)) return value;
+  const suffix = hourValue >= 12 ? "PM" : "AM";
+  const hour = hourValue % 12 || 12;
+  return `${hour}:${String(minuteValue).padStart(2, "0")} ${suffix}`;
+}
+
+function getScheduleDetails(slide, getLinkedAnnouncementForSlide) {
+  const announcement = getLinkedAnnouncementForSlide?.(slide) || {};
+  const startDate = announcement.date || slide.date || "";
+  const endDate = announcement.end_date || slide.end_date || "";
+  const startTime = announcement.time || slide.time || "";
+  const endTime = announcement.end_time || slide.end_time || "";
+
+  return {
+    startDate: formatDateLabel(startDate),
+    endDate: formatDateLabel(endDate),
+    startTime: formatTimeLabel(startTime),
+    endTime: formatTimeLabel(endTime),
+  };
+}
+
+function ScheduleDetails({ slide, getLinkedAnnouncementForSlide, compact = false }) {
+  const schedule = getScheduleDetails(slide, getLinkedAnnouncementForSlide);
+  const dateText = [
+    schedule.startDate ? `Start: ${schedule.startDate}` : "",
+    schedule.endDate ? `End: ${schedule.endDate}` : "",
+  ].filter(Boolean).join(" | ");
+  const timeText = [
+    schedule.startTime ? `Start: ${schedule.startTime}` : "",
+    schedule.endTime ? `End: ${schedule.endTime}` : "",
+  ].filter(Boolean).join(" | ");
+
+  if (!dateText && !timeText) return null;
+
+  return (
+    <div className={`min-w-0 space-y-0.5 text-xs leading-tight text-gray-600 ${compact ? "max-w-full" : "shrink-0 text-right"}`}>
+      {dateText && (
+        <div className={`flex items-start gap-1.5 ${compact ? "" : "justify-end"}`}>
+          <CalendarDays className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-amber-700" />
+          <span className="min-w-0">{dateText}</span>
+        </div>
+      )}
+      {timeText && (
+        <div className={`flex items-start gap-1.5 ${compact ? "" : "justify-end"}`}>
+          <Clock className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-amber-700" />
+          <span className="min-w-0">{timeText}</span>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function SlideGrid({
   title,
@@ -23,6 +89,7 @@ function SlideGrid({
   viewMode,
   mode,
   hideSelectAll = false,
+  getLinkedAnnouncementForSlide,
 }) {
   const allSelected = slides.length > 0 && selectedIds.length === slides.length;
   const isDraggable = mode === "visible" && typeof onReorder === "function";
@@ -158,25 +225,28 @@ function SlideGrid({
                   )}
                 </div>
 
-                <div className="min-w-0 flex-1 space-y-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="truncate text-sm font-semibold text-gray-900">{slide.alt_text || "No description"}</p>
-                    {slide.is_priority_announcement && <Badge className="bg-red-600">Priority</Badge>}
-                    <Badge className={mode === "visible" ? "bg-green-600" : "bg-gray-500"}>
-                      {mode === "visible" ? "Visible" : "Hidden"}
-                    </Badge>
-                  </div>
-                  {slide.link_url ? (
-                    <div className="flex items-center gap-1 truncate text-xs text-blue-600">
-                      <Link className="h-3 w-3 shrink-0" />
-                      <span className="truncate">{slide.link_label || slide.link_url}</span>
-                      <a href={slide.link_url} target="_blank" rel="noopener noreferrer">
-                        <ExternalLink className="h-3 w-3 shrink-0" />
-                      </a>
+                <div className="flex min-w-0 flex-1 items-start justify-between gap-3">
+                  <div className="min-w-0 space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="truncate text-sm font-semibold text-gray-900">{slide.alt_text || "No description"}</p>
+                      {slide.is_priority_announcement && <Badge className="bg-red-600">Priority</Badge>}
+                      <Badge className={mode === "visible" ? "bg-green-600" : "bg-gray-500"}>
+                        {mode === "visible" ? "Visible" : "Hidden"}
+                      </Badge>
                     </div>
-                  ) : (
-                    <p className="text-xs text-gray-400">No link</p>
-                  )}
+                    {slide.link_url ? (
+                      <div className="flex items-center gap-1 truncate text-xs text-blue-600">
+                        <Link className="h-3 w-3 shrink-0" />
+                        <span className="truncate">{slide.link_label || slide.link_url}</span>
+                        <a href={slide.link_url} target="_blank" rel="noopener noreferrer">
+                          <ExternalLink className="h-3 w-3 shrink-0" />
+                        </a>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-400">No link</p>
+                    )}
+                  </div>
+                  <ScheduleDetails slide={slide} getLinkedAnnouncementForSlide={getLinkedAnnouncementForSlide} />
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2 md:justify-end">
@@ -292,18 +362,23 @@ function SlideGrid({
                 )}
               </div>
               <CardContent className="space-y-2 p-4">
-                <p className="truncate text-sm font-medium text-gray-800">{slide.alt_text || "No description"}</p>
-                {slide.link_url ? (
-                  <div className="flex items-center gap-1 truncate text-xs text-blue-600">
-                    <Link className="h-3 w-3 flex-shrink-0" />
-                    <span className="truncate">{slide.link_label || slide.link_url}</span>
-                    <a href={slide.link_url} target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="h-3 w-3 flex-shrink-0" />
-                    </a>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 space-y-1">
+                    <p className="truncate text-sm font-medium text-gray-800">{slide.alt_text || "No description"}</p>
+                    {slide.link_url ? (
+                      <div className="flex items-center gap-1 truncate text-xs text-blue-600">
+                        <Link className="h-3 w-3 flex-shrink-0" />
+                        <span className="truncate">{slide.link_label || slide.link_url}</span>
+                        <a href={slide.link_url} target="_blank" rel="noopener noreferrer">
+                          <ExternalLink className="h-3 w-3 flex-shrink-0" />
+                        </a>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-400">No link</p>
+                    )}
                   </div>
-                ) : (
-                  <p className="text-xs text-gray-400">No link</p>
-                )}
+                  <ScheduleDetails slide={slide} getLinkedAnnouncementForSlide={getLinkedAnnouncementForSlide} />
+                </div>
                 <div className="flex gap-2 pt-1">
                   <Button size="sm" variant="outline" onClick={() => onEdit(slide)} className="flex-1 gap-1">
                     <Pencil className="h-3 w-3" /> Edit
@@ -356,6 +431,7 @@ export default function HeroSlideList({
   selectedHiddenIds: controlledSelectedHiddenIds,
   onSelectedHiddenIdsChange,
   hideSelectAll = false,
+  getLinkedAnnouncementForSlide,
 }) {
   const [internalSelectedVisibleIds, setInternalSelectedVisibleIds] = useState([]);
   const [internalSelectedHiddenIds, setInternalSelectedHiddenIds] = useState([]);
@@ -390,11 +466,16 @@ export default function HeroSlideList({
   const normalizedSearch = searchTerm.trim().toLowerCase();
   const matchesSearch = (slide) => {
     if (!normalizedSearch) return true;
+    const announcement = getLinkedAnnouncementForSlide?.(slide) || {};
     return [
       slide.alt_text,
       slide.link_label,
       slide.link_url,
       slide.image_url,
+      announcement.date,
+      announcement.end_date,
+      announcement.time,
+      announcement.end_time,
     ].some((value) => String(value || "").toLowerCase().includes(normalizedSearch));
   };
   const visibleSlides = useMemo(
@@ -513,6 +594,7 @@ export default function HeroSlideList({
           viewMode={effectiveViewMode}
           mode="visible"
           hideSelectAll={hideSelectAll}
+          getLinkedAnnouncementForSlide={getLinkedAnnouncementForSlide}
         />
       )}
 
@@ -534,6 +616,7 @@ export default function HeroSlideList({
           viewMode={effectiveViewMode}
           mode="hidden"
           hideSelectAll={hideSelectAll}
+          getLinkedAnnouncementForSlide={getLinkedAnnouncementForSlide}
         />
       )}
     </div>

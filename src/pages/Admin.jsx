@@ -2256,6 +2256,7 @@ export default function AdminPage() {
                 searchTerm={activeHeroAnnouncementSearch}
                 selectedVisibleIds={selectedActiveHeroSlideIds}
                 onSelectedVisibleIdsChange={updateActiveHeroSlideSelection}
+                getLinkedAnnouncementForSlide={getLinkedAnnouncementForSlide}
                 hideSelectAll
               />
             </section>
@@ -2319,6 +2320,7 @@ export default function AdminPage() {
                 searchTerm={inactiveHeroAnnouncementSearch}
                 selectedHiddenIds={selectedInactiveHeroSlideIds}
                 onSelectedHiddenIdsChange={updateInactiveHeroSlideSelection}
+                getLinkedAnnouncementForSlide={getLinkedAnnouncementForSlide}
                 hideSelectAll
               />
               <AnnouncementList
