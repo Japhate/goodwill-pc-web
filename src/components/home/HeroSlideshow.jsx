@@ -143,6 +143,56 @@ const BIBLE_STUDY_START_HOUR = 18; // 6:00 PM
 const BIBLE_STUDY_START_MIN = 0;
 const BIBLE_STUDY_END_HOUR = 19;   // 7:00 PM
 const BIBLE_STUDY_END_MIN = 0;
+const HERO_BUTTON_POSITION_CLASSES = {
+  left: "absolute bottom-3 left-4 flex flex-wrap items-center justify-start gap-2 sm:bottom-4 md:bottom-6 md:left-8",
+  center: "absolute bottom-3 left-1/2 flex -translate-x-1/2 flex-wrap items-center justify-center gap-2 sm:bottom-4 md:bottom-6",
+  right: "absolute bottom-3 right-4 flex flex-wrap items-center justify-end gap-2 sm:bottom-4 md:bottom-6 md:right-8",
+};
+
+function getLowTextButtonPosition(imageElement) {
+  if (!imageElement?.naturalWidth || !imageElement?.naturalHeight) return "center";
+
+  const sampleWidth = 240;
+  const sampleHeight = Math.max(80, Math.round(sampleWidth * imageElement.naturalHeight / imageElement.naturalWidth));
+  const canvas = document.createElement("canvas");
+  canvas.width = sampleWidth;
+  canvas.height = sampleHeight;
+
+  const context = canvas.getContext("2d");
+  if (!context) return "center";
+
+  context.drawImage(imageElement, 0, 0, sampleWidth, sampleHeight);
+
+  const bandTop = Math.floor(sampleHeight * 0.58);
+  const bandHeight = sampleHeight - bandTop;
+  const zoneStartRight = Math.floor(sampleWidth * 0.66);
+  const zones = [
+    { key: "left", x: 0, width: Math.floor(sampleWidth * 0.34) },
+    { key: "center", x: Math.floor(sampleWidth * 0.34), width: Math.floor(sampleWidth * 0.32) },
+    { key: "right", x: zoneStartRight, width: sampleWidth - zoneStartRight },
+  ];
+
+  const scores = zones.map((zone) => {
+    const data = context.getImageData(zone.x, bandTop, zone.width, bandHeight).data;
+    let score = 0;
+
+    for (let y = 1; y < bandHeight; y += 3) {
+      for (let x = 1; x < zone.width; x += 3) {
+        const index = (y * zone.width + x) * 4;
+        const previousIndex = (y * zone.width + x - 1) * 4;
+        const aboveIndex = ((y - 1) * zone.width + x) * 4;
+        const luminance = (data[index] + data[index + 1] + data[index + 2]) / 3;
+        const previousLuminance = (data[previousIndex] + data[previousIndex + 1] + data[previousIndex + 2]) / 3;
+        const aboveLuminance = (data[aboveIndex] + data[aboveIndex + 1] + data[aboveIndex + 2]) / 3;
+        score += Math.abs(luminance - previousLuminance) + Math.abs(luminance - aboveLuminance);
+      }
+    }
+
+    return { key: zone.key, score };
+  });
+
+  return scores.sort((a, b) => a.score - b.score)[0]?.key || "center";
+}
 
 function isZoomBibleStudySlide(slide) {
   if (!slide) return false;
@@ -263,6 +313,7 @@ export default function HeroSlideshow() {
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
   const [isTickerClosed, setIsTickerClosed] = useState(false);
   const [now, setNow] = useState(new Date());
+  const [buttonPosition, setButtonPosition] = useState("center");
   const timerRef = useRef(null);
   const sectionRef = useRef(null);
 
@@ -370,12 +421,18 @@ export default function HeroSlideshow() {
     ? `/Updates#announcement-${currentSlide.announcement_id}`
     : "";
   const externalSlideUrl = currentSlide?.link_url || (isZoomBibleStudySlide(currentSlide) ? BIBLE_STUDY_ZOOM : "");
+  const showExternalSlideButton = Boolean(externalSlideUrl && !relatedAnnouncementUrl);
   const primarySlideUrl = relatedAnnouncementUrl || externalSlideUrl;
   const primarySlideIsExternal = Boolean(primarySlideUrl && !relatedAnnouncementUrl && externalSlideUrl);
+  const standardButtonPositionClass = HERO_BUTTON_POSITION_CLASSES[buttonPosition] || HERO_BUTTON_POSITION_CLASSES.center;
 
   useEffect(() => {
     setCurrent(0);
   }, [activeSlides.length, isBibleStudyPinnedTime]);
+
+  useEffect(() => {
+    setButtonPosition("center");
+  }, [currentImageUrl]);
 
   useEffect(() => {
     if (isLiveTicker) {
@@ -496,14 +553,22 @@ export default function HeroSlideshow() {
                 decoding="async"
                 fetchPriority="high"
                 loading="eager"
+                crossOrigin="anonymous"
+                onLoad={(event) => {
+                  try {
+                    setButtonPosition(getLowTextButtonPosition(event.currentTarget));
+                  } catch {
+                    setButtonPosition("center");
+                  }
+                }}
               />
               {/* Link overlay buttons */}
-              {(relatedAnnouncementUrl || externalSlideUrl) && (
+              {(relatedAnnouncementUrl || showExternalSlideButton) && (
                 <div
                   className={
                     currentSlide.is_priority_announcement
                       ? "absolute bottom-3 left-1/2 hidden -translate-x-1/2 flex-wrap items-center justify-center gap-2 md:flex"
-                      : "absolute bottom-3 left-1/2 flex -translate-x-1/2 flex-wrap items-center justify-center gap-2 sm:bottom-4 md:bottom-6"
+                      : standardButtonPositionClass
                   }
                 >
                   {relatedAnnouncementUrl && (
@@ -520,15 +585,15 @@ export default function HeroSlideshow() {
                       {currentSlide.details_button_label || currentSlide.link_label || "More"}
                     </a>
                   )}
-                  {externalSlideUrl && (
+                  {showExternalSlideButton && (
                     <a
                       href={externalSlideUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       className={
                         currentSlide.is_priority_announcement
-                          ? "inline-flex items-center gap-1.5 rounded-full border border-amber-200/70 bg-amber-500/95 px-6 py-3 text-base font-bold text-black shadow-lg transition-all hover:bg-amber-400"
-                          : "inline-flex items-center gap-1.5 rounded-full bg-blue-600/95 px-3 py-1.5 text-xs font-semibold text-white shadow-lg transition-all hover:bg-blue-700 sm:px-4 sm:py-2 sm:text-sm md:gap-2 md:px-6 md:py-3 md:text-base"
+                          ? "inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 px-6 py-3 text-base font-bold text-white shadow-lg transition-all hover:from-amber-600 hover:to-amber-700 hover:shadow-xl"
+                          : "inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 px-3 py-1.5 text-xs font-semibold text-white shadow-lg transition-all hover:from-amber-600 hover:to-amber-700 hover:shadow-xl sm:px-4 sm:py-2 sm:text-sm md:gap-2 md:px-6 md:py-3 md:text-base"
                       }
                       onClick={(e) => e.stopPropagation()}
                     >
@@ -560,7 +625,7 @@ export default function HeroSlideshow() {
         </div>
       )}
 
-      {currentSlide?.is_priority_announcement && (relatedAnnouncementUrl || externalSlideUrl) && (
+      {currentSlide?.is_priority_announcement && (relatedAnnouncementUrl || showExternalSlideButton) && (
         <div className="flex flex-wrap items-center justify-center gap-2 bg-[#3f2a1f] px-4 py-2 text-center md:hidden">
           {relatedAnnouncementUrl && (
             <a
@@ -571,12 +636,12 @@ export default function HeroSlideshow() {
               {currentSlide.details_button_label || currentSlide.link_label || "More"}
             </a>
           )}
-          {externalSlideUrl && (
+          {showExternalSlideButton && (
             <a
               href={externalSlideUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-1.5 rounded-full border border-amber-200/70 bg-amber-500 px-4 py-2 text-xs font-bold text-black shadow-lg transition-all hover:bg-amber-400"
+              className="inline-flex items-center justify-center gap-1.5 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 px-4 py-2 text-xs font-bold text-white shadow-lg transition-all hover:from-amber-600 hover:to-amber-700 hover:shadow-xl"
             >
               <Navigation className="h-4 w-4" />
               {currentSlide.link_label || "Get Directions"}
