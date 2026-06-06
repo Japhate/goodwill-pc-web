@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { localApi } from "@/api/localApiClient";
 import { Loader2, Upload } from "lucide-react";
+import ConfirmedDateTimePicker from "@/components/admin/ConfirmedDateTimePicker";
 
 const BIBLE_STUDY_ZOOM = "https://us06web.zoom.us/j/82013337566?pwd=mULnQC1Zjg5GWkoTTKGvx3PyAFaCeZ.1";
 const HERO_IMAGE_WIDTH = 1920;
@@ -564,22 +565,34 @@ export default function HeroSlideForm({ slide, announcement, announcementMode = 
                   {validationErrors.related_content && <p className="mt-1 text-xs font-semibold text-red-600">{validationErrors.related_content}</p>}
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Start Date</label>
-                    <Input type="date" value={relatedAnnouncementDraft.date} onChange={(e) => handleRelatedAnnouncementChange("date", e.target.value)} />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">End Date</label>
-                    <Input type="date" value={relatedAnnouncementDraft.end_date} onChange={(e) => handleRelatedAnnouncementChange("end_date", e.target.value)} />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Start Time</label>
-                    <Input type="time" value={relatedAnnouncementDraft.time} onChange={(e) => handleRelatedAnnouncementChange("time", e.target.value)} />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">End Time</label>
-                    <Input type="time" value={relatedAnnouncementDraft.end_time} onChange={(e) => handleRelatedAnnouncementChange("end_time", e.target.value)} />
-                  </div>
+                  <ConfirmedDateTimePicker
+                    id="related_start_date"
+                    label="Start Date"
+                    type="date"
+                    value={relatedAnnouncementDraft.date}
+                    onChange={(value) => handleRelatedAnnouncementChange("date", value)}
+                  />
+                  <ConfirmedDateTimePicker
+                    id="related_end_date"
+                    label="End Date"
+                    type="date"
+                    value={relatedAnnouncementDraft.end_date}
+                    onChange={(value) => handleRelatedAnnouncementChange("end_date", value)}
+                  />
+                  <ConfirmedDateTimePicker
+                    id="related_start_time"
+                    label="Start Time"
+                    type="time"
+                    value={relatedAnnouncementDraft.time}
+                    onChange={(value) => handleRelatedAnnouncementChange("time", value)}
+                  />
+                  <ConfirmedDateTimePicker
+                    id="related_end_time"
+                    label="End Time"
+                    type="time"
+                    value={relatedAnnouncementDraft.end_time}
+                    onChange={(value) => handleRelatedAnnouncementChange("end_time", value)}
+                  />
                   <div>
                     <label className="block text-xs font-semibold text-gray-700 mb-1">Frequency</label>
                     <Input placeholder="e.g. Daily, Weekly, Every evening" value={relatedAnnouncementDraft.frequency} onChange={(e) => handleRelatedAnnouncementChange("frequency", e.target.value)} />
@@ -593,9 +606,10 @@ export default function HeroSlideForm({ slide, announcement, announcementMode = 
                     >
                       <option value="physical">Physical</option>
                       <option value="virtual">Virtual</option>
+                      <option value="both">Physical and Virtual</option>
                     </select>
                   </div>
-                  {(relatedAnnouncementDraft.location_type || "physical") === "virtual" ? (
+                  {["virtual", "both"].includes(relatedAnnouncementDraft.location_type || "physical") && (
                     <>
                       <div>
                         <label className="block text-xs font-semibold text-gray-700 mb-1">Platform</label>
@@ -606,7 +620,8 @@ export default function HeroSlideForm({ slide, announcement, announcementMode = 
                         <Input type="url" value={relatedAnnouncementDraft.zoom_link} onChange={(e) => handleRelatedAnnouncementChange("zoom_link", e.target.value)} />
                       </div>
                     </>
-                  ) : (
+                  )}
+                  {["physical", "both"].includes(relatedAnnouncementDraft.location_type || "physical") && (
                     <>
                       <div>
                         <label className="block text-xs font-semibold text-gray-700 mb-1">Place Name</label>

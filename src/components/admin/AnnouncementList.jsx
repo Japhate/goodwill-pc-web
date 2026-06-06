@@ -44,6 +44,18 @@ function AnnouncementImage({ announcement, className = 'h-16 w-24' }) {
   );
 }
 
+function getAnnouncementLocationSummary(announcement) {
+  const locationType = announcement.location_type || (
+    (announcement.location || announcement.directions_url) && (announcement.virtual_platform || announcement.zoom_link)
+      ? 'both'
+      : announcement.virtual_platform || announcement.zoom_link ? 'virtual' : 'physical'
+  );
+  const parts = [];
+  if (['physical', 'both'].includes(locationType) && announcement.location) parts.push(announcement.location);
+  if (['virtual', 'both'].includes(locationType) && announcement.virtual_platform) parts.push(announcement.virtual_platform);
+  return parts.join(' / ') || 'N/A';
+}
+
 function formatAnnouncementDate(date) {
   return date ? format(parseISO(date), 'MMM dd, yyyy') : 'N/A';
 }
@@ -181,7 +193,7 @@ export default function AnnouncementList({
                     <td className="px-4 py-4"><AnnouncementCategory category={announcement.category} /></td>
                     <td className="px-4 py-4">{formatAnnouncementDate(announcement.date)}</td>
                     <td className="px-4 py-4">{announcement.time || 'N/A'}</td>
-                    <td className="px-4 py-4">{announcement.location || announcement.virtual_platform || 'N/A'}</td>
+                    <td className="px-4 py-4">{getAnnouncementLocationSummary(announcement)}</td>
                     <td className="px-4 py-4"><AnnouncementStatus status={announcement.status} /></td>
                     <td className="px-4 py-4">{renderActions(announcement)}</td>
                   </tr>

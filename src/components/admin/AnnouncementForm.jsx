@@ -5,6 +5,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { UploadFile } from "@/integrations/Core";
 import { Loader2 } from "lucide-react";
+import ConfirmedDateTimePicker from "@/components/admin/ConfirmedDateTimePicker";
 
 export default function AnnouncementForm({ announcement, onSubmit, onCancel }) {
   const [formData, setFormData] = useState(announcement || {
@@ -131,23 +132,43 @@ export default function AnnouncementForm({ announcement, onSubmit, onCancel }) {
         </div>
 
         <div>
-          <label htmlFor="date" className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
-          <Input id="date" type="date" value={formData.date} onChange={e => handleChange('date', e.target.value)} />
+          <ConfirmedDateTimePicker
+            id="date"
+            label="Start Date"
+            type="date"
+            value={formData.date}
+            onChange={(value) => handleChange('date', value)}
+          />
         </div>
 
         <div>
-          <label htmlFor="end_date" className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
-          <Input id="end_date" type="date" value={formData.end_date || ''} onChange={e => handleChange('end_date', e.target.value)} />
+          <ConfirmedDateTimePicker
+            id="end_date"
+            label="End Date"
+            type="date"
+            value={formData.end_date || ''}
+            onChange={(value) => handleChange('end_date', value)}
+          />
         </div>
 
         <div>
-          <label htmlFor="time" className="block text-sm font-medium text-gray-700 mb-1">Start Time</label>
-          <Input id="time" type="time" value={formData.time} onChange={e => handleChange('time', e.target.value)} />
+          <ConfirmedDateTimePicker
+            id="time"
+            label="Start Time"
+            type="time"
+            value={formData.time}
+            onChange={(value) => handleChange('time', value)}
+          />
         </div>
 
         <div>
-          <label htmlFor="end_time" className="block text-sm font-medium text-gray-700 mb-1">End Time</label>
-          <Input id="end_time" type="time" value={formData.end_time} onChange={e => handleChange('end_time', e.target.value)} />
+          <ConfirmedDateTimePicker
+            id="end_time"
+            label="End Time"
+            type="time"
+            value={formData.end_time}
+            onChange={(value) => handleChange('end_time', value)}
+          />
         </div>
 
         <div>
@@ -164,11 +185,12 @@ export default function AnnouncementForm({ announcement, onSubmit, onCancel }) {
             <SelectContent>
               <SelectItem value="physical">Physical</SelectItem>
               <SelectItem value="virtual">Virtual</SelectItem>
+              <SelectItem value="both">Physical and Virtual</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
-        {(formData.location_type || 'physical') === 'virtual' ? (
+        {['virtual', 'both'].includes(formData.location_type || 'physical') && (
           <>
             <div>
               <label htmlFor="virtual_platform" className="block text-sm font-medium text-gray-700 mb-1">Platform</label>
@@ -179,7 +201,8 @@ export default function AnnouncementForm({ announcement, onSubmit, onCancel }) {
               <Input id="zoom_link" type="url" placeholder="https://..." value={formData.zoom_link} onChange={e => handleChange('zoom_link', e.target.value)} />
             </div>
           </>
-        ) : (
+        )}
+        {['physical', 'both'].includes(formData.location_type || 'physical') && (
           <>
             <div>
               <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-1">Place Name</label>

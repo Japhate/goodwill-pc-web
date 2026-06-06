@@ -370,6 +370,8 @@ export default function HeroSlideshow() {
     ? `/Updates#announcement-${currentSlide.announcement_id}`
     : "";
   const externalSlideUrl = currentSlide?.link_url || (isZoomBibleStudySlide(currentSlide) ? BIBLE_STUDY_ZOOM : "");
+  const primarySlideUrl = relatedAnnouncementUrl || externalSlideUrl;
+  const primarySlideIsExternal = Boolean(primarySlideUrl && !relatedAnnouncementUrl && externalSlideUrl);
 
   useEffect(() => {
     setCurrent(0);
@@ -424,6 +426,25 @@ export default function HeroSlideshow() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handleSlideClick = () => {
+    if (!primarySlideUrl) return;
+
+    if (primarySlideIsExternal) {
+      window.open(primarySlideUrl, "_blank", "noopener,noreferrer");
+      return;
+    }
+
+    window.location.href = primarySlideUrl;
+  };
+
+  const handleSlideKeyDown = (event) => {
+    if (!primarySlideUrl) return;
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      handleSlideClick();
+    }
+  };
+
   return (
     <section ref={sectionRef} className="relative w-full bg-white">
       {!isTickerClosed && bannerMessages.length > 0 && (
@@ -450,7 +471,14 @@ export default function HeroSlideshow() {
 
       {/* Slides */}
       {currentSlide && (
-        <div className="relative aspect-[48/19] w-full overflow-hidden bg-black">
+        <div
+          className={`relative aspect-[48/19] w-full overflow-hidden bg-black ${primarySlideUrl ? "cursor-pointer" : ""}`}
+          onClick={handleSlideClick}
+          onKeyDown={handleSlideKeyDown}
+          role={primarySlideUrl ? "link" : undefined}
+          tabIndex={primarySlideUrl ? 0 : undefined}
+          aria-label={primarySlideUrl ? `Open ${currentSlide.link_label || currentSlide.alt_text || "hero slide details"}` : undefined}
+        >
           <AnimatePresence initial={false}>
             <motion.div
               key={`${currentSlide.id || currentImageUrl}-${currentImageUrl}`}

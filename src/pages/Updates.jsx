@@ -52,7 +52,14 @@ const formatTimeRange = (startTime, endTime) => {
   return startLabel || endLabel || "";
 };
 
-const getLocationType = (item) => item.location_type || (item.virtual_platform || item.zoom_link ? "virtual" : "physical");
+const getLocationType = (item) => {
+  if (item.location_type) return item.location_type;
+  if ((item.location || item.directions_url) && (item.virtual_platform || item.zoom_link)) return "both";
+  return item.virtual_platform || item.zoom_link ? "virtual" : "physical";
+};
+
+const hasPhysicalLocation = (item) => ["physical", "both"].includes(getLocationType(item));
+const hasVirtualLocation = (item) => ["virtual", "both"].includes(getLocationType(item));
 
 const addDays = (date, days) => {
   const nextDate = new Date(date);
@@ -99,9 +106,11 @@ const getGoogleCalendarUrl = (item) => {
   }
 
   const locationType = getLocationType(item);
-  const calendarLocation = locationType === "virtual"
-    ? [item.virtual_platform, item.zoom_link].filter(Boolean).join(" - ")
-    : item.location || "";
+  const calendarLocation = locationType === "both"
+    ? [item.location, item.virtual_platform, item.zoom_link].filter(Boolean).join(" | ")
+    : locationType === "virtual"
+      ? [item.virtual_platform, item.zoom_link].filter(Boolean).join(" - ")
+      : item.location || "";
   if (calendarLocation) params.set("location", calendarLocation);
 
   const details = [
@@ -401,10 +410,10 @@ export default function Updates() {
 
 
       {/* Content with proper padding */}
-      <div className="pt-24 md:pt-20">
+      <div className="pt-1 md:pt-1">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
-          <section id="announcements-events" className="py-2 scroll-mt-[140px] md:scroll-mt-[124px]">
+          <section id="announcements-events" className="pt-0 pb-2 scroll-mt-[140px] md:scroll-mt-[124px]">
             <h2 className="mb-1 text-center text-2xl font-bold text-gray-900 md:text-3xl">Announcements & Events</h2>
             <p className="mx-auto mb-3 max-w-2xl text-center text-sm text-gray-600">
               What's happening at Goodwill? Here are the latest updates for our church family and community.
@@ -519,20 +528,17 @@ export default function Updates() {
                         )}
                         {timeLabel && <div className="flex items-start gap-2"><Clock className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Time:</strong> {timeLabel}</span></div>}
                         {item.frequency && <div className="flex items-start gap-2"><Clock className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Frequency:</strong> {item.frequency}</span></div>}
-                        {locationType === "virtual" ? (
-                          item.virtual_platform && <div className="flex items-start gap-2"><ExternalLink className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Platform:</strong> {item.virtual_platform}</span></div>
-                        ) : (
-                          item.location && <div className="flex items-start gap-2"><MapPin className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Location:</strong> {item.location}</span></div>
-                        )}
+                        {hasPhysicalLocation(item) && item.location && <div className="flex items-start gap-2"><MapPin className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Location:</strong> {item.location}</span></div>}
+                        {hasVirtualLocation(item) && item.virtual_platform && <div className="flex items-start gap-2"><ExternalLink className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Platform:</strong> {item.virtual_platform}</span></div>}
                         {(item.zoom_link || item.directions_url || item.file_upload) && (
                           <div className="flex flex-wrap gap-2 pt-2">
-                            {locationType === "virtual" && item.zoom_link && (
+                            {hasVirtualLocation(item) && item.zoom_link && (
                               <a href={item.zoom_link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-md bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700">
                                 <ExternalLink className="h-3.5 w-3.5" />
                                 Open Link
                               </a>
                             )}
-                            {locationType !== "virtual" && item.directions_url && (
+                            {hasPhysicalLocation(item) && item.directions_url && (
                               <a href={item.directions_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-md bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700">
                                 <MapPin className="h-3.5 w-3.5" />
                                 Get Directions
@@ -694,21 +700,18 @@ export default function Updates() {
                           )}
                           {timeLabel && <div className="flex items-start gap-2"><Clock className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Time:</strong> {timeLabel}</span></div>}
                           {item.frequency && <div className="flex items-start gap-2"><Clock className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Frequency:</strong> {item.frequency}</span></div>}
-                          {locationType === "virtual" ? (
-                            item.virtual_platform && <div className="flex items-start gap-2"><ExternalLink className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Platform:</strong> {item.virtual_platform}</span></div>
-                          ) : (
-                            item.location && <div className="flex items-start gap-2"><MapPin className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Location:</strong> {item.location}</span></div>
-                          )}
+                          {hasPhysicalLocation(item) && item.location && <div className="flex items-start gap-2"><MapPin className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Location:</strong> {item.location}</span></div>}
+                          {hasVirtualLocation(item) && item.virtual_platform && <div className="flex items-start gap-2"><ExternalLink className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Platform:</strong> {item.virtual_platform}</span></div>}
                         </div>
                         {(item.zoom_link || item.directions_url || item.file_upload) && (
                           <div className="mt-4 flex flex-wrap gap-2">
-                            {locationType === "virtual" && item.zoom_link && (
+                            {hasVirtualLocation(item) && item.zoom_link && (
                               <a href={item.zoom_link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-md bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700">
                                 <ExternalLink className="h-3.5 w-3.5" />
                                 Open Link
                               </a>
                             )}
-                            {locationType !== "virtual" && item.directions_url && (
+                            {hasPhysicalLocation(item) && item.directions_url && (
                               <a href={item.directions_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-md bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700">
                                 <MapPin className="h-3.5 w-3.5" />
                                 Get Directions
