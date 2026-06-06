@@ -1982,7 +1982,7 @@ export default function AdminPage() {
     .reduce((maxOrder, slide) => Math.max(maxOrder, Number(slide.order) || 0), 0) + 1;
   const activeHeroSlideCount = heroSlides.filter((slide) => slide.is_active !== false).length;
   const inactiveHeroSlideCount = heroSlides.filter((slide) => slide.is_active === false).length;
-  const activeHeroAnnouncementItemCount = activeHeroSlideCount + upcomingAnnouncements.length;
+  const activeHeroAnnouncementItemCount = activeHeroSlideCount;
   const inactiveHeroAnnouncementItemCount = inactiveHeroSlideCount + inactiveAnnouncements.length;
   const filterHeroSlidesByAdminSearch = (slidesToFilter, isActive, searchTerm) => {
     const normalizedSearch = searchTerm.trim().toLowerCase();
@@ -2257,20 +2257,6 @@ export default function AdminPage() {
                 selectedVisibleIds={selectedActiveHeroSlideIds}
                 onSelectedVisibleIdsChange={updateActiveHeroSlideSelection}
                 hideSelectAll
-              />
-              <AnnouncementList
-                announcements={upcomingAnnouncements}
-                onEdit={(item) => handleEdit(item, 'announcement')}
-                onDelete={(id) => handleSetAnnouncementVisibility(id, 'Hidden')}
-                onHide={(id) => handleSetAnnouncementVisibility(id, 'Hidden')}
-                onAddNew={() => handleAddNew('announcement')}
-                onDuplicate={(item) => handleDuplicate(item, 'announcement')}
-                title="Active Announcements"
-                addLabel="Add Event"
-                showAddNew={true}
-                showHeader={false}
-                viewModeOverride={activeHeroAnnouncementView}
-                searchTerm={activeHeroAnnouncementSearch}
               />
             </section>
 
