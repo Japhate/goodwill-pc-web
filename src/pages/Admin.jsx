@@ -1450,6 +1450,8 @@ export default function AdminPage() {
                     location: draft.location || '',
                     virtual_platform: draft.virtual_platform || '',
                     zoom_link: draft.zoom_link || '',
+                    meeting_id: draft.meeting_id || '',
+                    meeting_passcode: draft.meeting_passcode || '',
                     directions_url: draft.directions_url || '',
                     file_upload: draft.file_upload || '',
                     file_label: draft.file_label || '',

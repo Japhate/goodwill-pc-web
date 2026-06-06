@@ -2,12 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
 import { localApi } from "@/api/localApiClient";
 import { Loader2, Upload } from "lucide-react";
 import ConfirmedDateTimePicker from "@/components/admin/ConfirmedDateTimePicker";
 
-const BIBLE_STUDY_ZOOM = "https://us06web.zoom.us/j/82013337566?pwd=mULnQC1Zjg5GWkoTTKGvx3PyAFaCeZ.1";
 const HERO_IMAGE_WIDTH = 1920;
 const HERO_IMAGE_HEIGHT = 760;
 const HERO_IMAGE_QUALITY = 0.82;
@@ -23,6 +21,8 @@ const DEFAULT_RELATED_ANNOUNCEMENT = {
   location: "",
   virtual_platform: "",
   zoom_link: "",
+  meeting_id: "",
+  meeting_passcode: "",
   directions_url: "",
   file_upload: "",
   file_label: "",
@@ -149,6 +149,7 @@ export default function HeroSlideForm({ slide, announcement, announcementMode = 
     alt_text: "",
     link_url: "",
     link_label: "More",
+    details_button_label: "More",
     announcement_id: "",
     is_zoom_bible_study: false,
     is_priority_announcement: false,
@@ -168,7 +169,6 @@ export default function HeroSlideForm({ slide, announcement, announcementMode = 
   const [uploadedImages, setUploadedImages] = useState([]);
   const [uploadError, setUploadError] = useState("");
   const [validationErrors, setValidationErrors] = useState({});
-  const [announcementOptions, setAnnouncementOptions] = useState([]);
   const [relatedAnnouncementDraft, setRelatedAnnouncementDraft] = useState(getInitialAnnouncementDraft(announcement));
   const [relatedFileUploading, setRelatedFileUploading] = useState(false);
   const initialFormSnapshot = useMemo(() => JSON.stringify({
@@ -177,6 +177,7 @@ export default function HeroSlideForm({ slide, announcement, announcementMode = 
       alt_text: formData.alt_text || "",
       link_url: formData.link_url || "",
       link_label: formData.link_label || "",
+      details_button_label: formData.details_button_label || "",
       announcement_id: formData.announcement_id || "",
       is_zoom_bible_study: formData.is_zoom_bible_study === true,
       is_priority_announcement: formData.is_priority_announcement === true,
@@ -188,36 +189,6 @@ export default function HeroSlideForm({ slide, announcement, announcementMode = 
     relatedAnnouncementDraft,
     uploadedImages,
   }), []);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const loadAnnouncements = async () => {
-      try {
-        const announcements = await localApi.entities.AnnouncementsEvents.list("-created_date", 200);
-        if (!isMounted) return;
-
-        setAnnouncementOptions(
-          announcements
-            .filter((announcement) => announcement.status !== "Hidden")
-            .map((announcement) => ({
-              id: announcement.id,
-              title: announcement.title || "Untitled announcement",
-              status: announcement.status || "Active",
-            }))
-        );
-      } catch (error) {
-        console.error("Unable to load announcement options:", error);
-        if (isMounted) setAnnouncementOptions([]);
-      }
-    };
-
-    loadAnnouncements();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
 
   const handleChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -247,16 +218,6 @@ export default function HeroSlideForm({ slide, announcement, announcementMode = 
     } finally {
       setRelatedFileUploading(false);
     }
-  };
-
-  const handleZoomSlideChange = (checked) => {
-    setFormData((prev) => ({
-      ...prev,
-      is_zoom_bible_study: checked,
-      alt_text: checked && !prev.alt_text ? "Join us every Wednesday at 6:30 PM for Zoom Bible Study" : prev.alt_text,
-      link_url: checked && !prev.link_url ? BIBLE_STUDY_ZOOM : prev.link_url,
-      link_label: checked && (!prev.link_label || prev.link_label === "More") ? "Join Zoom" : prev.link_label,
-    }));
   };
 
   const handleFileUpload = async (e) => {
@@ -290,9 +251,11 @@ export default function HeroSlideForm({ slide, announcement, announcementMode = 
   const buildSubmissionPayload = ({ asDraft = false } = {}) => {
     const order = Number(formData.order);
     const hasHeroImage = String(formData.image_url || "").trim() !== "";
-    const hasRelatedAnnouncement = hasRelatedAnnouncementDraftStarted(relatedAnnouncementDraft);
+    const description = String(formData.alt_text || "").trim();
+    const fullAnnouncement = String(relatedAnnouncementDraft.content || "").trim();
+    const hasRelatedAnnouncement = Boolean(fullAnnouncement) || isAnnouncementWorkflow || isLinkedPairEdit;
     const relatedAnnouncementPayload = hasRelatedAnnouncement
-      ? { ...relatedAnnouncementDraft, create: true, status: asDraft ? "Hidden" : relatedAnnouncementDraft.status || "Active" }
+      ? { ...relatedAnnouncementDraft, content: fullAnnouncement, create: true, status: asDraft ? "Hidden" : relatedAnnouncementDraft.status || "Active" }
       : null;
     const slideData = {
       ...(hasRelatedAnnouncement ? { ...formData, announcement_id: "" } : formData),
@@ -301,11 +264,11 @@ export default function HeroSlideForm({ slide, announcement, announcementMode = 
     const announcementData = {
       ...relatedAnnouncementDraft,
       title: String(relatedAnnouncementDraft.title || "").trim() || (asDraft ? "Draft announcement" : ""),
-      content: String(relatedAnnouncementDraft.content || "").trim() || (asDraft ? "Draft saved from the admin panel." : ""),
+      content: fullAnnouncement || (asDraft ? "Draft saved from the admin panel." : ""),
       status: asDraft ? "Hidden" : relatedAnnouncementDraft.status || "Active",
     };
 
-    if (asDraft && !hasHeroImage && !hasRelatedAnnouncement) return null;
+    if (asDraft && !hasHeroImage && !description && !hasRelatedAnnouncement) return null;
 
     if ((isAnnouncementWorkflow || isLinkedPairEdit) && (hasHeroImage || asDraft)) {
       return {
@@ -346,6 +309,7 @@ export default function HeroSlideForm({ slide, announcement, announcementMode = 
         alt_text: formData.alt_text || "",
         link_url: formData.link_url || "",
         link_label: formData.link_label || "",
+        details_button_label: formData.details_button_label || "",
         announcement_id: formData.announcement_id || "",
         is_zoom_bible_study: formData.is_zoom_bible_study === true,
         is_priority_announcement: formData.is_priority_announcement === true,
@@ -369,27 +333,36 @@ export default function HeroSlideForm({ slide, announcement, announcementMode = 
     const nextErrors = {};
 
     const hasHeroImage = String(formData.image_url || "").trim() !== "";
-    const hasRelatedAnnouncement = hasRelatedAnnouncementDraftStarted(relatedAnnouncementDraft);
+    const description = String(formData.alt_text || "").trim();
+    const fullAnnouncement = String(relatedAnnouncementDraft.content || "").trim();
+    const hasRelatedAnnouncement = Boolean(fullAnnouncement) || isAnnouncementWorkflow || isLinkedPairEdit;
     if (!hasHeroImage && !hasRelatedAnnouncement) {
-      nextErrors.image_url = "Add a hero image, announcement details, or both.";
-      nextErrors.related_title = "Enter announcement details if this should be an announcement only.";
+      nextErrors.image_url = "Add a hero image, full announcement details, or both.";
+      nextErrors.related_content = "Enter the full announcement details if this should be an announcement only.";
     }
-    if (isAnnouncementWorkflow && !hasRelatedAnnouncement) {
-      nextErrors.related_title = "Enter the announcement title.";
+    if (hasHeroImage && !description) {
+      nextErrors.alt_text = "Enter a description.";
     }
-    if (formData.is_priority_announcement) {
-      if (!formData.priority_start) nextErrors.priority_start = "Choose when this priority slide starts.";
-      if (!formData.priority_end) nextErrors.priority_end = "Choose when this priority slide ends.";
+    if (isAnnouncementWorkflow && !fullAnnouncement) {
+      nextErrors.related_content = "Enter the full announcement details.";
+    }
+    if (String(formData.link_url || "").trim() && !hasHeroImage) {
+      nextErrors.link_url = "Upload or enter a hero image before adding a virtual or external button link.";
     }
     if (hasRelatedAnnouncement) {
       if (!String(relatedAnnouncementDraft.title || "").trim()) nextErrors.related_title = "Enter the related announcement title.";
-      if (!String(relatedAnnouncementDraft.content || "").trim()) nextErrors.related_content = "Enter the related announcement details.";
+      if (!fullAnnouncement) nextErrors.related_content = "Enter the full announcement details.";
     }
     setValidationErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
 
     onSubmit(buildSubmissionPayload());
   };
+
+  const fullAnnouncementDetails = String(relatedAnnouncementDraft.content || "").trim();
+  const hasHeroImage = String(formData.image_url || "").trim() !== "";
+  const isAnnouncementTitleRequired = isAnnouncementWorkflow || isLinkedPairEdit || Boolean(fullAnnouncementDetails);
+  const canEditDetailsButtonLabel = Boolean(hasHeroImage && fullAnnouncementDetails);
 
   return (
     <Card className="max-w-6xl mx-auto">
@@ -409,7 +382,7 @@ export default function HeroSlideForm({ slide, announcement, announcementMode = 
             <div className="space-y-4 rounded-md border border-gray-200 bg-white p-4">
               <div className="border-b border-gray-200 pb-2">
                 <h3 className="text-lg font-bold text-gray-900">Hero Slide</h3>
-                <p className="text-sm text-gray-600">Create or edit the selected hero slide. Leave this side blank when creating an announcement only.</p>
+                <p className="text-sm text-gray-600">Create or edit the selected hero slide. The description is required for hero slides, announcements, and linked slide announcements.</p>
               </div>
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1">
@@ -462,141 +435,140 @@ export default function HeroSlideForm({ slide, announcement, announcementMode = 
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Description / Alt Text</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">
+              Slide/Announcement Title{hasHeroImage && <span className="ml-1 text-red-600">*</span>}
+            </label>
             <Input
               value={formData.alt_text}
               onChange={(e) => handleChange("alt_text", e.target.value)}
               placeholder="e.g. Join us for Wednesday Zoom Bible Study"
+              className={validationErrors.alt_text ? "border-red-500 focus-visible:ring-red-500" : ""}
             />
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Link Button Label (optional)</label>
-            <Input
-              value={formData.link_label}
-              onChange={(e) => handleChange("link_label", e.target.value)}
-              placeholder="More"
-            />
-            <p className="text-xs text-gray-500 mt-1">Defaults to More. You can change it to Read More, Learn More, Join Zoom, or any short action text.</p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Link URL (optional)</label>
-            <Input
-              value={formData.link_url}
-              onChange={(e) => handleChange("link_url", e.target.value)}
-              placeholder="e.g. https://us02web.zoom.us/j/..."
-            />
-            <p className="text-xs text-gray-500 mt-1">When set, this button opens the link in a new tab.</p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Display Order</label>
-            <Input
-              type="number"
-              value={formData.order}
-              onChange={(e) => handleChange("order", e.target.value)}
-              placeholder="0"
-              className="w-28"
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              {uploadedImages.length > 1
-                ? `Lower numbers appear first. This batch will use orders ${Number(formData.order)} through ${Number(formData.order) + uploadedImages.length - 1}.`
-                : "Lower numbers appear first."}
+            {validationErrors.alt_text && <p className="mt-1 text-xs font-semibold text-red-600">{validationErrors.alt_text}</p>}
+            <p className="mt-1 text-xs text-gray-500">
+              This title is used for the hero image and accessibility.
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
-            <Switch
-              checked={formData.is_active}
-              onCheckedChange={(val) => handleChange("is_active", val)}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <ConfirmedDateTimePicker
+              id="related_start_date"
+              label="Start Date"
+              type="date"
+              value={relatedAnnouncementDraft.date}
+              onChange={(value) => handleRelatedAnnouncementChange("date", value)}
             />
-            <label className="text-sm font-semibold text-gray-700">Active (show on homepage)</label>
-          </div>
-
-          <div className="rounded-md border border-blue-200 bg-blue-50 p-3">
-            <div className="flex items-center gap-3">
-              <Switch
-                checked={formData.is_zoom_bible_study}
-                onCheckedChange={handleZoomSlideChange}
-              />
-              <label className="text-sm font-semibold text-gray-700">Zoom Bible Study slide</label>
+            <ConfirmedDateTimePicker
+              id="related_end_date"
+              label="End Date"
+              type="date"
+              value={relatedAnnouncementDraft.end_date}
+              onChange={(value) => handleRelatedAnnouncementChange("end_date", value)}
+            />
+            <ConfirmedDateTimePicker
+              id="related_start_time"
+              label="Start Time"
+              type="time"
+              value={relatedAnnouncementDraft.time}
+              onChange={(value) => handleRelatedAnnouncementChange("time", value)}
+            />
+            <ConfirmedDateTimePicker
+              id="related_end_time"
+              label="End Time"
+              type="time"
+              value={relatedAnnouncementDraft.end_time}
+              onChange={(value) => handleRelatedAnnouncementChange("end_time", value)}
+            />
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">Frequency</label>
+              <Input placeholder="e.g. Daily, Weekly, Every evening" value={relatedAnnouncementDraft.frequency} onChange={(e) => handleRelatedAnnouncementChange("frequency", e.target.value)} />
             </div>
-            <p className="text-xs text-gray-600 mt-2">
-              Enables the Join Zoom button and the countdown to the next Wednesday Bible Study meeting.
-            </p>
-          </div>
-
-          <div className="rounded-md border border-red-200 bg-red-50 p-3">
-            <div className="flex items-center gap-3">
-              <Switch
-                checked={formData.is_priority_announcement === true}
-                onCheckedChange={(val) => handleChange("is_priority_announcement", val)}
-              />
-              <label className="text-sm font-semibold text-gray-700">Priority announcement slide</label>
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">Location Type</label>
+              <select
+                value={relatedAnnouncementDraft.location_type || "physical"}
+                onChange={(e) => handleRelatedAnnouncementChange("location_type", e.target.value)}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                <option value="physical">Physical</option>
+                <option value="virtual">Virtual</option>
+                <option value="both">Physical & Virtual</option>
+              </select>
             </div>
-            <p className="text-xs text-gray-600 mt-2">
-              When active during the scheduled window, this slide is shown by itself and the homepage slideshow does not rotate.
-            </p>
-            {formData.is_priority_announcement && (
-              <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {["virtual", "both"].includes(relatedAnnouncementDraft.location_type || "physical") && (
+              <>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Starts<span className="ml-1 text-red-600">*</span></label>
-                  <Input
-                    type="datetime-local"
-                    value={formData.priority_start || ""}
-                    onChange={(e) => handleChange("priority_start", e.target.value)}
-                    className={validationErrors.priority_start ? "border-red-500 focus-visible:ring-red-500" : ""}
-                  />
-                  {validationErrors.priority_start && <p className="mt-1 text-xs font-semibold text-red-600">{validationErrors.priority_start}</p>}
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Platform</label>
+                  <Input placeholder="e.g. Zoom, Teams, YouTube" value={relatedAnnouncementDraft.virtual_platform} onChange={(e) => handleRelatedAnnouncementChange("virtual_platform", e.target.value)} />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Ends<span className="ml-1 text-red-600">*</span></label>
-                  <Input
-                    type="datetime-local"
-                    value={formData.priority_end || ""}
-                    onChange={(e) => handleChange("priority_end", e.target.value)}
-                    className={validationErrors.priority_end ? "border-red-500 focus-visible:ring-red-500" : ""}
-                  />
-                  {validationErrors.priority_end && <p className="mt-1 text-xs font-semibold text-red-600">{validationErrors.priority_end}</p>}
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Link</label>
+                  <Input type="url" value={relatedAnnouncementDraft.zoom_link} onChange={(e) => handleRelatedAnnouncementChange("zoom_link", e.target.value)} />
                 </div>
-              </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Meeting ID</label>
+                  <Input placeholder="e.g. 820 1333 7566" value={relatedAnnouncementDraft.meeting_id || ""} onChange={(e) => handleRelatedAnnouncementChange("meeting_id", e.target.value)} />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Passcode</label>
+                  <Input placeholder="e.g. 123456" value={relatedAnnouncementDraft.meeting_passcode || ""} onChange={(e) => handleRelatedAnnouncementChange("meeting_passcode", e.target.value)} />
+                </div>
+              </>
+            )}
+            {["physical", "both"].includes(relatedAnnouncementDraft.location_type || "physical") && (
+              <>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Place Name</label>
+                  <Input placeholder="e.g. Goodwill Presbyterian Church" value={relatedAnnouncementDraft.location} onChange={(e) => handleRelatedAnnouncementChange("location", e.target.value)} />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Google Maps Directions</label>
+                  <Input type="url" placeholder="https://maps.google.com/..." value={relatedAnnouncementDraft.directions_url} onChange={(e) => handleRelatedAnnouncementChange("directions_url", e.target.value)} />
+                </div>
+              </>
             )}
           </div>
             </div>
 
             <div className="space-y-4 rounded-md border border-amber-200 bg-amber-50 p-4">
-              <div className="border-b border-amber-200 pb-2">
-                <h3 className="text-lg font-bold text-gray-900">Announcements & Events</h3>
-                <p className="text-sm text-gray-600">Create or edit the full announcement. Leave this side blank when the hero slide should not link to an announcement.</p>
-              </div>
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Related Announcement (optional)</label>
-            <select
-              value={formData.announcement_id || ""}
-              onChange={(e) => handleChange("announcement_id", e.target.value)}
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            >
-              <option value="">No related announcement</option>
-              {announcementOptions.map((announcement) => (
-                <option key={announcement.id} value={announcement.id}>
-                  {announcement.title} ({announcement.status})
-                </option>
-              ))}
-            </select>
-            <p className="mt-1 text-xs text-gray-500">
-              Adds a Read More button that opens this announcement on the Updates page.
-            </p>
-          </div>
-
           <div>
             <h3 className="text-sm font-bold text-gray-900">New Announcement Details</h3>
             <p className="mt-2 text-xs text-gray-600">
-              Fill these fields to create or update the full announcement. If a hero image is also present, the two items are linked automatically.
+              Start with the full announcement details. If this box is filled, an announcement is created and linked to the hero image when one is provided.
             </p>
             <div className="mt-4 space-y-3">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Announcement Title</label>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    Full Announcement{(isAnnouncementWorkflow || isLinkedPairEdit || fullAnnouncementDetails) && <span className="ml-1 text-red-600">*</span>}
+                  </label>
+                  <textarea
+                    value={relatedAnnouncementDraft.content}
+                    onChange={(e) => handleRelatedAnnouncementChange("content", e.target.value)}
+                    rows={7}
+                    className={`flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${validationErrors.related_content ? "border-red-500 focus-visible:ring-red-500" : ""}`}
+                    placeholder="Enter the full announcement that should appear on the Updates page."
+                  />
+                  {validationErrors.related_content && <p className="mt-1 text-xs font-semibold text-red-600">{validationErrors.related_content}</p>}
+                  <p className="mt-1 text-xs text-gray-500">
+                    Filling this box creates an announcement and links it to the hero image when one is provided.
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Details Button Label</label>
+                  <Input
+                    value={formData.details_button_label || "More"}
+                    onChange={(e) => handleChange("details_button_label", e.target.value)}
+                    placeholder="More"
+                    disabled={!canEditDetailsButtonLabel}
+                  />
+                  <p className="mt-1 text-xs text-gray-500">
+                    This button appears on the hero image and opens the full announcement. It becomes available after a hero image and full announcement details are both added.
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    Announcement Title{isAnnouncementTitleRequired && <span className="ml-1 text-red-600">*</span>}
+                  </label>
                   <Input
                     value={relatedAnnouncementDraft.title}
                     onChange={(e) => handleRelatedAnnouncementChange("title", e.target.value)}
@@ -604,100 +576,6 @@ export default function HeroSlideForm({ slide, announcement, announcementMode = 
                     placeholder="e.g. Celebrations, Accomplishments & Thanksgiving Recognition"
                   />
                   {validationErrors.related_title && <p className="mt-1 text-xs font-semibold text-red-600">{validationErrors.related_title}</p>}
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Full Announcement</label>
-                  <textarea
-                    value={relatedAnnouncementDraft.content}
-                    onChange={(e) => handleRelatedAnnouncementChange("content", e.target.value)}
-                    rows={7}
-                    className={`flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${validationErrors.related_content ? "border-red-500 focus-visible:ring-red-500" : ""}`}
-                    placeholder="Enter the complete announcement that should appear on the Updates page."
-                  />
-                  {validationErrors.related_content && <p className="mt-1 text-xs font-semibold text-red-600">{validationErrors.related_content}</p>}
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <ConfirmedDateTimePicker
-                    id="related_start_date"
-                    label="Start Date"
-                    type="date"
-                    value={relatedAnnouncementDraft.date}
-                    onChange={(value) => handleRelatedAnnouncementChange("date", value)}
-                  />
-                  <ConfirmedDateTimePicker
-                    id="related_end_date"
-                    label="End Date"
-                    type="date"
-                    value={relatedAnnouncementDraft.end_date}
-                    onChange={(value) => handleRelatedAnnouncementChange("end_date", value)}
-                  />
-                  <ConfirmedDateTimePicker
-                    id="related_start_time"
-                    label="Start Time"
-                    type="time"
-                    value={relatedAnnouncementDraft.time}
-                    onChange={(value) => handleRelatedAnnouncementChange("time", value)}
-                  />
-                  <ConfirmedDateTimePicker
-                    id="related_end_time"
-                    label="End Time"
-                    type="time"
-                    value={relatedAnnouncementDraft.end_time}
-                    onChange={(value) => handleRelatedAnnouncementChange("end_time", value)}
-                  />
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Frequency</label>
-                    <Input placeholder="e.g. Daily, Weekly, Every evening" value={relatedAnnouncementDraft.frequency} onChange={(e) => handleRelatedAnnouncementChange("frequency", e.target.value)} />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Location Type</label>
-                    <select
-                      value={relatedAnnouncementDraft.location_type || "physical"}
-                      onChange={(e) => handleRelatedAnnouncementChange("location_type", e.target.value)}
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                    >
-                      <option value="physical">Physical</option>
-                      <option value="virtual">Virtual</option>
-                      <option value="both">Physical and Virtual</option>
-                    </select>
-                  </div>
-                  {["virtual", "both"].includes(relatedAnnouncementDraft.location_type || "physical") && (
-                    <>
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1">Platform</label>
-                        <Input placeholder="e.g. Zoom, Teams, YouTube" value={relatedAnnouncementDraft.virtual_platform} onChange={(e) => handleRelatedAnnouncementChange("virtual_platform", e.target.value)} />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1">Link</label>
-                        <Input type="url" value={relatedAnnouncementDraft.zoom_link} onChange={(e) => handleRelatedAnnouncementChange("zoom_link", e.target.value)} />
-                      </div>
-                    </>
-                  )}
-                  {["physical", "both"].includes(relatedAnnouncementDraft.location_type || "physical") && (
-                    <>
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1">Place Name</label>
-                        <Input placeholder="e.g. Goodwill Presbyterian Church" value={relatedAnnouncementDraft.location} onChange={(e) => handleRelatedAnnouncementChange("location", e.target.value)} />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1">Google Maps Directions</label>
-                        <Input type="url" placeholder="https://maps.google.com/..." value={relatedAnnouncementDraft.directions_url} onChange={(e) => handleRelatedAnnouncementChange("directions_url", e.target.value)} />
-                      </div>
-                    </>
-                  )}
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Status</label>
-                    <select
-                      value={relatedAnnouncementDraft.status}
-                      onChange={(e) => handleRelatedAnnouncementChange("status", e.target.value)}
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                    >
-                      <option value="Active">Active</option>
-                      <option value="Timeless">Timeless</option>
-                      <option value="Inactive">Inactive</option>
-                      <option value="Hidden">Hidden</option>
-                    </select>
-                  </div>
                 </div>
                 <div className="rounded-md border border-amber-200 bg-white/70 p-3">
                   <label className="block text-xs font-semibold text-gray-700 mb-2">Form / PDF Attachment</label>

@@ -54,8 +54,9 @@ const formatTimeRange = (startTime, endTime) => {
 
 const getLocationType = (item) => {
   if (item.location_type) return item.location_type;
-  if ((item.location || item.directions_url) && (item.virtual_platform || item.zoom_link)) return "both";
-  return item.virtual_platform || item.zoom_link ? "virtual" : "physical";
+  const hasVirtualDetails = item.virtual_platform || item.zoom_link || item.meeting_id || item.meeting_passcode;
+  if ((item.location || item.directions_url) && hasVirtualDetails) return "both";
+  return hasVirtualDetails ? "virtual" : "physical";
 };
 
 const hasPhysicalLocation = (item) => ["physical", "both"].includes(getLocationType(item));
@@ -107,9 +108,9 @@ const getGoogleCalendarUrl = (item) => {
 
   const locationType = getLocationType(item);
   const calendarLocation = locationType === "both"
-    ? [item.location, item.virtual_platform, item.zoom_link].filter(Boolean).join(" | ")
+    ? [item.location, item.virtual_platform, item.zoom_link, item.meeting_id ? `Meeting ID: ${item.meeting_id}` : ""].filter(Boolean).join(" | ")
     : locationType === "virtual"
-      ? [item.virtual_platform, item.zoom_link].filter(Boolean).join(" - ")
+      ? [item.virtual_platform, item.zoom_link, item.meeting_id ? `Meeting ID: ${item.meeting_id}` : ""].filter(Boolean).join(" - ")
       : item.location || "";
   if (calendarLocation) params.set("location", calendarLocation);
 
@@ -117,6 +118,8 @@ const getGoogleCalendarUrl = (item) => {
     stripMarkdown(item.content),
     item.frequency ? `Frequency: ${item.frequency}` : "",
     item.zoom_link ? `Link: ${item.zoom_link}` : "",
+    item.meeting_id ? `Meeting ID: ${item.meeting_id}` : "",
+    item.meeting_passcode ? `Passcode: ${item.meeting_passcode}` : "",
     item.directions_url ? `Directions: ${item.directions_url}` : "",
     item.file_upload ? `Attachment: ${item.file_upload}` : "",
   ].filter(Boolean).join("\n\n");
@@ -530,6 +533,8 @@ export default function Updates() {
                         {item.frequency && <div className="flex items-start gap-2"><Clock className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Frequency:</strong> {item.frequency}</span></div>}
                         {hasPhysicalLocation(item) && item.location && <div className="flex items-start gap-2"><MapPin className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Location:</strong> {item.location}</span></div>}
                         {hasVirtualLocation(item) && item.virtual_platform && <div className="flex items-start gap-2"><ExternalLink className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Platform:</strong> {item.virtual_platform}</span></div>}
+                        {hasVirtualLocation(item) && item.meeting_id && <div className="flex items-start gap-2"><ExternalLink className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Meeting ID:</strong> {item.meeting_id}</span></div>}
+                        {hasVirtualLocation(item) && item.meeting_passcode && <div className="flex items-start gap-2"><ExternalLink className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Passcode:</strong> {item.meeting_passcode}</span></div>}
                         {(item.zoom_link || item.directions_url || item.file_upload) && (
                           <div className="flex flex-wrap gap-2 pt-2">
                             {hasVirtualLocation(item) && item.zoom_link && (
@@ -702,6 +707,8 @@ export default function Updates() {
                           {item.frequency && <div className="flex items-start gap-2"><Clock className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Frequency:</strong> {item.frequency}</span></div>}
                           {hasPhysicalLocation(item) && item.location && <div className="flex items-start gap-2"><MapPin className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Location:</strong> {item.location}</span></div>}
                           {hasVirtualLocation(item) && item.virtual_platform && <div className="flex items-start gap-2"><ExternalLink className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Platform:</strong> {item.virtual_platform}</span></div>}
+                          {hasVirtualLocation(item) && item.meeting_id && <div className="flex items-start gap-2"><ExternalLink className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Meeting ID:</strong> {item.meeting_id}</span></div>}
+                          {hasVirtualLocation(item) && item.meeting_passcode && <div className="flex items-start gap-2"><ExternalLink className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Passcode:</strong> {item.meeting_passcode}</span></div>}
                         </div>
                         {(item.zoom_link || item.directions_url || item.file_upload) && (
                           <div className="mt-4 flex flex-wrap gap-2">

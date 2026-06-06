@@ -46,13 +46,14 @@ function AnnouncementImage({ announcement, className = 'h-16 w-24' }) {
 
 function getAnnouncementLocationSummary(announcement) {
   const locationType = announcement.location_type || (
-    (announcement.location || announcement.directions_url) && (announcement.virtual_platform || announcement.zoom_link)
+    (announcement.location || announcement.directions_url) && (announcement.virtual_platform || announcement.zoom_link || announcement.meeting_id || announcement.meeting_passcode)
       ? 'both'
-      : announcement.virtual_platform || announcement.zoom_link ? 'virtual' : 'physical'
+      : announcement.virtual_platform || announcement.zoom_link || announcement.meeting_id || announcement.meeting_passcode ? 'virtual' : 'physical'
   );
   const parts = [];
   if (['physical', 'both'].includes(locationType) && announcement.location) parts.push(announcement.location);
   if (['virtual', 'both'].includes(locationType) && announcement.virtual_platform) parts.push(announcement.virtual_platform);
+  if (['virtual', 'both'].includes(locationType) && announcement.meeting_id) parts.push(`Meeting ID: ${announcement.meeting_id}`);
   return parts.join(' / ') || 'N/A';
 }
 
@@ -89,6 +90,8 @@ export default function AnnouncementList({
       announcement.category,
       announcement.location,
       announcement.virtual_platform,
+      announcement.meeting_id,
+      announcement.meeting_passcode,
       announcement.status,
     ].some((value) => String(value || '').toLowerCase().includes(normalizedSearch));
   });

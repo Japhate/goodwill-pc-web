@@ -517,7 +517,7 @@ export default function HeroSlideshow() {
                       onClick={(e) => e.stopPropagation()}
                     >
                       <ExternalLink className="w-4 h-4" />
-                      Read More
+                      {currentSlide.details_button_label || currentSlide.link_label || "More"}
                     </a>
                   )}
                   {externalSlideUrl && (
@@ -568,7 +568,7 @@ export default function HeroSlideshow() {
               className="inline-flex items-center justify-center gap-1.5 rounded-full border border-amber-200/70 bg-white px-4 py-2 text-xs font-bold text-black shadow-lg transition-all hover:bg-amber-100"
             >
               <ExternalLink className="h-4 w-4" />
-              Read More
+              {currentSlide.details_button_label || currentSlide.link_label || "More"}
             </a>
           )}
           {externalSlideUrl && (

@@ -20,6 +20,8 @@ export default function AnnouncementForm({ announcement, onSubmit, onCancel }) {
     location: '',
     virtual_platform: '',
     zoom_link: '',
+    meeting_id: '',
+    meeting_passcode: '',
     directions_url: '',
     file_upload: '',
     file_label: '',
@@ -185,7 +187,7 @@ export default function AnnouncementForm({ announcement, onSubmit, onCancel }) {
             <SelectContent>
               <SelectItem value="physical">Physical</SelectItem>
               <SelectItem value="virtual">Virtual</SelectItem>
-              <SelectItem value="both">Physical and Virtual</SelectItem>
+              <SelectItem value="both">Physical & Virtual</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -199,6 +201,14 @@ export default function AnnouncementForm({ announcement, onSubmit, onCancel }) {
             <div>
               <label htmlFor="zoom_link" className="block text-sm font-medium text-gray-700 mb-1">Link</label>
               <Input id="zoom_link" type="url" placeholder="https://..." value={formData.zoom_link} onChange={e => handleChange('zoom_link', e.target.value)} />
+            </div>
+            <div>
+              <label htmlFor="meeting_id" className="block text-sm font-medium text-gray-700 mb-1">Meeting ID</label>
+              <Input id="meeting_id" placeholder="e.g. 820 1333 7566" value={formData.meeting_id || ''} onChange={e => handleChange('meeting_id', e.target.value)} />
+            </div>
+            <div>
+              <label htmlFor="meeting_passcode" className="block text-sm font-medium text-gray-700 mb-1">Passcode</label>
+              <Input id="meeting_passcode" placeholder="e.g. 123456" value={formData.meeting_passcode || ''} onChange={e => handleChange('meeting_passcode', e.target.value)} />
             </div>
           </>
         )}
