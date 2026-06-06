@@ -39,6 +39,8 @@ const formatTimeRange = (startTime, endTime) => {
   return startTime || endTime || "";
 };
 
+const SHOW_PAST_EVENTS_GALLERY = false;
+
 export default function Updates() {
   const [feedItems, setFeedItems] = useState([]);
   const [worshipEvents, setWorshipEvents] = useState([]);
@@ -59,7 +61,7 @@ export default function Updates() {
   const subNavLinks = useMemo(() => [
     { title: "Announcements & Events", href: "#announcements-events" },
     { title: "Calendar of Worship", href: "#calendar" },
-    { title: "Past Events Gallery", href: "#past-events" },
+    ...(SHOW_PAST_EVENTS_GALLERY ? [{ title: "Past Events Gallery", href: "#past-events" }] : []),
   ], []);
 
   useEffect(() => {
@@ -517,6 +519,7 @@ export default function Updates() {
           </section>
 
           {/* Section 3: Past Events Gallery */}
+          {SHOW_PAST_EVENTS_GALLERY && (
           <section id="past-events" className="py-6 scroll-mt-[140px] md:scroll-mt-[124px] -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8" style={{ background: '#fdf8f0' }}>
             <div className="text-center mb-8">
               <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Past Events Gallery</h2>
@@ -594,6 +597,7 @@ export default function Updates() {
               </div>
             )}
           </section>
+          )}
         </div>
       </div>
     </div>
