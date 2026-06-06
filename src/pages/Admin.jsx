@@ -35,9 +35,10 @@ import { firestore } from '@/lib/firebase';
 import { DEFAULT_HOMEPAGE_BANNERS } from '@/lib/homepageBanners';
 import { DEFAULT_EMAIL_TEMPLATES, NEWSLETTER_TEMPLATE_IDS } from '@/lib/newsletterTemplates';
 import { createSpecialServicePopup } from '@/lib/specialServiceNotice';
-import { Camera, Loader2, ShieldAlert, CalendarHeart, PlaySquare, FileText, MessageSquare, LayoutTemplate, LogOut, BellRing, Mail, ShieldCheck, UserRound, Code2, Search, Grid2X2, List, Plus, Info, ChevronDown } from 'lucide-react';
+import { Camera, Loader2, ShieldAlert, CalendarHeart, PlaySquare, FileText, MessageSquare, LayoutTemplate, LogOut, BellRing, Mail, ShieldCheck, UserRound, Code2, Search, Grid2X2, List, Plus, Info, ChevronDown, EyeOff, RotateCcw, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const ADMIN_INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000;
 const AUTO_LOGOUT_NOTICE_KEY = 'goodwill-admin-auto-logout';
@@ -216,6 +217,7 @@ export default function AdminPage() {
   const [newsletterBroadcasts, setNewsletterBroadcasts] = useState([]);
   const [adminActivityLogs, setAdminActivityLogs] = useState([]);
   const [siteAdminComparison, setSiteAdminComparison] = useState([]);
+  const [siteAdminLoadError, setSiteAdminLoadError] = useState('');
   const [loadingDeveloperLogs, setLoadingDeveloperLogs] = useState(false);
   const [loadingSiteAdmins, setLoadingSiteAdmins] = useState(false);
   const [view, setView] = useState(getInitialAdminView); // 'worshipEvents', 'sermons', 'bulletins', 'banners', 'heroSlides', 'sitePopups', 'newsletter', 'developer'
@@ -227,7 +229,11 @@ export default function AdminPage() {
   const [inactiveHeroAnnouncementSearchOpen, setInactiveHeroAnnouncementSearchOpen] = useState(false);
   const [activeHeroAnnouncementSearch, setActiveHeroAnnouncementSearch] = useState('');
   const [inactiveHeroAnnouncementSearch, setInactiveHeroAnnouncementSearch] = useState('');
+  const [selectedActiveHeroSlideIds, setSelectedActiveHeroSlideIds] = useState([]);
+  const [selectedInactiveHeroSlideIds, setSelectedInactiveHeroSlideIds] = useState([]);
   const [adminInstructionExpanded, setAdminInstructionExpanded] = useState(false);
+  const [adminSectionMenuOpen, setAdminSectionMenuOpen] = useState(false);
+  const [adminInstructionOverflows, setAdminInstructionOverflows] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loginEmail, setLoginEmail] = useState('');
@@ -247,9 +253,24 @@ export default function AdminPage() {
   const [uploadingAdminPhoto, setUploadingAdminPhoto] = useState(false);
   const inactivityTimerRef = useRef(null);
   const privacyNoticeRef = useRef(null);
+  const adminInstructionRef = useRef(null);
   const canViewDeveloperPanel = isDeveloperAdminEmail(currentAdmin?.email);
   const canManageSiteAdmins = canViewDeveloperPanel;
   const adminRoleLabel = canManageSiteAdmins ? 'Site Developer' : 'Site Administrator';
+  const adminSectionOptions = [
+    { value: 'worshipEvents', label: 'Calendar of Worship', icon: CalendarHeart, instructions: 'Create and maintain worship services, special observances, dates, times, and worship calendar details.' },
+    { value: 'sermons', label: 'Sermons', icon: PlaySquare, instructions: 'Manage sermon recordings, titles, dates, speakers, scripture references, and links for the Sermons page.' },
+    { value: 'bulletins', label: 'Worship Bulletins', icon: FileText, instructions: 'Upload and organize worship bulletins so visitors can find current and previous service materials.' },
+    { value: 'banners', label: 'Homepage Banner', icon: MessageSquare, instructions: 'Update the homepage banner message used for short, high-visibility notices and welcome information.' },
+    { value: 'heroSlides', label: 'Hero Slides & Announcements', icon: LayoutTemplate, instructions: 'Use this section to manage the hero slides shown on the homepage and the announcements shown on the Updates page. You may drag and drop slide cards or use arrows to reorder. Review hidden or inactive slides and announcements, then restore or permanently delete them.' },
+    { value: 'sitePopups', label: 'Homepage Popups', icon: BellRing, instructions: 'Create temporary homepage popups for urgent notices, service changes, and important church updates.' },
+    { value: 'newsletter', label: 'Newsletter', icon: Mail, instructions: 'Manage newsletter subscribers, message templates, drafts, tests, scheduled sends, and broadcast history.' },
+    ...(canViewDeveloperPanel ? [{ value: 'developer', label: 'Developer Panel', icon: Code2, instructions: 'Review admin activity, site administrators, and developer-only maintenance information.' }] : []),
+  ];
+  const selectedAdminSection = adminSectionOptions.find((option) => option.value === view) || adminSectionOptions[0];
+  const SelectedAdminSectionIcon = selectedAdminSection?.icon || LayoutTemplate;
+  const selectedAdminInstructions = selectedAdminSection?.instructions || '';
+  const canExpandAdminInstructions = adminInstructionOverflows;
 
   const logAdminActivity = async ({
     action,
@@ -310,26 +331,48 @@ export default function AdminPage() {
   const loadSiteAdminComparison = async () => {
     if (!canViewDeveloperPanel) {
       setSiteAdminComparison([]);
+      setSiteAdminLoadError('');
       return;
     }
 
+    const currentDeveloperAdmin = currentAdmin ? {
+      uid: currentAdmin.id || firebaseAuth?.currentUser?.uid || '',
+      email: String(currentAdmin.email || SITE_DEVELOPER_EMAIL).trim().toLowerCase(),
+      first_name: currentAdmin.first_name || currentAdmin.firstName || '',
+      last_name: currentAdmin.last_name || currentAdmin.lastName || '',
+      has_saved_name: Boolean((currentAdmin.first_name || currentAdmin.firstName) && (currentAdmin.last_name || currentAdmin.lastName)),
+      created_date: currentAdmin.created_date || '',
+      updated_date: currentAdmin.updated_date || '',
+      role_label: 'Site Developer',
+    } : null;
+
     const token = await firebaseAuth?.currentUser?.getIdToken();
     if (!token) {
-      setSiteAdminComparison([]);
+      setSiteAdminComparison(currentDeveloperAdmin ? [currentDeveloperAdmin] : []);
+      setSiteAdminLoadError('Signed in, but the developer session token was not available. Refresh the page and try again.');
       return;
     }
 
     setLoadingSiteAdmins(true);
+    setSiteAdminLoadError('');
     try {
       const response = await fetch('/api/admin/site-admins', {
         headers: { Authorization: `Bearer ${token}` },
       });
       const body = await response.json().catch(() => null);
       if (!response.ok) throw new Error(body?.error || 'Unable to load site administrators.');
-      setSiteAdminComparison(body?.admins || []);
+      const admins = Array.isArray(body?.admins) ? body.admins : [];
+      const hasCurrentDeveloper = currentDeveloperAdmin && admins.some((admin) => (
+        String(admin.uid || '') === String(currentDeveloperAdmin.uid || '')
+        || String(admin.email || '').trim().toLowerCase() === currentDeveloperAdmin.email
+      ));
+      setSiteAdminComparison(currentDeveloperAdmin && !hasCurrentDeveloper
+        ? [currentDeveloperAdmin, ...admins]
+        : admins);
     } catch (error) {
       console.error('Unable to compare site administrators:', error);
-      setSiteAdminComparison([]);
+      setSiteAdminComparison(currentDeveloperAdmin ? [currentDeveloperAdmin] : []);
+      setSiteAdminLoadError(error.message || 'Unable to load the full site administrator list.');
     } finally {
       setLoadingSiteAdmins(false);
     }
@@ -468,6 +511,18 @@ export default function AdminPage() {
   }, [view, currentAdmin, canViewDeveloperPanel]);
 
   useEffect(() => {
+    const checkInstructionOverflow = () => {
+      const node = adminInstructionRef.current;
+      if (!node || adminInstructionExpanded) return;
+      setAdminInstructionOverflows(node.scrollHeight > node.clientHeight + 1);
+    };
+
+    checkInstructionOverflow();
+    window.addEventListener('resize', checkInstructionOverflow);
+    return () => window.removeEventListener('resize', checkInstructionOverflow);
+  }, [selectedAdminInstructions, adminInstructionExpanded]);
+
+  useEffect(() => {
     if (!firebaseEnabled || !isAdmin) return undefined;
 
     const endSessionForInactivity = async () => {
@@ -573,6 +628,7 @@ export default function AdminPage() {
 
     setAdminActivityLogs([]);
     setSiteAdminComparison([]);
+    setSiteAdminLoadError('');
     if (view === 'developer') {
       setView('heroSlides');
     }
@@ -1783,6 +1839,37 @@ export default function AdminPage() {
   const inactiveHeroSlideCount = heroSlides.filter((slide) => slide.is_active === false).length;
   const activeHeroAnnouncementItemCount = activeHeroSlideCount + upcomingAnnouncements.length;
   const inactiveHeroAnnouncementItemCount = inactiveHeroSlideCount + inactiveAnnouncements.length;
+  const filterHeroSlidesByAdminSearch = (slidesToFilter, isActive, searchTerm) => {
+    const normalizedSearch = searchTerm.trim().toLowerCase();
+    return slidesToFilter.filter((slide) => {
+      const matchesState = isActive ? slide.is_active !== false : slide.is_active === false;
+      if (!matchesState) return false;
+      if (!normalizedSearch) return true;
+
+      return [
+        slide.alt_text,
+        slide.link_label,
+        slide.link_url,
+        slide.image_url,
+      ].some((value) => String(value || '').toLowerCase().includes(normalizedSearch));
+    });
+  };
+  const activeHeroSlidesForSelection = filterHeroSlidesByAdminSearch(heroSlides, true, activeHeroAnnouncementSearch);
+  const inactiveHeroSlidesForSelection = filterHeroSlidesByAdminSearch(heroSlides, false, inactiveHeroAnnouncementSearch);
+  const activeHeroSlideSelectionSet = new Set(activeHeroSlidesForSelection.map((slide) => slide.id));
+  const inactiveHeroSlideSelectionSet = new Set(inactiveHeroSlidesForSelection.map((slide) => slide.id));
+  const selectedActiveHeroSlideIdsInView = selectedActiveHeroSlideIds.filter((id) => activeHeroSlideSelectionSet.has(id));
+  const selectedInactiveHeroSlideIdsInView = selectedInactiveHeroSlideIds.filter((id) => inactiveHeroSlideSelectionSet.has(id));
+  const allActiveHeroSlidesSelected = activeHeroSlidesForSelection.length > 0 && selectedActiveHeroSlideIdsInView.length === activeHeroSlidesForSelection.length;
+  const allInactiveHeroSlidesSelected = inactiveHeroSlidesForSelection.length > 0 && selectedInactiveHeroSlideIdsInView.length === inactiveHeroSlidesForSelection.length;
+  const updateActiveHeroSlideSelection = (ids) => {
+    setSelectedActiveHeroSlideIds(ids);
+    if (ids.length > 0) setSelectedInactiveHeroSlideIds([]);
+  };
+  const updateInactiveHeroSlideSelection = (ids) => {
+    setSelectedInactiveHeroSlideIds(ids);
+    if (ids.length > 0) setSelectedActiveHeroSlideIds([]);
+  };
   const getLinkedAnnouncementForSlide = (slide) => {
     if (!slide?.announcement_id) return null;
     return announcements.find((announcement) => String(announcement.id) === String(slide.announcement_id)) || null;
@@ -1804,14 +1891,38 @@ export default function AdminPage() {
     itemCount = 0,
     itemStateLabel = 'active',
     showReorderHint = false,
+    selectableCount = 0,
+    selectedCount = 0,
+    allSelected = false,
+    onToggleSelectAll,
+    selectionActions = null,
   }) => (
     <div className="flex flex-wrap items-start justify-between gap-4">
       <div>
         <h2 className="text-2xl font-bold text-gray-900">{title}</h2>
-        <p className="mt-1 text-sm text-gray-600">
-          <span className="text-lg font-extrabold text-amber-700">{itemCount}</span>{' '}
-          {itemStateLabel} {itemCount === 1 ? 'item' : 'items'}
-        </p>
+        <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-gray-600">
+          <span>
+            <span className="text-lg font-extrabold text-amber-700">{itemCount}</span>{' '}
+            {itemStateLabel} {itemCount === 1 ? 'item' : 'items'}
+          </span>
+          {selectableCount > 0 && typeof onToggleSelectAll === 'function' && (
+            <>
+              <span className="h-4 w-px bg-gray-300" aria-hidden="true" />
+              <label className="inline-flex items-center gap-2 align-middle text-sm font-medium text-gray-700">
+                <Checkbox
+                  checked={allSelected}
+                  onCheckedChange={(checked) => onToggleSelectAll(checked === true)}
+                  aria-label={`Select all ${itemStateLabel} hero slides`}
+                />
+                Select all
+                {selectedCount > 0 && (
+                  <span className="text-xs font-semibold text-amber-700">({selectedCount})</span>
+                )}
+              </label>
+            </>
+          )}
+          {selectionActions}
+        </div>
         {description && <p className="mt-1 text-sm text-gray-600">{description}</p>}
       </div>
       <div className="flex flex-wrap items-center justify-end gap-3">
@@ -1857,22 +1968,6 @@ export default function AdminPage() {
       </div>
     </div>
   );
-  const adminSectionOptions = [
-    { value: 'worshipEvents', label: 'Calendar of Worship', icon: CalendarHeart, instructions: 'Create and maintain worship services, special observances, dates, times, and worship calendar details.' },
-    { value: 'sermons', label: 'Sermons', icon: PlaySquare, instructions: 'Manage sermon recordings, titles, dates, speakers, scripture references, and links for the Sermons page.' },
-    { value: 'bulletins', label: 'Worship Bulletins', icon: FileText, instructions: 'Upload and organize worship bulletins so visitors can find current and previous service materials.' },
-    { value: 'banners', label: 'Homepage Banner', icon: MessageSquare, instructions: 'Update the homepage banner message used for short, high-visibility notices and welcome information.' },
-    { value: 'heroSlides', label: 'Hero Slides & Announcements', icon: LayoutTemplate, instructions: 'Use this section to manage the hero slides shown on the homepage and the announcements shown on the Updates page. You may drag and drop slide cards or use arrows to reorder. Review hidden or inactive slides and announcements, then restore or permanently delete them.' },
-    { value: 'sitePopups', label: 'Homepage Popups', icon: BellRing, instructions: 'Create temporary homepage popups for urgent notices, service changes, and important church updates.' },
-    { value: 'newsletter', label: 'Newsletter', icon: Mail, instructions: 'Manage newsletter subscribers, message templates, drafts, tests, scheduled sends, and broadcast history.' },
-    ...(canViewDeveloperPanel ? [{ value: 'developer', label: 'Developer Panel', icon: Code2, instructions: 'Review admin activity, site administrators, and developer-only maintenance information.' }] : []),
-  ];
-  const selectedAdminSection = adminSectionOptions.find((option) => option.value === view) || adminSectionOptions[0];
-  const SelectedAdminSectionIcon = selectedAdminSection?.icon || LayoutTemplate;
-  const selectedAdminInstructions = selectedAdminSection?.instructions || '';
-  const canExpandAdminInstructions = selectedAdminInstructions.length > 100;
-
-
   const renderContent = () => {
     switch (formView) {
       case 'announcement':
@@ -1978,6 +2073,23 @@ export default function AdminPage() {
                 onSearchValueChange={setActiveHeroAnnouncementSearch}
                 itemCount={activeHeroAnnouncementItemCount}
                 itemStateLabel="active"
+                selectableCount={activeHeroSlidesForSelection.length}
+                selectedCount={selectedActiveHeroSlideIdsInView.length}
+                allSelected={allActiveHeroSlidesSelected}
+                onToggleSelectAll={(checked) => updateActiveHeroSlideSelection(checked ? activeHeroSlidesForSelection.map((slide) => slide.id) : [])}
+                selectionActions={selectedActiveHeroSlideIdsInView.length > 0 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={async () => {
+                      const changed = await handleSetHeroSlideVisibility(selectedActiveHeroSlideIdsInView, false);
+                      if (changed) setSelectedActiveHeroSlideIds([]);
+                    }}
+                    className="h-8 gap-2 border-gray-300 px-3 text-gray-700 hover:bg-gray-50"
+                  >
+                    <EyeOff className="h-4 w-4" /> Hide Selected ({selectedActiveHeroSlideIdsInView.length})
+                  </Button>
+                )}
                 showReorderHint
                 showAddButton
               />
@@ -1995,6 +2107,9 @@ export default function AdminPage() {
                 showHeader={false}
                 viewModeOverride={activeHeroAnnouncementView}
                 searchTerm={activeHeroAnnouncementSearch}
+                selectedVisibleIds={selectedActiveHeroSlideIds}
+                onSelectedVisibleIdsChange={updateActiveHeroSlideSelection}
+                hideSelectAll
               />
               <AnnouncementList
                 announcements={upcomingAnnouncements}
@@ -2024,6 +2139,36 @@ export default function AdminPage() {
                 onSearchValueChange={setInactiveHeroAnnouncementSearch}
                 itemCount={inactiveHeroAnnouncementItemCount}
                 itemStateLabel="inactive"
+                selectableCount={inactiveHeroSlidesForSelection.length}
+                selectedCount={selectedInactiveHeroSlideIdsInView.length}
+                allSelected={allInactiveHeroSlidesSelected}
+                onToggleSelectAll={(checked) => updateInactiveHeroSlideSelection(checked ? inactiveHeroSlidesForSelection.map((slide) => slide.id) : [])}
+                selectionActions={selectedInactiveHeroSlideIdsInView.length > 0 && (
+                  <div className="inline-flex flex-wrap items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={async () => {
+                        const changed = await handleSetHeroSlideVisibility(selectedInactiveHeroSlideIdsInView, true);
+                        if (changed) setSelectedInactiveHeroSlideIds([]);
+                      }}
+                      className="h-8 gap-2 border-green-300 px-3 text-green-700 hover:bg-green-50"
+                    >
+                      <RotateCcw className="h-4 w-4" /> Restore Selected ({selectedInactiveHeroSlideIdsInView.length})
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={async () => {
+                        const deleted = await handleDeleteSelectedHeroSlides(selectedInactiveHeroSlideIdsInView);
+                        if (deleted) setSelectedInactiveHeroSlideIds([]);
+                      }}
+                      className="h-8 gap-2 border-red-300 px-3 text-red-600 hover:bg-red-50"
+                    >
+                      <Trash2 className="h-4 w-4" /> Delete Selected ({selectedInactiveHeroSlideIdsInView.length})
+                    </Button>
+                  </div>
+                )}
               />
               <HeroSlideList
                 slides={heroSlides}
@@ -2039,6 +2184,9 @@ export default function AdminPage() {
                 showHeader={false}
                 viewModeOverride={inactiveHeroAnnouncementView}
                 searchTerm={inactiveHeroAnnouncementSearch}
+                selectedHiddenIds={selectedInactiveHeroSlideIds}
+                onSelectedHiddenIdsChange={updateInactiveHeroSlideSelection}
+                hideSelectAll
               />
               <AnnouncementList
                 announcements={inactiveAnnouncements}
@@ -2083,6 +2231,7 @@ export default function AdminPage() {
           ? <DeveloperPanel
               logs={adminActivityLogs}
               admins={siteAdminComparison}
+              adminLoadError={siteAdminLoadError}
               loading={loadingDeveloperLogs || loadingSiteAdmins}
               onRefresh={async () => {
                 await Promise.all([loadAdminActivityLogs(), loadSiteAdminComparison()]);
@@ -2239,22 +2388,54 @@ export default function AdminPage() {
         )}
         
         <div className="mb-2 rounded-xl border border-amber-100 bg-white p-1.5 shadow-sm">
-          <div className="grid gap-2 lg:grid-cols-[minmax(240px,0.75fr)_minmax(420px,2fr)_300px] lg:items-center">
-            <div className="flex min-w-0 items-center gap-2">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-600 text-white shadow-sm">
-                <SelectedAdminSectionIcon className="h-4 w-4" />
+          <div className="grid gap-2 lg:grid-cols-[300px_minmax(0,1fr)] lg:items-center">
+            <div className="relative flex h-full min-h-[57px] flex-col justify-between">
+              <p className="mb-0.5 text-sm font-medium tracking-wide text-amber-800">Content Section Switcher</p>
+              <button
+                type="button"
+                onClick={() => setAdminSectionMenuOpen((open) => !open)}
+                className="flex h-10 w-full items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-2.5 text-left shadow-inner outline-none transition hover:bg-amber-100/70 focus:border-amber-500 focus:bg-white focus:ring-2 focus:ring-amber-200"
+                aria-expanded={adminSectionMenuOpen}
+              >
+                <span className="flex min-w-0 items-center gap-2">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-amber-600 text-white shadow-sm">
+                    <SelectedAdminSectionIcon className="h-3.5 w-3.5" />
+                  </span>
+                  <span className="truncate text-sm font-bold text-gray-950">{selectedAdminSection?.label}</span>
+                </span>
+                <ChevronDown className={`h-4 w-4 shrink-0 text-amber-700 transition-transform ${adminSectionMenuOpen ? 'rotate-180' : ''}`} />
+              </button>
+              {adminSectionMenuOpen && (
+                <div className="absolute left-0 right-0 top-full z-30 mt-1 overflow-hidden rounded-lg border border-amber-200 bg-white shadow-xl">
+                  {adminSectionOptions.map((option) => {
+                    const OptionIcon = option.icon;
+                    const isSelected = option.value === view;
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => {
+                          setView(option.value);
+                          setFormView(null);
+                          setAdminInstructionExpanded(false);
+                          setAdminSectionMenuOpen(false);
+                        }}
+                        className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-semibold transition ${isSelected ? 'bg-amber-50 text-amber-800' : 'text-gray-700 hover:bg-gray-50'}`}
+                      >
+                        <OptionIcon className={`h-4 w-4 ${isSelected ? 'text-amber-700' : 'text-gray-500'}`} />
+                        <span className="truncate">{option.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
               </div>
-              <div className="min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-wide text-amber-700">Content Section</p>
-                <h2 className="truncate text-base font-bold text-gray-950">{selectedAdminSection?.label}</h2>
-              </div>
-            </div>
-            <div className="ml-0 mr-auto flex min-h-[52px] w-[92%] max-w-5xl min-w-0 items-center gap-2 rounded-lg border border-amber-200 bg-amber-50/70 px-2.5 py-1 text-sm text-gray-700">
-              <div className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-white text-amber-700 ring-1 ring-amber-200">
-                <Info className="h-2.5 w-2.5" />
+            <div className="ml-0 mr-0 flex min-h-[62px] w-full min-w-0 items-center gap-2 rounded-lg border border-amber-200 bg-amber-50/70 px-2.5 py-1 text-sm text-red-700">
+              <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-red-200 bg-white text-red-600 shadow-sm">
+                <Info className="h-3.5 w-3.5" strokeWidth={2.25} />
               </div>
               <div className="relative min-w-0 flex-1">
-                <p className={`leading-4 ${!adminInstructionExpanded ? 'line-clamp-2' : ''}`}>
+                <p ref={adminInstructionRef} className={`leading-4 ${!adminInstructionExpanded ? 'line-clamp-2' : ''}`}>
                   {selectedAdminInstructions}
                 </p>
                 {canExpandAdminInstructions && !adminInstructionExpanded && (
@@ -2279,24 +2460,6 @@ export default function AdminPage() {
                 )}
               </div>
             </div>
-            <label className="flex w-full flex-col gap-0.5">
-              <span className="text-xs font-semibold tracking-wide text-gray-500">Switch Section</span>
-              <select
-                value={view}
-                onChange={(event) => {
-                  setView(event.target.value);
-                  setFormView(null);
-                  setAdminInstructionExpanded(false);
-                }}
-                className="h-9 w-full rounded-lg border border-amber-200 bg-amber-50 px-3 text-sm font-semibold text-gray-900 shadow-inner outline-none transition focus:border-amber-500 focus:bg-white focus:ring-2 focus:ring-amber-200"
-              >
-                {adminSectionOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
           </div>
         </div>
         

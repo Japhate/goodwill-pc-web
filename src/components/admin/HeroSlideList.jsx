@@ -22,6 +22,7 @@ function SlideGrid({
   onReorder,
   viewMode,
   mode,
+  hideSelectAll = false,
 }) {
   const allSelected = slides.length > 0 && selectedIds.length === slides.length;
   const isDraggable = mode === "visible" && typeof onReorder === "function";
@@ -79,7 +80,7 @@ function SlideGrid({
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {slides.length > 0 && (
+          {!hideSelectAll && slides.length > 0 && (
             <label className="flex items-center gap-2 text-sm text-gray-700">
               <Checkbox
                 checked={allSelected}
@@ -88,7 +89,7 @@ function SlideGrid({
               Select all
             </label>
           )}
-          {selectedIds.length > 0 && mode === "visible" && (
+          {!hideSelectAll && selectedIds.length > 0 && mode === "visible" && (
             <Button
               variant="outline"
               onClick={onBulkHide}
@@ -97,7 +98,7 @@ function SlideGrid({
               <EyeOff className="h-4 w-4" /> Hide Selected ({selectedIds.length})
             </Button>
           )}
-          {selectedIds.length > 0 && mode === "hidden" && (
+          {!hideSelectAll && selectedIds.length > 0 && mode === "hidden" && (
             <>
               <Button
                 variant="outline"
@@ -350,10 +351,41 @@ export default function HeroSlideList({
   showHeader = true,
   viewModeOverride = null,
   searchTerm = "",
+  selectedVisibleIds: controlledSelectedVisibleIds,
+  onSelectedVisibleIdsChange,
+  selectedHiddenIds: controlledSelectedHiddenIds,
+  onSelectedHiddenIdsChange,
+  hideSelectAll = false,
 }) {
-  const [selectedVisibleIds, setSelectedVisibleIds] = useState([]);
-  const [selectedHiddenIds, setSelectedHiddenIds] = useState([]);
+  const [internalSelectedVisibleIds, setInternalSelectedVisibleIds] = useState([]);
+  const [internalSelectedHiddenIds, setInternalSelectedHiddenIds] = useState([]);
   const [viewMode, setViewMode] = useState("grid");
+  const selectedVisibleIds = controlledSelectedVisibleIds ?? internalSelectedVisibleIds;
+  const selectedHiddenIds = controlledSelectedHiddenIds ?? internalSelectedHiddenIds;
+  const setSelectedVisibleIds = (nextSelection) => {
+    if (onSelectedVisibleIdsChange) {
+      const resolvedSelection = typeof nextSelection === "function" ? nextSelection(selectedVisibleIds) : nextSelection;
+      onSelectedVisibleIdsChange(resolvedSelection);
+      return;
+    }
+    setInternalSelectedVisibleIds(nextSelection);
+  };
+  const setSelectedHiddenIds = (nextSelection) => {
+    if (onSelectedHiddenIdsChange) {
+      const resolvedSelection = typeof nextSelection === "function" ? nextSelection(selectedHiddenIds) : nextSelection;
+      onSelectedHiddenIdsChange(resolvedSelection);
+      return;
+    }
+    setInternalSelectedHiddenIds(nextSelection);
+  };
+  const visibleSlideIdSet = useMemo(
+    () => new Set(slides.filter((slide) => slide.is_active !== false).map((slide) => slide.id)),
+    [slides]
+  );
+  const hiddenSlideIdSet = useMemo(
+    () => new Set(slides.filter((slide) => slide.is_active === false).map((slide) => slide.id)),
+    [slides]
+  );
 
   const normalizedSearch = searchTerm.trim().toLowerCase();
   const matchesSearch = (slide) => {
@@ -374,13 +406,19 @@ export default function HeroSlideList({
     [slides, normalizedSearch]
   );
   const effectiveViewMode = viewModeOverride || viewMode;
+  const visibleSlidesInViewSet = new Set(visibleSlides.map((slide) => slide.id));
+  const hiddenSlidesInViewSet = new Set(hiddenSlides.map((slide) => slide.id));
+  const selectedVisibleIdsInView = selectedVisibleIds.filter((id) => visibleSlidesInViewSet.has(id));
+  const selectedHiddenIdsInView = selectedHiddenIds.filter((id) => hiddenSlidesInViewSet.has(id));
 
   useEffect(() => {
-    const visibleIds = new Set(visibleSlides.map((slide) => slide.id));
-    const hiddenIds = new Set(hiddenSlides.map((slide) => slide.id));
-    setSelectedVisibleIds((ids) => ids.filter((id) => visibleIds.has(id)));
-    setSelectedHiddenIds((ids) => ids.filter((id) => hiddenIds.has(id)));
-  }, [visibleSlides, hiddenSlides]);
+    if (showVisible) {
+      setSelectedVisibleIds((ids) => ids.filter((id) => visibleSlideIdSet.has(id)));
+    }
+    if (showHidden) {
+      setSelectedHiddenIds((ids) => ids.filter((id) => hiddenSlideIdSet.has(id)));
+    }
+  }, [visibleSlideIdSet, hiddenSlideIdSet, showVisible, showHidden]);
 
   const toggleVisibleSelected = (id, checked) => {
     setSelectedVisibleIds((ids) => (
@@ -461,7 +499,7 @@ export default function HeroSlideList({
           title={visibleTitle}
           emptyMessage="No visible slides. Restore a hidden slide or add a new one."
           slides={visibleSlides}
-          selectedIds={selectedVisibleIds}
+          selectedIds={selectedVisibleIdsInView}
           onToggleSelected={toggleVisibleSelected}
           onToggleAll={(checked) => setSelectedVisibleIds(checked ? visibleSlides.map((slide) => slide.id) : [])}
           onEdit={onEdit}
@@ -474,6 +512,7 @@ export default function HeroSlideList({
           onReorder={onReorderVisible}
           viewMode={effectiveViewMode}
           mode="visible"
+          hideSelectAll={hideSelectAll}
         />
       )}
 
@@ -482,7 +521,7 @@ export default function HeroSlideList({
           title={hiddenTitle}
           emptyMessage="No hidden hero slides."
           slides={hiddenSlides}
-          selectedIds={selectedHiddenIds}
+          selectedIds={selectedHiddenIdsInView}
           onToggleSelected={toggleHiddenSelected}
           onToggleAll={(checked) => setSelectedHiddenIds(checked ? hiddenSlides.map((slide) => slide.id) : [])}
           onEdit={onEdit}
@@ -494,6 +533,7 @@ export default function HeroSlideList({
           onBulkDelete={deleteHiddenSelected}
           viewMode={effectiveViewMode}
           mode="hidden"
+          hideSelectAll={hideSelectAll}
         />
       )}
     </div>

@@ -38,6 +38,7 @@ function FieldLabel({ children, required = false }) {
 export default function DeveloperPanel({
   logs = [],
   admins = [],
+  adminLoadError = "",
   loading = false,
   onRefresh,
   onCreateAdmin,
@@ -164,6 +165,11 @@ export default function DeveloperPanel({
         </div>
 
         <div className="overflow-x-auto rounded-md border">
+          {adminLoadError && (
+            <p className="border-b border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900">
+              {adminLoadError} Showing the current developer account while the full administrator list is unavailable.
+            </p>
+          )}
           {adminStatus && (
             <p className={`border-b px-4 py-3 text-sm font-semibold ${
               adminStatus.includes("Unable") ? "bg-red-50 text-red-700" : "bg-green-50 text-green-700"
@@ -190,6 +196,7 @@ export default function DeveloperPanel({
                 const hasName = Boolean(admin.first_name && admin.last_name);
                 const adminEmail = admin.email || "";
                 const isCurrentDeveloper = adminEmail.toLowerCase() === currentAdminEmail.toLowerCase();
+                const roleLabel = admin.role_label || (isCurrentDeveloper ? "Site Developer" : "Site Administrator");
                 return (
                   <tr key={admin.uid || admin.email} className="border-t hover:bg-gray-50">
                     <td className="px-4 py-4 font-semibold text-gray-900">{fullName || "Name not entered yet"}</td>
@@ -198,9 +205,14 @@ export default function DeveloperPanel({
                       <p className="text-xs text-gray-500">{admin.uid || "No UID recorded"}</p>
                     </td>
                     <td className="px-4 py-4">
-                      <Badge className={hasName ? "bg-green-600" : "bg-orange-600"}>
-                        {hasName ? "Profile complete" : "Name pending"}
-                      </Badge>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge className={roleLabel === "Site Developer" ? "bg-amber-600" : "bg-blue-600"}>
+                          {roleLabel}
+                        </Badge>
+                        <Badge className={hasName ? "bg-green-600" : "bg-orange-600"}>
+                          {hasName ? "Profile complete" : "Name pending"}
+                        </Badge>
+                      </div>
                     </td>
                     <td className="px-4 py-4 text-right">
                       <Button

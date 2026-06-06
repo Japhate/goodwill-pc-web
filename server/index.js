@@ -996,7 +996,7 @@ app.post('/api/admin/complete-invitation', async (req, res) => {
 
 app.get('/api/admin/site-admins', async (req, res) => {
   try {
-    await assertDeveloperAdminRequest(req);
+    const developerAdmin = await assertDeveloperAdminRequest(req);
     const db = getAdminFirestore(getFirebaseAdminApp());
     const adminSnapshot = await db.collection('admins').get();
     const rows = adminSnapshot.docs
@@ -1010,9 +1010,29 @@ app.get('/api/admin/site-admins', async (req, res) => {
         has_saved_name: Boolean(data.first_name && data.last_name),
         created_date: data.created_date || '',
         updated_date: data.updated_date || '',
+        role_label: normalizeEmail(data.email) === SITE_DEVELOPER_EMAIL ? 'Site Developer' : 'Site Administrator',
         };
       })
-      .sort((a, b) => a.email.localeCompare(b.email));
+      .filter((admin) => admin.uid || admin.email);
+
+    const developerInRows = rows.some((admin) => (
+      String(admin.uid || '') === String(developerAdmin.uid || '')
+      || normalizeEmail(admin.email) === developerAdmin.email
+    ));
+    if (!developerInRows) {
+      rows.push({
+        uid: developerAdmin.uid,
+        email: developerAdmin.email,
+        first_name: developerAdmin.firstName,
+        last_name: developerAdmin.lastName,
+        has_saved_name: Boolean(developerAdmin.firstName && developerAdmin.lastName),
+        created_date: '',
+        updated_date: '',
+        role_label: 'Site Developer',
+      });
+    }
+
+    rows.sort((a, b) => a.email.localeCompare(b.email));
 
     res.json({ admins: rows });
   } catch (error) {
