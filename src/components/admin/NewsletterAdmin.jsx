@@ -481,8 +481,8 @@ export default function NewsletterAdmin({
   };
 
   return (
-    <div className="space-y-8">
-      <div className="rounded-lg bg-white p-8 shadow-md">
+    <div className="space-y-5">
+      <div className="rounded-lg bg-white p-4 shadow-md">
         <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
           <div>
             <h2 className="flex items-center gap-2 text-2xl font-bold text-gray-900">
@@ -577,7 +577,7 @@ export default function NewsletterAdmin({
 
             <div className="max-h-56 overflow-y-auto rounded-md border">
               {activeSubscribers.length === 0 ? (
-                <p className="px-4 py-6 text-center text-sm text-gray-500">No active newsletter subscribers.</p>
+                <p className="px-4 py-4 text-center text-sm text-gray-500">No active newsletter subscribers.</p>
               ) : (
                 activeSubscribers.map((subscriber) => {
                   const subscriberId = getSubscriberKey(subscriber);
@@ -658,7 +658,7 @@ export default function NewsletterAdmin({
         </form>
       </div>
 
-      <div className="rounded-lg bg-white p-8 shadow-md">
+      <div className="rounded-lg bg-white p-4 shadow-md">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <div>
             <h2 className="flex items-center gap-2 text-2xl font-bold text-gray-900">
@@ -697,7 +697,7 @@ export default function NewsletterAdmin({
             <tbody>
               {visibleBroadcasts.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-gray-500">No broadcast messages yet.</td>
+                <td colSpan={5} className="px-4 py-5 text-center text-gray-500">No broadcast messages yet.</td>
                 </tr>
               ) : visibleBroadcasts.map((broadcast) => {
                 const status = broadcast.status || "draft";
@@ -732,7 +732,7 @@ export default function NewsletterAdmin({
         </div>
       </div>
 
-      <div className="rounded-lg bg-white p-8 shadow-md">
+      <div className="rounded-lg bg-white p-4 shadow-md">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <div>
             <h2 className="flex items-center gap-2 text-2xl font-bold text-gray-900">
@@ -818,7 +818,7 @@ export default function NewsletterAdmin({
             <tbody>
               {filteredSubscribers.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-gray-500">No newsletter subscribers found.</td>
+                <td colSpan={5} className="px-4 py-5 text-center text-gray-500">No newsletter subscribers found.</td>
                 </tr>
               ) : filteredSubscribers.map((subscriber) => (
                 <tr key={subscriber.id} className="border-b hover:bg-gray-50">
@@ -844,7 +844,7 @@ export default function NewsletterAdmin({
         </div>
       </div>
 
-      <div className="rounded-lg bg-white p-8 shadow-md">
+      <div className="rounded-lg bg-white p-4 shadow-md">
         <div className="mb-6">
           <h2 className="flex items-center gap-2 text-2xl font-bold text-gray-900">
             <Mail className="h-6 w-6 text-amber-600" />

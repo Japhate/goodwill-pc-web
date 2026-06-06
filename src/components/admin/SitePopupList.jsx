@@ -17,7 +17,7 @@ function formatDateTime(value) {
 
 export default function SitePopupList({ popups, onAddNew, onEdit, onDelete, onDuplicate }) {
   return (
-    <div className="rounded-lg bg-white p-8 shadow-md">
+    <div className="rounded-lg bg-white p-4 shadow-md">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h2 className="flex items-center gap-2 text-2xl font-bold text-gray-900">
@@ -46,7 +46,7 @@ export default function SitePopupList({ popups, onAddNew, onEdit, onDelete, onDu
           <tbody>
             {popups.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-gray-500">No homepage popups yet.</td>
+            <td colSpan={5} className="px-4 py-5 text-center text-gray-500">No homepage popups yet.</td>
               </tr>
             ) : popups.map((popup) => (
               <tr key={popup.id} className="border-b hover:bg-gray-50">

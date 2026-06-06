@@ -56,7 +56,7 @@ export default function SermonForm({ sermon, onSubmit, onCancel }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 bg-white p-8 rounded-lg shadow-md">
+    <form onSubmit={handleSubmit} className="space-y-3 bg-white p-4 rounded-lg shadow-md">
       <h2 className="text-2xl font-bold text-gray-800">{sermon ? 'Edit' : 'Create'} Sermon</h2>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -163,7 +163,7 @@ export default function SermonForm({ sermon, onSubmit, onCancel }) {
         <Textarea id="notes" value={formData.notes} onChange={e => handleChange('notes', e.target.value)} rows={3} />
       </div>
 
-      <div className="flex justify-end space-x-4 pt-4">
+      <div className="flex justify-end space-x-4 pt-2">
         <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
         <Button type="submit" className="bg-amber-600 hover:bg-amber-700">
           {sermon ? 'Save Changes' : 'Create Sermon'}

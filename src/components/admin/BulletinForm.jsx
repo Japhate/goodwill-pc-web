@@ -70,7 +70,7 @@ export default function BulletinForm({ bulletin, onSubmit, onCancel }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 bg-white p-8 rounded-lg shadow-md" noValidate>
+    <form onSubmit={handleSubmit} className="space-y-3 bg-white p-4 rounded-lg shadow-md" noValidate>
       <h2 className="text-2xl font-bold text-gray-800">{bulletin ? 'Edit' : 'Create'} Bulletin</h2>
       {Object.values(validationErrors).some(Boolean) && (
         <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
@@ -155,7 +155,7 @@ export default function BulletinForm({ bulletin, onSubmit, onCancel }) {
         )}
       </div>
 
-      <div className="flex justify-end space-x-4 pt-4">
+      <div className="flex justify-end space-x-4 pt-2">
         <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
         <Button type="submit" className="bg-amber-600 hover:bg-amber-700" disabled={isUploadingFile || isUploadingThumb}>
           {isUploadingFile || isUploadingThumb ? 'Uploading...' : (bulletin ? 'Save Changes' : 'Create Bulletin')}

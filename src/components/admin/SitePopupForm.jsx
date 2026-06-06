@@ -50,7 +50,7 @@ export default function SitePopupForm({ popup, onSubmit, onCancel }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="mx-auto max-w-3xl space-y-5 rounded-lg bg-white p-8 shadow-md" noValidate>
+    <form onSubmit={handleSubmit} className="mx-auto max-w-3xl space-y-3 rounded-lg bg-white p-4 shadow-md" noValidate>
       <div>
         <h2 className="text-2xl font-bold text-gray-900">{popup ? "Edit Popup" : "Create Popup"}</h2>
         <p className="mt-1 text-sm text-gray-600">Create a dismissible homepage alert that appears during a scheduled time window.</p>

@@ -107,8 +107,8 @@ export default function DeveloperPanel({
   };
 
   return (
-    <div className="space-y-6">
-      <div className="rounded-lg bg-white p-6 shadow-md">
+    <div className="space-y-4">
+      <div className="rounded-lg bg-white p-4 shadow-md">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-amber-700">
@@ -153,7 +153,7 @@ export default function DeveloperPanel({
         )}
       </div>
 
-      <div className="rounded-lg bg-white p-6 shadow-md">
+      <div className="rounded-lg bg-white p-4 shadow-md">
         <div className="mb-5 flex items-start gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-gray-700">
             <Users className="h-5 w-5" />
@@ -183,7 +183,7 @@ export default function DeveloperPanel({
             <tbody>
               {admins.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-gray-500">No admin profiles found.</td>
+                    <td colSpan={4} className="px-4 py-5 text-center text-gray-500">No admin profiles found.</td>
                 </tr>
               ) : admins.map((admin) => {
                 const fullName = [admin.first_name, admin.last_name].filter(Boolean).join(" ");
@@ -225,7 +225,7 @@ export default function DeveloperPanel({
       </div>
 
       {canManageAdmins && (
-      <div className="rounded-lg bg-white p-6 shadow-md">
+      <div className="rounded-lg bg-white p-4 shadow-md">
         <div className="mb-5 flex items-start gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100 text-amber-800">
             <UserPlus className="h-5 w-5" />
@@ -279,7 +279,7 @@ export default function DeveloperPanel({
       </div>
       )}
 
-      <div className="rounded-lg bg-white p-6 shadow-md">
+      <div className="rounded-lg bg-white p-4 shadow-md">
         <div className="mb-4 flex items-center gap-2">
           <Activity className="h-5 w-5 text-amber-600" />
           <h3 className="text-xl font-bold text-gray-950">Activity Log</h3>
@@ -300,7 +300,7 @@ export default function DeveloperPanel({
             <tbody>
               {logs.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                      <td colSpan={6} className="px-4 py-5 text-center text-gray-500">
                     {loading ? "Loading developer logs..." : "No admin activity has been recorded yet."}
                   </td>
                 </tr>

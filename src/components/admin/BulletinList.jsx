@@ -17,7 +17,7 @@ export default function BulletinList({ bulletins, onEdit, onDelete, onAddNew, on
   };
 
   return (
-    <div className="bg-white p-8 rounded-lg shadow-md">
+    <div className="bg-white p-4 rounded-lg shadow-md">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold text-gray-800">Manage Worship Bulletins</h2>
         <Button onClick={onAddNew} className="bg-amber-600 hover:bg-amber-700">

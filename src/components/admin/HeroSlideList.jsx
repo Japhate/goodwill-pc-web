@@ -25,6 +25,7 @@ function SlideGrid({
 }) {
   const allSelected = slides.length > 0 && selectedIds.length === slides.length;
   const isDraggable = mode === "visible" && typeof onReorder === "function";
+  const slideStateLabel = mode === "visible" ? "active" : "inactive";
 
   const handleDragStart = (event, slideId) => {
     if (!isDraggable) return;
@@ -66,16 +67,18 @@ function SlideGrid({
   };
 
   return (
-    <section className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <section className="space-y-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h3 className="text-xl font-bold text-gray-900">{title}</h3>
-          <p className="text-sm text-gray-500">
-            {slides.length} {slides.length === 1 ? "slide" : "slides"}
-            {mode === "visible" && slides.length > 1 ? " - drag cards or use arrows to reorder" : ""}
-          </p>
+          {title && <h3 className="text-xl font-bold text-gray-900">{title}</h3>}
+          {title && (
+            <p className="text-sm text-gray-500">
+              {slides.length} {slideStateLabel} {slides.length === 1 ? "slide" : "slides"}
+              {mode === "visible" && slides.length > 1 ? ". You may drag and drop cards or use arrows to reorder" : ""}
+            </p>
+          )}
         </div>
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           {slides.length > 0 && (
             <label className="flex items-center gap-2 text-sm text-gray-700">
               <Checkbox
@@ -117,7 +120,7 @@ function SlideGrid({
 
       {slides.length === 0 ? (
         <Card>
-          <CardContent className="py-10 text-center text-gray-500">
+          <CardContent className="py-3 text-center text-gray-500">
             {emptyMessage}
           </CardContent>
         </Card>
@@ -345,19 +348,32 @@ export default function HeroSlideList({
   showVisible = true,
   showHidden = true,
   showHeader = true,
+  viewModeOverride = null,
+  searchTerm = "",
 }) {
   const [selectedVisibleIds, setSelectedVisibleIds] = useState([]);
   const [selectedHiddenIds, setSelectedHiddenIds] = useState([]);
   const [viewMode, setViewMode] = useState("grid");
 
+  const normalizedSearch = searchTerm.trim().toLowerCase();
+  const matchesSearch = (slide) => {
+    if (!normalizedSearch) return true;
+    return [
+      slide.alt_text,
+      slide.link_label,
+      slide.link_url,
+      slide.image_url,
+    ].some((value) => String(value || "").toLowerCase().includes(normalizedSearch));
+  };
   const visibleSlides = useMemo(
-    () => slides.filter((slide) => slide.is_active !== false),
-    [slides]
+    () => slides.filter((slide) => slide.is_active !== false && matchesSearch(slide)),
+    [slides, normalizedSearch]
   );
   const hiddenSlides = useMemo(
-    () => slides.filter((slide) => slide.is_active === false),
-    [slides]
+    () => slides.filter((slide) => slide.is_active === false && matchesSearch(slide)),
+    [slides, normalizedSearch]
   );
+  const effectiveViewMode = viewModeOverride || viewMode;
 
   useEffect(() => {
     const visibleIds = new Set(visibleSlides.map((slide) => slide.id));
@@ -398,7 +414,7 @@ export default function HeroSlideList({
   };
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-2">
       {showHeader && (
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -456,7 +472,7 @@ export default function HeroSlideList({
           onBulkRestore={() => restoreSlides(selectedHiddenIds)}
           onBulkDelete={hideVisibleSelected}
           onReorder={onReorderVisible}
-          viewMode={viewMode}
+          viewMode={effectiveViewMode}
           mode="visible"
         />
       )}
@@ -476,7 +492,7 @@ export default function HeroSlideList({
           onBulkHide={() => hideSlides(selectedVisibleIds)}
           onBulkRestore={() => restoreSlides(selectedHiddenIds)}
           onBulkDelete={deleteHiddenSelected}
-          viewMode={viewMode}
+          viewMode={effectiveViewMode}
           mode="hidden"
         />
       )}

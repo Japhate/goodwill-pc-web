@@ -61,10 +61,30 @@ export default function AnnouncementList({
   addLabel = 'Add Event',
   showAddNew = true,
   mode = 'active',
+  showHeader = true,
+  viewModeOverride = null,
+  searchTerm = '',
 }) {
   const [viewMode, setViewMode] = useState('grid');
   const today = startOfDay(new Date());
   const isHiddenMode = mode === 'hidden';
+  const normalizedSearch = searchTerm.trim().toLowerCase();
+  const visibleAnnouncements = announcements.filter((announcement) => {
+    if (!normalizedSearch) return true;
+    return [
+      announcement.title,
+      announcement.content,
+      announcement.category,
+      announcement.location,
+      announcement.virtual_platform,
+      announcement.status,
+    ].some((value) => String(value || '').toLowerCase().includes(normalizedSearch));
+  });
+  const effectiveViewMode = viewModeOverride || viewMode;
+
+  if (!showHeader && visibleAnnouncements.length === 0) {
+    return null;
+  }
 
   const renderActions = (announcement) => (
     <div className="flex flex-wrap items-center gap-2">
@@ -96,44 +116,45 @@ export default function AnnouncementList({
   );
 
   return (
-    <div className="space-y-5 rounded-lg bg-white p-6 shadow-md">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">{title}</h2>
-          {description && <p className="text-sm text-gray-500">{description}</p>}
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="inline-flex overflow-hidden rounded-md border border-gray-200 bg-white">
-            <button
-              type="button"
-              onClick={() => setViewMode('grid')}
-              className={`inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold transition ${viewMode === 'grid' ? 'bg-amber-600 text-white' : 'text-gray-700 hover:bg-gray-50'}`}
-              aria-pressed={viewMode === 'grid'}
-            >
-              <Grid2X2 className="h-4 w-4" /> Grid
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('list')}
-              className={`inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold transition ${viewMode === 'list' ? 'bg-amber-600 text-white' : 'text-gray-700 hover:bg-gray-50'}`}
-              aria-pressed={viewMode === 'list'}
-            >
-              <List className="h-4 w-4" /> List
-            </button>
+    <div className={showHeader ? "space-y-3 rounded-lg bg-white p-4 shadow-md" : "space-y-2"}>
+      {showHeader && (
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">{title}</h2>
+            {description && <p className="text-sm text-gray-500">{description}</p>}
           </div>
-          {showAddNew && (
-            <Button onClick={onAddNew} className="gap-2 bg-amber-600 hover:bg-amber-700">
-              <PlusCircle className="h-4 w-4" /> {addLabel}
-            </Button>
-          )}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="inline-flex overflow-hidden rounded-md border border-gray-200 bg-white">
+              <button
+                type="button"
+                onClick={() => setViewMode('grid')}
+                className={`inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold transition ${viewMode === 'grid' ? 'bg-amber-600 text-white' : 'text-gray-700 hover:bg-gray-50'}`}
+                aria-pressed={viewMode === 'grid'}
+              >
+                <Grid2X2 className="h-4 w-4" /> Grid
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('list')}
+                className={`inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold transition ${viewMode === 'list' ? 'bg-amber-600 text-white' : 'text-gray-700 hover:bg-gray-50'}`}
+                aria-pressed={viewMode === 'list'}
+              >
+                <List className="h-4 w-4" /> List
+              </button>
+            </div>
+            {showAddNew && (
+              <Button onClick={onAddNew} className="gap-2 bg-amber-600 hover:bg-amber-700">
+                <PlusCircle className="h-4 w-4" /> {addLabel}
+              </Button>
+            )}
+          </div>
         </div>
-      </div>
-
-      {announcements.length === 0 ? (
-        <div className="rounded-md border border-dashed border-gray-300 py-10 text-center text-sm text-gray-500">
+      )}
+      {visibleAnnouncements.length === 0 ? (
+        <div className="rounded-md border border-dashed border-gray-300 py-3 text-center text-sm text-gray-500">
           No announcements or events in this section.
         </div>
-      ) : viewMode === 'list' ? (
+      ) : effectiveViewMode === 'list' ? (
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm text-gray-500">
             <thead className="bg-gray-50 text-xs uppercase text-gray-700">
@@ -150,7 +171,7 @@ export default function AnnouncementList({
               </tr>
             </thead>
             <tbody>
-              {announcements.map((announcement, index) => {
+              {visibleAnnouncements.map((announcement, index) => {
                 const isPast = announcement.date && isBefore(parseISO(announcement.date), today);
                 return (
                   <tr key={announcement.id} className={`border-b transition-colors ${isPast ? 'bg-gray-100 text-gray-600' : 'bg-white hover:bg-gray-50'}`}>
@@ -170,11 +191,11 @@ export default function AnnouncementList({
           </table>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
-          {announcements.map((announcement, index) => (
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {visibleAnnouncements.map((announcement, index) => (
             <article key={announcement.id} className="overflow-hidden rounded-md border bg-white shadow-sm">
               <AnnouncementImage announcement={announcement} className="aspect-[16/9] w-full" />
-              <div className="space-y-3 p-4">
+              <div className="space-y-2 p-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex flex-wrap items-center gap-2">
                     <div className="rounded-full bg-black/70 px-2 py-1 text-xs text-white">#{index + 1}</div>
