@@ -509,7 +509,7 @@ export default function HeroSlideshow() {
                       ) : (
                         <ExternalLink className="w-4 h-4" />
                       )}
-                      {currentSlide.link_label || (isZoomBibleStudySlide(currentSlide) ? "Join Zoom" : "Learn More")}
+                      {currentSlide.link_label || (isZoomBibleStudySlide(currentSlide) ? "Join Zoom" : "More")}
                     </a>
                   )}
                 </div>

@@ -120,7 +120,7 @@ export default function HeroSlideForm({ slide, defaultOrder = 0, onSubmit, onCan
     image_url: "",
     alt_text: "",
     link_url: "",
-    link_label: "",
+    link_label: "More",
     announcement_id: "",
     is_zoom_bible_study: false,
     is_priority_announcement: false,
@@ -207,7 +207,7 @@ export default function HeroSlideForm({ slide, defaultOrder = 0, onSubmit, onCan
       is_zoom_bible_study: checked,
       alt_text: checked && !prev.alt_text ? "Join us every Wednesday at 6:30 PM for Zoom Bible Study" : prev.alt_text,
       link_url: checked && !prev.link_url ? BIBLE_STUDY_ZOOM : prev.link_url,
-      link_label: checked && !prev.link_label ? "Join Zoom" : prev.link_label,
+      link_label: checked && (!prev.link_label || prev.link_label === "More") ? "Join Zoom" : prev.link_label,
     }));
   };
 
@@ -345,22 +345,23 @@ export default function HeroSlideForm({ slide, defaultOrder = 0, onSubmit, onCan
           </div>
 
           <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">Link Button Label (optional)</label>
+            <Input
+              value={formData.link_label}
+              onChange={(e) => handleChange("link_label", e.target.value)}
+              placeholder="More"
+            />
+            <p className="text-xs text-gray-500 mt-1">Defaults to More. You can change it to Read More, Learn More, Join Zoom, or any short action text.</p>
+          </div>
+
+          <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1">Link URL (optional)</label>
             <Input
               value={formData.link_url}
               onChange={(e) => handleChange("link_url", e.target.value)}
               placeholder="e.g. https://us02web.zoom.us/j/..."
             />
-            <p className="text-xs text-gray-500 mt-1">When set, clicking the slide will open this link in a new tab.</p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Link Button Label (optional)</label>
-            <Input
-              value={formData.link_label}
-              onChange={(e) => handleChange("link_label", e.target.value)}
-              placeholder="e.g. Join Zoom Meeting"
-            />
+            <p className="text-xs text-gray-500 mt-1">When set, this button opens the link in a new tab.</p>
           </div>
 
           <div>
