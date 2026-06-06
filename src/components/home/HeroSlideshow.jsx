@@ -143,6 +143,8 @@ const BIBLE_STUDY_START_HOUR = 18; // 6:00 PM
 const BIBLE_STUDY_START_MIN = 0;
 const BIBLE_STUDY_END_HOUR = 19;   // 7:00 PM
 const BIBLE_STUDY_END_MIN = 0;
+const SHOW_HERO_EXTERNAL_ACTION_BUTTON = false;
+const SHOW_BIBLE_STUDY_COUNTDOWN_OVERLAY = false;
 
 function isZoomBibleStudySlide(slide) {
   if (!slide) return false;
@@ -370,6 +372,7 @@ export default function HeroSlideshow() {
     ? `/Updates#announcement-${currentSlide.announcement_id}`
     : "";
   const externalSlideUrl = currentSlide?.link_url || (isZoomBibleStudySlide(currentSlide) ? BIBLE_STUDY_ZOOM : "");
+  const showExternalSlideButton = SHOW_HERO_EXTERNAL_ACTION_BUTTON && Boolean(externalSlideUrl);
   const primarySlideUrl = relatedAnnouncementUrl || externalSlideUrl;
   const primarySlideIsExternal = Boolean(primarySlideUrl && !relatedAnnouncementUrl && externalSlideUrl);
 
@@ -498,7 +501,7 @@ export default function HeroSlideshow() {
                 loading="eager"
               />
               {/* Link overlay buttons */}
-              {(relatedAnnouncementUrl || externalSlideUrl) && (
+              {(relatedAnnouncementUrl || showExternalSlideButton) && (
                 <div
                   className={
                     currentSlide.is_priority_announcement
@@ -511,8 +514,8 @@ export default function HeroSlideshow() {
                       href={relatedAnnouncementUrl}
                       className={
                         currentSlide.is_priority_announcement
-                          ? "inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 px-6 py-3 text-base font-bold text-white shadow-lg transition-all hover:from-amber-600 hover:to-amber-700 hover:shadow-xl"
-                          : "inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 px-3 py-1.5 text-xs font-semibold text-white shadow-lg transition-all hover:from-amber-600 hover:to-amber-700 hover:shadow-xl sm:px-4 sm:py-2 sm:text-sm md:gap-2 md:px-6 md:py-3 md:text-base"
+                          ? "inline-flex items-center gap-1 rounded-full border border-white/45 bg-white/5 px-3.5 py-1.5 text-sm font-semibold text-white shadow-[0_8px_24px_rgba(0,0,0,0.18)] backdrop-blur-[2px] transition-all hover:border-amber-500 hover:bg-gradient-to-r hover:from-amber-500 hover:to-amber-600 hover:text-white hover:shadow-xl md:px-4 md:py-2 md:text-base"
+                          : "inline-flex items-center gap-1 rounded-full border border-white/45 bg-white/5 px-2.5 py-1 text-xs font-semibold text-white shadow-[0_8px_24px_rgba(0,0,0,0.18)] backdrop-blur-[2px] transition-all hover:border-amber-500 hover:bg-gradient-to-r hover:from-amber-500 hover:to-amber-600 hover:text-white hover:shadow-xl sm:px-3 sm:py-1.5 sm:text-sm md:px-4 md:py-2 md:text-base"
                       }
                       onClick={(e) => e.stopPropagation()}
                     >
@@ -520,7 +523,7 @@ export default function HeroSlideshow() {
                       {currentSlide.details_button_label || currentSlide.link_label || "More"}
                     </a>
                   )}
-                  {externalSlideUrl && (
+                  {showExternalSlideButton && (
                     <a
                       href={externalSlideUrl}
                       target="_blank"
@@ -554,24 +557,24 @@ export default function HeroSlideshow() {
           </div>
 
           {/* Zoom Countdown Overlay — only on the Bible Study slide */}
-          {isZoomBibleStudySlide(currentSlide) && (
+          {SHOW_BIBLE_STUDY_COUNTDOWN_OVERLAY && isZoomBibleStudySlide(currentSlide) && (
             <ZoomCountdownOverlay />
           )}
         </div>
       )}
 
-      {currentSlide?.is_priority_announcement && (relatedAnnouncementUrl || externalSlideUrl) && (
+      {currentSlide?.is_priority_announcement && (relatedAnnouncementUrl || showExternalSlideButton) && (
         <div className="flex flex-wrap items-center justify-center gap-2 bg-[#3f2a1f] px-4 py-2 text-center md:hidden">
           {relatedAnnouncementUrl && (
             <a
               href={relatedAnnouncementUrl}
-              className="inline-flex items-center justify-center gap-1.5 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 px-4 py-2 text-xs font-bold text-white shadow-lg transition-all hover:from-amber-600 hover:to-amber-700 hover:shadow-xl"
+              className="inline-flex items-center justify-center gap-1 rounded-full border border-white/45 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white shadow-[0_8px_24px_rgba(0,0,0,0.18)] backdrop-blur-[2px] transition-all hover:border-amber-500 hover:bg-gradient-to-r hover:from-amber-500 hover:to-amber-600 hover:text-white hover:shadow-xl"
             >
               <ExternalLink className="h-4 w-4" />
               {currentSlide.details_button_label || currentSlide.link_label || "More"}
             </a>
           )}
-          {externalSlideUrl && (
+          {showExternalSlideButton && (
             <a
               href={externalSlideUrl}
               target="_blank"
