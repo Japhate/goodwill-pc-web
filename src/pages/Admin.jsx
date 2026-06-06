@@ -818,22 +818,60 @@ export default function AdminPage() {
     if (!normalizedFirstName || !normalizedLastName || !normalizedEmail) return;
 
     try {
+      const emailKey = encodeURIComponent(normalizedEmail);
+      const unsubscribeToken = createUnsubscribeToken();
+
       await NewsletterSubscriptions.create({
         first_name: normalizedFirstName,
         last_name: normalizedLastName,
         email: normalizedEmail,
-        email_key: encodeURIComponent(normalizedEmail),
-        unsubscribe_token: createUnsubscribeToken(),
+        email_key: emailKey,
+        unsubscribe_token: unsubscribeToken,
         status: 'active',
       });
+
+      let welcomeEmailSent = false;
+      let welcomeEmailError = '';
+      try {
+        const welcomeResponse = await fetch('/api/send-welcome-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: normalizedEmail,
+            firstName: normalizedFirstName,
+            lastName: normalizedLastName,
+            emailKey,
+            unsubscribeToken,
+            host: window.location.host,
+            protocol: window.location.protocol.replace(':', ''),
+          }),
+        });
+
+        if (!welcomeResponse.ok) {
+          welcomeEmailError = await getApiErrorMessage(welcomeResponse, 'The welcome email could not be sent.');
+        } else {
+          welcomeEmailSent = true;
+        }
+      } catch (error) {
+        welcomeEmailError = `The welcome email request failed: ${error.message}`;
+      }
+
       await logAdminActivity({
         action: 'created',
         section: 'Newsletter',
         itemType: 'newsletter subscriber',
         itemLabel: normalizedEmail,
-        details: { first_name: normalizedFirstName, last_name: normalizedLastName },
+        details: {
+          first_name: normalizedFirstName,
+          last_name: normalizedLastName,
+          welcome_email_sent: welcomeEmailSent,
+          welcome_email_error: welcomeEmailError,
+        },
       });
       await loadNewsletterAdmin();
+      if (welcomeEmailError) {
+        window.alert(`Subscriber added, but ${welcomeEmailError}`);
+      }
     } catch (error) {
       console.error('Unable to add newsletter subscriber:', error);
       if (error?.message === 'already-subscribed' || error?.status === 409) {
@@ -2357,7 +2395,6 @@ export default function AdminPage() {
           onAddSubscriber={handleAddNewsletterSubscriber}
           onDeleteSubscriber={handleDeleteNewsletterSubscriber}
           onSaveTemplate={handleSaveEmailTemplate}
-          onSendTestEmail={handleSendNewsletterTestEmail}
           onSendBroadcast={handleSendNewsletterBroadcast}
           onSaveBroadcastDraft={handleSaveNewsletterBroadcastDraft}
           onScheduleBroadcast={handleScheduleNewsletterBroadcast}

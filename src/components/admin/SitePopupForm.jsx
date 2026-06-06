@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import ConfirmedDateTimePicker from "@/components/admin/ConfirmedDateTimePicker";
 
 const DEFAULT_POPUP = {
   title: "",
@@ -22,6 +23,16 @@ const DEFAULT_POPUP = {
   dismissible: true,
 };
 
+function splitDateTime(value = "") {
+  const [date = "", time = ""] = String(value || "").split("T");
+  return { date, time };
+}
+
+function buildDateTime(date, time) {
+  if (!date && !time) return "";
+  return `${date || ""}${time ? `T${time}` : ""}`;
+}
+
 export default function SitePopupForm({ popup, onSubmit, onCancel }) {
   const [formData, setFormData] = useState({ ...DEFAULT_POPUP, ...popup });
   const [validationErrors, setValidationErrors] = useState({});
@@ -34,6 +45,14 @@ export default function SitePopupForm({ popup, onSubmit, onCancel }) {
   const handleChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     setValidationErrors((prev) => ({ ...prev, [field]: "" }));
+  };
+
+  const handleDateTimeChange = (field, part, value) => {
+    const current = splitDateTime(formData[field]);
+    handleChange(field, buildDateTime(
+      part === "date" ? value : current.date,
+      part === "time" ? value : current.time
+    ));
   };
 
   const handleSubmit = (event) => {
@@ -121,13 +140,35 @@ export default function SitePopupForm({ popup, onSubmit, onCancel }) {
       </div>
 
       <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
-        <div>
-          <label className="mb-1 block text-sm font-semibold text-gray-700">Starts</label>
-          <Input type="datetime-local" value={formData.start_at || ""} onChange={(event) => handleChange("start_at", event.target.value)} />
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-semibold text-gray-700">Ends</label>
-          <Input type="datetime-local" value={formData.end_at || ""} onChange={(event) => handleChange("end_at", event.target.value)} />
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:col-span-2">
+          <ConfirmedDateTimePicker
+            id="popup_start_date"
+            label="Start Date"
+            type="date"
+            value={splitDateTime(formData.start_at).date}
+            onChange={(value) => handleDateTimeChange("start_at", "date", value)}
+          />
+          <ConfirmedDateTimePicker
+            id="popup_start_time"
+            label="Start Time"
+            type="time"
+            value={splitDateTime(formData.start_at).time}
+            onChange={(value) => handleDateTimeChange("start_at", "time", value)}
+          />
+          <ConfirmedDateTimePicker
+            id="popup_end_date"
+            label="End Date"
+            type="date"
+            value={splitDateTime(formData.end_at).date}
+            onChange={(value) => handleDateTimeChange("end_at", "date", value)}
+          />
+          <ConfirmedDateTimePicker
+            id="popup_end_time"
+            label="End Time"
+            type="time"
+            value={splitDateTime(formData.end_at).time}
+            onChange={(value) => handleDateTimeChange("end_at", "time", value)}
+          />
         </div>
         <div>
           <label className="mb-1 block text-sm font-semibold text-gray-700">Priority</label>

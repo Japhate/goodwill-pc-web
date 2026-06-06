@@ -5,6 +5,17 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Mail, Paperclip, PlusCircle, Save, Search, Send, Trash2, Users, X } from "lucide-react";
 import { DEFAULT_EMAIL_TEMPLATES, mergeEmailTemplate } from "@/lib/newsletterTemplates";
+import ConfirmedDateTimePicker from "@/components/admin/ConfirmedDateTimePicker";
+
+function splitDateTime(value = "") {
+  const [date = "", time = ""] = String(value || "").split("T");
+  return { date, time };
+}
+
+function buildDateTime(date, time) {
+  if (!date && !time) return "";
+  return `${date || ""}${time ? `T${time}` : ""}`;
+}
 
 function formatDate(value) {
   if (!value) return "Not set";
@@ -28,16 +39,30 @@ function FieldLabel({ children, required = false }) {
   );
 }
 
-function TemplateEditor({ template, onSave, onSendTestEmail, testEmail }) {
+function getTemplateSnapshot(template) {
+  return JSON.stringify({
+    subject: template.subject || "",
+    heading: template.heading || "",
+    body: template.body || "",
+    footer: template.footer || "",
+    support_phone: template.support_phone || "",
+    support_email: template.support_email || "",
+  });
+}
+
+function TemplateEditor({ template, onSave }) {
   const [formData, setFormData] = useState(template);
   const [saving, setSaving] = useState(false);
-  const [sendingTest, setSendingTest] = useState(false);
+  const [savedSnapshot, setSavedSnapshot] = useState(getTemplateSnapshot(template));
   const [templateErrors, setTemplateErrors] = useState({});
 
   useEffect(() => {
     setFormData(template);
+    setSavedSnapshot(getTemplateSnapshot(template));
     setTemplateErrors({});
   }, [template]);
+
+  const hasUnsavedChanges = getTemplateSnapshot(formData) !== savedSnapshot;
 
   const handleChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -53,26 +78,14 @@ function TemplateEditor({ template, onSave, onSendTestEmail, testEmail }) {
     return Object.keys(nextErrors).length === 0;
   };
 
-  const handleSendTest = async () => {
-    if (!testEmail) {
-      window.alert("Enter a test email address first.");
-      return;
-    }
-
-    setSendingTest(true);
-    try {
-      await onSendTestEmail(formData.id, testEmail);
-    } finally {
-      setSendingTest(false);
-    }
-  };
-
   const handleSubmit = async (event) => {
     event.preventDefault();
+    if (!hasUnsavedChanges) return;
     if (!validateTemplate()) return;
     setSaving(true);
     try {
       await onSave(formData.id, formData);
+      setSavedSnapshot(getTemplateSnapshot(formData));
     } finally {
       setSaving(false);
     }
@@ -140,15 +153,12 @@ function TemplateEditor({ template, onSave, onSendTestEmail, testEmail }) {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-3">
-        <Button type="submit" className="bg-amber-600 hover:bg-amber-700" disabled={saving}>
+      <div className="flex flex-wrap items-center gap-3">
+        <Button type="submit" className="bg-amber-600 hover:bg-amber-700" disabled={saving || !hasUnsavedChanges}>
           <Save className="mr-2 h-4 w-4" />
           {saving ? "Saving..." : "Save Template"}
         </Button>
-        <Button type="button" variant="outline" onClick={handleSendTest} disabled={sendingTest}>
-          <Mail className="mr-2 h-4 w-4" />
-          {sendingTest ? "Sending..." : "Send Test"}
-        </Button>
+        {!hasUnsavedChanges && <span className="text-xs font-semibold text-gray-500">No changes to save</span>}
       </div>
     </form>
   );
@@ -190,7 +200,6 @@ export default function NewsletterAdmin({
   onAddSubscriber,
   onDeleteSubscriber,
   onSaveTemplate,
-  onSendTestEmail,
   onSendBroadcast,
   onSaveBroadcastDraft,
   onScheduleBroadcast,
@@ -200,7 +209,6 @@ export default function NewsletterAdmin({
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [search, setSearch] = useState("");
-  const [testEmail, setTestEmail] = useState("");
   const [adding, setAdding] = useState(false);
   const [broadcastSubject, setBroadcastSubject] = useState("");
   const [broadcastMessage, setBroadcastMessage] = useState("");
@@ -210,6 +218,7 @@ export default function NewsletterAdmin({
   const [selectedRecipientIds, setSelectedRecipientIds] = useState([]);
   const [editingBroadcastId, setEditingBroadcastId] = useState("");
   const [scheduledAt, setScheduledAt] = useState("");
+  const [showSchedulePicker, setShowSchedulePicker] = useState(false);
   const [savingBroadcast, setSavingBroadcast] = useState(false);
   const [broadcastFilter, setBroadcastFilter] = useState("all");
   const [broadcastErrors, setBroadcastErrors] = useState({});
@@ -367,8 +376,18 @@ export default function NewsletterAdmin({
     setBroadcastMessage("");
     setBroadcastAttachments([]);
     setScheduledAt("");
+    setShowSchedulePicker(false);
     setSelectedRecipientIds(activeRecipientIds);
     setBroadcastErrors({});
+  };
+
+  const handleScheduledDateTimeChange = (part, value) => {
+    const current = splitDateTime(scheduledAt);
+    setScheduledAt(buildDateTime(
+      part === "date" ? value : current.date,
+      part === "time" ? value : current.time
+    ));
+    setBroadcastErrors((errors) => ({ ...errors, scheduledAt: "" }));
   };
 
   const handleLoadBroadcast = (broadcast) => {
@@ -382,6 +401,7 @@ export default function NewsletterAdmin({
       file_url: attachment.file_url || "",
     })));
     setScheduledAt(broadcast.scheduled_at || "");
+    setShowSchedulePicker(Boolean(broadcast.scheduled_at));
     const storedRecipients = broadcast.recipient_ids || [];
     setSelectedRecipientIds(storedRecipients.length > 0 ? storedRecipients.filter((id) => activeRecipientIds.includes(id)) : activeRecipientIds);
     setBroadcastStatus(`Loaded "${broadcast.subject || "Untitled broadcast"}" for editing.`);
@@ -432,6 +452,12 @@ export default function NewsletterAdmin({
   };
 
   const handleSchedule = async () => {
+    if (!showSchedulePicker) {
+      setShowSchedulePicker(true);
+      setBroadcastStatus("Choose a schedule date and time, then click Schedule again.");
+      return;
+    }
+
     const payload = getBroadcastPayload();
     if (!validateBroadcast({ requireSchedule: true })) return;
     setSavingBroadcast(true);
@@ -518,21 +544,6 @@ export default function NewsletterAdmin({
             {broadcastErrors.subject && <p className="mt-1 text-xs font-semibold text-red-600">{broadcastErrors.subject}</p>}
           </div>
 
-          <div>
-            <FieldLabel>Schedule Date and Time</FieldLabel>
-            <Input
-              type="datetime-local"
-              value={scheduledAt}
-              onChange={(event) => {
-                setScheduledAt(event.target.value);
-                setBroadcastErrors((errors) => ({ ...errors, scheduledAt: "" }));
-              }}
-              disabled={sendingBroadcast || savingBroadcast}
-              className={broadcastErrors.scheduledAt ? "border-red-500 focus-visible:ring-red-500" : ""}
-            />
-            <p className="mt-1 text-xs text-gray-500">Save as scheduled when this message should be sent later.</p>
-            {broadcastErrors.scheduledAt && <p className="mt-1 text-xs font-semibold text-red-600">{broadcastErrors.scheduledAt}</p>}
-          </div>
           <div>
             <FieldLabel required>Message</FieldLabel>
             <Textarea
@@ -649,6 +660,27 @@ export default function NewsletterAdmin({
             <Button type="button" variant="outline" onClick={handleSchedule} disabled={savingBroadcast || sendingBroadcast}>
               {savingBroadcast ? "Scheduling..." : "Schedule"}
             </Button>
+            {showSchedulePicker && (
+              <div className={`grid min-w-[min(100%,28rem)] grid-cols-1 gap-2 rounded-md ${broadcastErrors.scheduledAt ? "border border-red-500 p-2" : ""} sm:grid-cols-2`}>
+                <ConfirmedDateTimePicker
+                  id="broadcast_schedule_date"
+                  label="Date"
+                  type="date"
+                  value={splitDateTime(scheduledAt).date}
+                  onChange={(value) => handleScheduledDateTimeChange("date", value)}
+                  disabled={sendingBroadcast || savingBroadcast}
+                />
+                <ConfirmedDateTimePicker
+                  id="broadcast_schedule_time"
+                  label="Time"
+                  type="time"
+                  value={splitDateTime(scheduledAt).time}
+                  onChange={(value) => handleScheduledDateTimeChange("time", value)}
+                  disabled={sendingBroadcast || savingBroadcast}
+                />
+                {broadcastErrors.scheduledAt && <p className="text-xs font-semibold text-red-600 sm:col-span-2">{broadcastErrors.scheduledAt}</p>}
+              </div>
+            )}
             {broadcastStatus && (
               <p className={`text-sm font-semibold ${Object.values(broadcastErrors).some(Boolean) || broadcastStatus.includes("not sent") || broadcastStatus.includes("failed") || broadcastStatus.includes("not scheduled") ? "text-red-700" : "text-green-700"}`}>
                 {broadcastStatus}
@@ -852,18 +884,12 @@ export default function NewsletterAdmin({
           </h2>
           <p className="mt-1 text-sm text-gray-600">Edit the welcome email and the message sent when someone tries to subscribe again.</p>
         </div>
-        <div className="mb-5 max-w-md">
-          <FieldLabel>Test Email Address</FieldLabel>
-          <Input type="email" value={testEmail} onChange={(event) => setTestEmail(event.target.value)} placeholder="Send a test to..." />
-        </div>
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
           {normalizedTemplates.map((template) => (
             <TemplateEditor
               key={template.id}
               template={template}
-              testEmail={testEmail.trim().toLowerCase()}
               onSave={onSaveTemplate}
-              onSendTestEmail={onSendTestEmail}
             />
           ))}
         </div>

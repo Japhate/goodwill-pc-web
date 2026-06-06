@@ -63,6 +63,7 @@ export default function ConfirmedDateTimePicker({
   value = "",
   onChange,
   placeholder,
+  disabled = false,
 }) {
   const [open, setOpen] = useState(false);
   const [draftDate, setDraftDate] = useState(parseLocalDate(value));
@@ -84,6 +85,7 @@ export default function ConfirmedDateTimePicker({
   }, [isDate, placeholder, value]);
 
   const handleOpenChange = (nextOpen) => {
+    if (disabled) return;
     if (nextOpen) {
       setDraftDate(parseLocalDate(value));
       setDraftTime(value || "");
@@ -120,6 +122,7 @@ export default function ConfirmedDateTimePicker({
               id={id}
               type="button"
               variant="outline"
+              disabled={disabled}
               className={`h-10 min-w-0 flex-1 justify-start gap-2 px-3 text-left font-semibold ${value ? "text-gray-900" : "text-gray-500"}`}
             >
               {isDate ? <CalendarDays className="h-4 w-4 text-amber-700" /> : <Clock className="h-4 w-4 text-amber-700" />}
