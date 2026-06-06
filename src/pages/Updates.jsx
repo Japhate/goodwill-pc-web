@@ -41,6 +41,68 @@ const formatTimeRange = (startTime, endTime) => {
 
 const getLocationType = (item) => item.location_type || (item.virtual_platform || item.zoom_link ? "virtual" : "physical");
 
+const addDays = (date, days) => {
+  const nextDate = new Date(date);
+  nextDate.setDate(nextDate.getDate() + days);
+  return nextDate;
+};
+
+const createDateWithTime = (dateString, timeString) => {
+  const [year, month, day] = String(dateString || "").split("-").map(Number);
+  if (!year || !month || !day) return null;
+
+  const [hour = 9, minute = 0] = String(timeString || "09:00").split(":").map(Number);
+  return new Date(year, month - 1, day, hour || 0, minute || 0, 0);
+};
+
+const stripMarkdown = (value = "") => String(value)
+  .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+  .replace(/[*_`>#-]/g, "")
+  .replace(/\n{3,}/g, "\n\n")
+  .trim();
+
+const getGoogleCalendarUrl = (item) => {
+  if (!item?.date) return "";
+
+  const params = new URLSearchParams({
+    action: "TEMPLATE",
+    text: item.title || "Goodwill Presbyterian Church Event",
+  });
+
+  if (item.time || item.end_time) {
+    const startDate = createDateWithTime(item.date, item.time || "09:00");
+    if (!startDate) return "";
+    let endDate = createDateWithTime(item.end_date || item.date, item.end_time || "");
+    if (!endDate || endDate <= startDate) {
+      endDate = new Date(startDate);
+      endDate.setHours(endDate.getHours() + 1);
+    }
+    params.set("dates", `${format(startDate, "yyyyMMdd'T'HHmmss")}/${format(endDate, "yyyyMMdd'T'HHmmss")}`);
+  } else {
+    const startDate = parseDateAsLocal(item.date);
+    const endDate = parseDateAsLocal(item.end_date || item.date);
+    if (!startDate || !endDate) return "";
+    params.set("dates", `${format(startDate, "yyyyMMdd")}/${format(addDays(endDate, 1), "yyyyMMdd")}`);
+  }
+
+  const locationType = getLocationType(item);
+  const calendarLocation = locationType === "virtual"
+    ? [item.virtual_platform, item.zoom_link].filter(Boolean).join(" - ")
+    : item.location || "";
+  if (calendarLocation) params.set("location", calendarLocation);
+
+  const details = [
+    stripMarkdown(item.content),
+    item.frequency ? `Frequency: ${item.frequency}` : "",
+    item.zoom_link ? `Link: ${item.zoom_link}` : "",
+    item.directions_url ? `Directions: ${item.directions_url}` : "",
+    item.file_upload ? `Attachment: ${item.file_upload}` : "",
+  ].filter(Boolean).join("\n\n");
+  if (details) params.set("details", details);
+
+  return `https://calendar.google.com/calendar/render?${params.toString()}`;
+};
+
 const SHOW_PAST_EVENTS_GALLERY = false;
 
 export default function Updates() {
@@ -397,6 +459,7 @@ export default function Updates() {
                   const dateLabel = !isFarFuture ? formatDateRange(itemDate, itemEndDate) : "";
                   const timeLabel = formatTimeRange(item.time, item.end_time);
                   const locationType = getLocationType(item);
+                  const calendarUrl = getGoogleCalendarUrl(item);
                   return (
                   <div
                     id={`announcement-${item.id}`}
@@ -437,8 +500,14 @@ export default function Updates() {
                         ) : (
                           item.location && <div className="flex items-start gap-2"><MapPin className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Location:</strong> {item.location}</span></div>
                         )}
-                        {(item.zoom_link || item.directions_url || item.file_upload) && (
+                        {(calendarUrl || item.zoom_link || item.directions_url || item.file_upload) && (
                           <div className="flex flex-wrap gap-2 pt-2">
+                            {calendarUrl && (
+                              <a href={calendarUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-md bg-white px-3 py-1.5 text-xs font-semibold text-amber-700 ring-1 ring-amber-300 hover:bg-amber-50">
+                                <Calendar className="h-3.5 w-3.5" />
+                                Add to Calendar
+                              </a>
+                            )}
                             {locationType === "virtual" && item.zoom_link && (
                               <a href={item.zoom_link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-md bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700">
                                 <ExternalLink className="h-3.5 w-3.5" />
@@ -559,6 +628,7 @@ export default function Updates() {
                   const dateLabel = formatDateRange(itemDate, itemEndDate);
                   const timeLabel = formatTimeRange(item.time, item.end_time);
                   const locationType = getLocationType(item);
+                  const calendarUrl = getGoogleCalendarUrl(item);
                   return (
                   <div
                     id={`announcement-${item.id}`}
@@ -596,8 +666,14 @@ export default function Updates() {
                             item.location && <div className="flex items-start gap-2"><MapPin className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Location:</strong> {item.location}</span></div>
                           )}
                         </div>
-                        {(item.zoom_link || item.directions_url || item.file_upload) && (
+                        {(calendarUrl || item.zoom_link || item.directions_url || item.file_upload) && (
                           <div className="mt-4 flex flex-wrap gap-2">
+                            {calendarUrl && (
+                              <a href={calendarUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-md bg-white px-3 py-1.5 text-xs font-semibold text-amber-700 ring-1 ring-amber-300 hover:bg-amber-50">
+                                <Calendar className="h-3.5 w-3.5" />
+                                Add to Calendar
+                              </a>
+                            )}
                             {locationType === "virtual" && item.zoom_link && (
                               <a href={item.zoom_link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-md bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700">
                                 <ExternalLink className="h-3.5 w-3.5" />
