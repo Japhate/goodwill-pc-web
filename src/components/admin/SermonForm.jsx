@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-const DEFAULT_SPEAKERS = ["Rev. Dr. Joe Rigsby, Pastor"];
+const DEFAULT_SPEAKERS = ["Rev. Dr. Joe W. Rigsby, Pastor"];
 
 export default function SermonForm({ sermon, onSubmit, onCancel }) {
   const [speakers, setSpeakers] = useState(() => {

@@ -147,9 +147,9 @@ export default function About() {
 
   const staff = [
     {
-      name: "Rev. Dr. Joe Rigsby",
+      name: "Rev. Dr. Joe W. Rigsby",
       role: "Pastor",
-      bio: "Rev. Dr. Joe Rigsby has been faithfully serving our congregation with a heart for biblical teaching, pastoral care, and community outreach."
+      bio: "Rev. Dr. Joe W. Rigsby has been faithfully serving our congregation with a heart for biblical teaching, pastoral care, and community outreach."
     },
     {
       name: "Elder Barbara R. Champagne",
