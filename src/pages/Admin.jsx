@@ -270,6 +270,7 @@ export default function AdminPage() {
   const inactivityTimerRef = useRef(null);
   const privacyNoticeRef = useRef(null);
   const adminInstructionRef = useRef(null);
+  const adminContentTopRef = useRef(null);
   const canViewDeveloperPanel = isSiteDeveloperAdmin(currentAdmin);
   const canManageSiteAdmins = isRootSiteDeveloper(currentAdmin);
   const adminRoleLabel = canManageSiteAdmins ? 'Site Developer' : 'Site Admin';
@@ -1214,6 +1215,11 @@ export default function AdminPage() {
       setEditingItem(item);
       setHeroFormUnsavedDraft({ isDirty: false, draft: null });
       setFormView(type);
+      if (type === 'bulletin') {
+        window.requestAnimationFrame(() => {
+          adminContentTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+      }
     });
   };
 
@@ -2722,6 +2728,7 @@ export default function AdminPage() {
           </div>
         </div>
         
+        <div ref={adminContentTopRef} className="scroll-mt-[160px]" />
         {renderContent()}
       </div>
     </div>
