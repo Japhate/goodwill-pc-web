@@ -55,7 +55,6 @@ import Prayer from './pages/Prayer';
 import Resources from './pages/Resources';
 import Updates from './pages/Updates';
 import Home from './pages/Home';
-import LoaderPreview from './pages/LoaderPreview';
 import __Layout from './Layout.jsx';
 
 
@@ -68,7 +67,6 @@ export const PAGES = {
     "Resources": Resources,
     "Updates": Updates,
     "Home": Home,
-    "LoaderPreview": LoaderPreview,
 }
 
 export const pagesConfig = {

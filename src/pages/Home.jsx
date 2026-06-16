@@ -1062,7 +1062,7 @@ export default function Home() {
 
 
       {/* Latest Sermon Section - Now shows Live Stream during service time */}
-      <section id="latest-sermon" className="sermon-motion-section relative isolate overflow-hidden scroll-mt-[160px] py-6 md:py-10 md:scroll-mt-[144px] fade-in-section">
+      <section id="latest-sermon" className="sermon-motion-section relative isolate overflow-hidden scroll-mt-[160px] py-3 md:py-10 md:scroll-mt-[144px] fade-in-section">
         {shouldLoadSermonBgVideo && (
           <video
             className="absolute inset-0 z-0 h-full w-full object-cover opacity-90"
@@ -1080,13 +1080,13 @@ export default function Home() {
         <div className="absolute inset-0 z-0 bg-white/18 backdrop-blur-[1px]" aria-hidden="true"></div>
         <div className="relative z-10 mx-auto max-w-[88rem] px-4 sm:px-6 lg:px-8">
           {!inPersonOnlyNotice && (
-            <div className="mb-5 flex flex-col gap-3 md:mb-7 md:flex-row md:items-end md:justify-between">
+            <div className="mb-3 flex flex-col gap-2 md:mb-7 md:flex-row md:items-end md:justify-between">
               <div>
-                <h2 className="text-3xl font-bold leading-tight text-white drop-shadow-[0_3px_12px_rgba(0,0,0,0.75)] md:text-4xl">
+                <h2 className="text-2xl font-bold leading-tight text-white drop-shadow-[0_3px_12px_rgba(0,0,0,0.75)] md:text-4xl">
                   Latest Sermon
                 </h2>
               </div>
-              <p className="max-w-xl rounded-md border border-white/20 bg-black/28 px-4 py-3 text-sm font-medium leading-6 text-white shadow-[0_12px_34px_rgba(0,0,0,0.18)] backdrop-blur-[2px] md:text-right">
+              <p className="max-w-xl rounded-md border border-white/20 bg-black/28 px-3 py-2 text-xs font-medium leading-5 text-white shadow-[0_12px_34px_rgba(0,0,0,0.18)] backdrop-blur-[2px] md:px-4 md:py-3 md:text-right md:text-sm md:leading-6">
                 Watch the most recent message or continue into the sermon library for more worship recordings.
               </p>
             </div>
@@ -1128,7 +1128,7 @@ export default function Home() {
               </div>
             </div>
           ) : isLive && liveSermon ? (
-            <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl lg:grid lg:grid-cols-[minmax(0,1.45fr)_minmax(340px,0.55fr)]">
+            <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl md:rounded-2xl lg:grid lg:grid-cols-[minmax(0,1.45fr)_minmax(340px,0.55fr)]">
               <div className="relative bg-gray-950">
                 <div className="relative w-full" style={{ paddingTop: '56.25%' }}>
                   <iframe
@@ -1142,15 +1142,15 @@ export default function Home() {
                   ></iframe>
                 </div>
               </div>
-              <div className="flex flex-col justify-center p-6 lg:p-10">
-                <div className="mb-4 inline-flex w-fit items-center gap-2 rounded-full bg-red-600 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-white">
+              <div className="flex flex-col justify-center p-3 md:p-6 lg:p-10">
+                <div className="mb-2 inline-flex w-fit items-center gap-2 rounded-full bg-red-600 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-white md:mb-4 md:px-3 md:py-1.5 md:text-xs">
                   <span className="h-2 w-2 rounded-full bg-white animate-pulse"></span>
                   Live Now
                 </div>
-                <h3 className="mb-3 text-2xl font-bold leading-tight text-gray-950 md:text-3xl">{liveSermon.title}</h3>
-                <div className="mb-4 grid gap-2 text-sm text-gray-700 sm:grid-cols-2">
+                <h3 className="mb-2 text-xl font-bold leading-tight text-gray-950 md:mb-3 md:text-3xl">{liveSermon.title}</h3>
+                <div className="mb-3 grid gap-1.5 text-sm text-gray-700 sm:grid-cols-2 md:mb-4 md:gap-2">
                   {liveSermon.speaker && (
-                    <div className="rounded-lg bg-gray-50 px-3 py-1.5 sm:col-span-2">
+                    <div className="rounded-lg bg-gray-50 px-2.5 py-1 sm:col-span-2 md:px-3 md:py-1.5">
                       <p className="flex min-w-0 items-center gap-2 text-sm text-gray-900 sm:block">
                         <span className="inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-600">
                           <UserRound className="h-4 w-4 text-amber-700" />
@@ -1160,7 +1160,7 @@ export default function Home() {
                       </p>
                     </div>
                   )}
-                  <div className="rounded-lg bg-gray-50 px-3 py-1.5">
+                  <div className="rounded-lg bg-gray-50 px-2.5 py-1 md:px-3 md:py-1.5">
                     <p className="flex min-w-0 items-center gap-2 text-sm text-gray-900 sm:block">
                       <span className="inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-600">
                         <Clock className="h-4 w-4 text-amber-700" />
@@ -1170,7 +1170,7 @@ export default function Home() {
                     </p>
                   </div>
                   {liveSermon.scripture && (
-                    <div className="rounded-lg bg-gray-50 px-3 py-1.5 sm:col-span-2">
+                    <div className="rounded-lg bg-gray-50 px-2.5 py-1 sm:col-span-2 md:px-3 md:py-1.5">
                       <p className="flex min-w-0 items-center gap-2 text-sm text-gray-900 sm:block">
                         <span className="inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-600">
                           <BookOpen className="h-4 w-4 flex-shrink-0 text-amber-700" />
@@ -1181,21 +1181,21 @@ export default function Home() {
                     </div>
                   )}
                   {liveSermon.series && (
-                    <div className="rounded-lg bg-gray-50 px-3 py-1.5 text-gray-800 sm:col-span-2">
+                    <div className="rounded-lg bg-gray-50 px-2.5 py-1 text-gray-800 sm:col-span-2 md:px-3 md:py-1.5">
                       <p className="mb-0.5 text-xs font-semibold uppercase tracking-wide text-gray-600">Series</p>
                       <p className="font-semibold text-gray-900">{liveSermon.series}</p>
                     </div>
                   )}
                 </div>
                 {liveSermon.notes && (
-                  <div className="mb-6 border-l-2 border-amber-500 pl-4">
-                    <p className="line-clamp-3 text-sm italic leading-6 text-gray-700">{liveSermon.notes}</p>
+                  <div className="mb-3 border-l-2 border-amber-500 pl-3 md:mb-6 md:pl-4">
+                    <p className="line-clamp-2 text-sm italic leading-5 text-gray-700 md:line-clamp-3 md:leading-6">{liveSermon.notes}</p>
                   </div>
                 )}
-                <div className="flex flex-col gap-3 sm:flex-row">
+                <div className="flex flex-col gap-2 sm:flex-row md:gap-3">
                   <a 
                     href={createPageUrl("Connect") + "#visit"}
-                    className="inline-flex items-center justify-center rounded-md bg-amber-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-amber-700"
+                    className="inline-flex items-center justify-center rounded-md bg-amber-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-amber-700 md:px-5 md:py-3"
                   >
                     <MapPin className="mr-2 h-4 w-4" />
                     Visit In Person
@@ -1204,7 +1204,7 @@ export default function Home() {
               </div>
             </div>
           ) : latestSermon ? (
-            <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl lg:grid lg:grid-cols-[minmax(0,1.45fr)_minmax(340px,0.55fr)]">
+            <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl md:rounded-2xl lg:grid lg:grid-cols-[minmax(0,1.45fr)_minmax(340px,0.55fr)]">
               <div className="relative bg-gray-950">
                 <div style={{ paddingTop: '56.25%', position: 'relative' }}>
                   {embedUrl ? (
@@ -1246,15 +1246,15 @@ export default function Home() {
                   )}
                 </div>
               </div>
-              <div className="flex flex-col justify-center p-6 lg:p-10">
-                <div className="mb-4 inline-flex w-fit items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-amber-800">
+              <div className="flex flex-col justify-center p-3 md:p-6 lg:p-10">
+                <div className="mb-2 inline-flex w-fit items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-amber-800 md:mb-4 md:gap-2 md:px-3 md:py-1.5 md:text-xs">
                   <Play className="h-3.5 w-3.5" />
                   Featured Message
                 </div>
-                <h3 className="mb-3 break-words text-2xl font-bold leading-tight text-gray-950 md:text-3xl lg:text-4xl">{latestSermon.title}</h3>
-                <div className="mb-4 grid gap-2 text-sm text-gray-700 sm:grid-cols-2">
+                <h3 className="mb-2 break-words text-xl font-bold leading-tight text-gray-950 md:mb-3 md:text-3xl lg:text-4xl">{latestSermon.title}</h3>
+                <div className="mb-3 grid gap-1.5 text-sm text-gray-700 sm:grid-cols-2 md:mb-4 md:gap-2">
                     {latestSermon.speaker && (
-                      <div className="rounded-lg bg-gray-50 px-3 py-1.5 sm:col-span-2">
+                      <div className="rounded-lg bg-gray-50 px-2.5 py-1 sm:col-span-2 md:px-3 md:py-1.5">
                         <p className="flex min-w-0 items-center gap-2 text-sm text-gray-900 sm:block">
                           <span className="inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-600">
                             <UserRound className="h-4 w-4 text-amber-700" />
@@ -1264,7 +1264,7 @@ export default function Home() {
                         </p>
                       </div>
                     )}
-                    <div className="rounded-lg bg-gray-50 px-3 py-1.5">
+                    <div className="rounded-lg bg-gray-50 px-2.5 py-1 md:px-3 md:py-1.5">
                       <p className="flex min-w-0 items-center gap-2 text-sm text-gray-900 sm:block">
                         <span className="inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-600">
                           <Clock className="h-4 w-4 text-amber-700" />
@@ -1274,7 +1274,7 @@ export default function Home() {
                       </p>
                     </div>
                     {latestSermon.scripture && (
-                      <div className="rounded-lg bg-gray-50 px-3 py-1.5 sm:col-span-2">
+                      <div className="rounded-lg bg-gray-50 px-2.5 py-1 sm:col-span-2 md:px-3 md:py-1.5">
                         <p className="flex min-w-0 items-center gap-2 text-sm text-gray-900 sm:block">
                           <span className="inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-600">
                             <BookOpen className="h-4 w-4 flex-shrink-0 text-amber-700" />
@@ -1285,21 +1285,21 @@ export default function Home() {
                       </div>
                     )}
                     {latestSermon.series && (
-                      <div className="rounded-lg bg-gray-50 px-3 py-1.5 text-gray-800 sm:col-span-2">
+                      <div className="rounded-lg bg-gray-50 px-2.5 py-1 text-gray-800 sm:col-span-2 md:px-3 md:py-1.5">
                         <p className="mb-0.5 text-xs font-semibold uppercase tracking-wide text-gray-600">Series</p>
                         <p className="font-semibold text-gray-900">{latestSermon.series}</p>
                       </div>
                     )}
                 </div>
                 {latestSermon.notes && (
-                    <p className="mb-6 border-l-2 border-amber-500 pl-4 text-sm italic leading-6 text-gray-700 line-clamp-3">
+                    <p className="mb-3 border-l-2 border-amber-500 pl-3 text-sm italic leading-5 text-gray-700 line-clamp-2 md:mb-6 md:pl-4 md:leading-6 md:line-clamp-3">
                         {latestSermon.notes}
                     </p>
                 )}
-                <div className="flex flex-col gap-3 sm:flex-row">
+                <div className="flex flex-col gap-2 sm:flex-row md:gap-3">
                     <a 
                         href={createPageUrl("Resources") + "#more-sermons"}
-                        className="inline-flex items-center justify-center rounded-md bg-red-700 px-5 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-red-800"
+                        className="inline-flex items-center justify-center rounded-md bg-red-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-red-800 md:px-5 md:py-3"
                     >
                         <YoutubeIcon className="mr-2 h-5 w-5" />
                         Watch More Sermons
