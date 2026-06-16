@@ -273,9 +273,9 @@ export default function Home() {
     const sermonSection = document.getElementById("latest-sermon");
     if (!sermonSection) return;
     const reduceMotionQuery = window.matchMedia?.("(prefers-reduced-motion: reduce)");
-    const desktopVideoQuery = window.matchMedia?.("(min-width: 768px)");
+    const saveData = navigator.connection?.saveData === true;
 
-    if (reduceMotionQuery?.matches || desktopVideoQuery?.matches === false) return;
+    if (reduceMotionQuery?.matches || saveData) return;
 
     let loadTimer;
     let idleCallbackId;
@@ -1034,7 +1034,7 @@ export default function Home() {
       <section id="latest-sermon" className="sermon-motion-section relative isolate overflow-hidden scroll-mt-[160px] py-6 md:py-10 md:scroll-mt-[144px] fade-in-section">
         {shouldLoadSermonBgVideo && (
           <video
-            className="absolute inset-0 z-0 hidden h-full w-full object-cover opacity-90 md:block"
+            className="absolute inset-0 z-0 h-full w-full object-cover opacity-90"
             autoPlay
             muted
             loop
@@ -1051,9 +1051,6 @@ export default function Home() {
           {!inPersonOnlyNotice && (
             <div className="mb-5 flex flex-col gap-3 md:mb-7 md:flex-row md:items-end md:justify-between">
               <div>
-                <p className="mb-2 text-xs font-bold uppercase tracking-[0.24em] text-amber-200 drop-shadow-[0_2px_6px_rgba(0,0,0,0.55)]">
-                  Featured Message
-                </p>
                 <h2 className="text-3xl font-bold leading-tight text-white drop-shadow-[0_3px_12px_rgba(0,0,0,0.75)] md:text-4xl">
                   Latest Sermon
                 </h2>
@@ -1123,27 +1120,33 @@ export default function Home() {
                 <div className="mb-4 grid gap-2 text-sm text-gray-700 sm:grid-cols-2">
                   {liveSermon.speaker && (
                     <div className="rounded-lg bg-gray-50 px-3 py-1.5 sm:col-span-2">
-                      <p className="mb-0.5 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-600">
-                        <UserRound className="h-4 w-4 text-amber-700" />
-                        Speaker
+                      <p className="flex min-w-0 items-center gap-2 text-sm text-gray-900 sm:block">
+                        <span className="inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-600">
+                          <UserRound className="h-4 w-4 text-amber-700" />
+                          Speaker
+                        </span>
+                        <span className="min-w-0 overflow-x-auto whitespace-nowrap font-semibold sm:mt-0.5 sm:block">{liveSermon.speaker}</span>
                       </p>
-                      <p className="overflow-x-auto whitespace-nowrap font-semibold text-gray-900">{liveSermon.speaker}</p>
                     </div>
                   )}
                   <div className="rounded-lg bg-gray-50 px-3 py-1.5">
-                    <p className="mb-0.5 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-600">
-                      <Clock className="h-4 w-4 text-amber-700" />
-                      Date
+                    <p className="flex min-w-0 items-center gap-2 text-sm text-gray-900 sm:block">
+                      <span className="inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-600">
+                        <Clock className="h-4 w-4 text-amber-700" />
+                        Date
+                      </span>
+                      <span className="min-w-0 whitespace-nowrap font-semibold sm:mt-0.5 sm:block">{format(parseISO(liveSermon.date), 'MMMM d, yyyy')}</span>
                     </p>
-                    <p className="font-semibold text-gray-900">{format(parseISO(liveSermon.date), 'MMMM d, yyyy')}</p>
                   </div>
                   {liveSermon.scripture && (
                     <div className="rounded-lg bg-gray-50 px-3 py-1.5 sm:col-span-2">
-                      <p className="mb-0.5 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-600">
-                        <BookOpen className="h-4 w-4 flex-shrink-0 text-amber-700" />
-                        Scripture(s)
+                      <p className="flex min-w-0 items-center gap-2 text-sm text-gray-900 sm:block">
+                        <span className="inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-600">
+                          <BookOpen className="h-4 w-4 flex-shrink-0 text-amber-700" />
+                          Scripture(s)
+                        </span>
+                        <span className="min-w-0 overflow-x-auto whitespace-nowrap font-semibold sm:mt-0.5 sm:block">{liveSermon.scripture}</span>
                       </p>
-                      <p className="font-semibold text-gray-900">{liveSermon.scripture}</p>
                     </div>
                   )}
                   {liveSermon.series && (
@@ -1221,27 +1224,33 @@ export default function Home() {
                 <div className="mb-4 grid gap-2 text-sm text-gray-700 sm:grid-cols-2">
                     {latestSermon.speaker && (
                       <div className="rounded-lg bg-gray-50 px-3 py-1.5 sm:col-span-2">
-                        <p className="mb-0.5 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-600">
-                          <UserRound className="h-4 w-4 text-amber-700" />
-                          Speaker
+                        <p className="flex min-w-0 items-center gap-2 text-sm text-gray-900 sm:block">
+                          <span className="inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-600">
+                            <UserRound className="h-4 w-4 text-amber-700" />
+                            Speaker
+                          </span>
+                          <span className="min-w-0 overflow-x-auto whitespace-nowrap font-semibold sm:mt-0.5 sm:block">{latestSermon.speaker}</span>
                         </p>
-                        <p className="overflow-x-auto whitespace-nowrap font-semibold text-gray-900">{latestSermon.speaker}</p>
                       </div>
                     )}
                     <div className="rounded-lg bg-gray-50 px-3 py-1.5">
-                      <p className="mb-0.5 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-600">
-                        <Clock className="h-4 w-4 text-amber-700" />
-                        Date
+                      <p className="flex min-w-0 items-center gap-2 text-sm text-gray-900 sm:block">
+                        <span className="inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-600">
+                          <Clock className="h-4 w-4 text-amber-700" />
+                          Date
+                        </span>
+                        <span className="min-w-0 whitespace-nowrap font-semibold sm:mt-0.5 sm:block">{format(parseISO(latestSermon.date), 'MMMM d, yyyy')}</span>
                       </p>
-                      <p className="font-semibold text-gray-900">{format(parseISO(latestSermon.date), 'MMMM d, yyyy')}</p>
                     </div>
                     {latestSermon.scripture && (
                       <div className="rounded-lg bg-gray-50 px-3 py-1.5 sm:col-span-2">
-                        <p className="mb-0.5 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-600">
-                          <BookOpen className="h-4 w-4 flex-shrink-0 text-amber-700" />
-                          Scripture(s)
+                        <p className="flex min-w-0 items-center gap-2 text-sm text-gray-900 sm:block">
+                          <span className="inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-600">
+                            <BookOpen className="h-4 w-4 flex-shrink-0 text-amber-700" />
+                            Scripture(s)
+                          </span>
+                          <span className="min-w-0 overflow-x-auto whitespace-nowrap font-semibold sm:mt-0.5 sm:block">{latestSermon.scripture}</span>
                         </p>
-                        <p className="font-semibold text-gray-900">{latestSermon.scripture}</p>
                       </div>
                     )}
                     {latestSermon.series && (
