@@ -682,24 +682,24 @@ export default function HeroSlideshow({ onReady }) {
                 <div className="pointer-events-none absolute inset-0 z-[25] flex items-center justify-start bg-gradient-to-r from-black/72 via-black/34 to-transparent px-4 text-left sm:px-8 md:px-14">
                   <div className="welcome-hero-copy ml-[3vw] max-w-[min(68vw,620px)] sm:ml-[6vw] sm:max-w-[min(64vw,660px)] md:ml-[10vw] md:max-w-[min(78vw,720px)] lg:ml-[12vw]">
                     <p
-                      className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-200 drop-shadow-[0_2px_8px_rgba(0,0,0,0.85)] sm:text-xs md:mb-3 md:text-base"
+                      className="mb-1 text-[9px] font-semibold uppercase tracking-[0.18em] text-amber-200 drop-shadow-[0_2px_8px_rgba(0,0,0,0.85)] sm:text-[11px] md:mb-3 md:text-base"
                     >
                       Welcome to
                     </p>
                     <h1
-                      className="text-balance font-serif text-[clamp(2rem,8.2vw,3rem)] font-bold leading-[0.98] text-white drop-shadow-[0_4px_18px_rgba(0,0,0,0.9)] sm:text-[clamp(2.25rem,5.4vw,3.25rem)] md:text-6xl md:leading-tight lg:text-7xl"
+                      className="text-balance font-serif text-[clamp(1.7rem,7.2vw,2.55rem)] font-bold leading-[0.98] text-white drop-shadow-[0_4px_18px_rgba(0,0,0,0.9)] sm:text-[clamp(2rem,4.9vw,3rem)] md:text-6xl md:leading-tight lg:text-7xl"
                     >
                       Goodwill Presbyterian Church, USA
                     </h1>
-                    <div className="welcome-hero-line mt-2 h-px w-24 origin-left bg-gradient-to-r from-amber-200 via-white/70 to-transparent sm:w-36 md:mt-5 md:w-48" />
+                    <div className="welcome-hero-line mt-1.5 h-px w-20 origin-left bg-gradient-to-r from-amber-200 via-white/70 to-transparent sm:w-32 md:mt-5 md:w-48" />
                     {welcomeHeroUrl && (
-                      <div className="mt-3 flex flex-wrap items-stretch gap-2 sm:mt-4 sm:gap-3 md:mt-7 md:gap-4">
-                        <span className="pointer-events-none inline-flex items-center font-serif text-lg font-semibold italic leading-none text-amber-100 drop-shadow-[0_4px_12px_rgba(0,0,0,0.75)] sm:text-xl md:text-3xl">
+                      <div className="mt-2.5 flex flex-wrap items-stretch gap-2 sm:mt-3 sm:gap-3 md:mt-7 md:gap-4">
+                        <span className="pointer-events-none inline-flex items-center font-serif text-base font-semibold italic leading-none text-amber-100 drop-shadow-[0_4px_12px_rgba(0,0,0,0.75)] sm:text-lg md:text-3xl">
                           New Here?
                         </span>
                         <a
                           href={welcomeHeroUrl}
-                          className="welcome-hero-cta pointer-events-auto group relative inline-flex items-center gap-1.5 overflow-hidden rounded-xl border border-amber-100/80 bg-gradient-to-r from-[#c58a1f] via-[#f3c45b] to-[#b87918] px-2.5 py-1.5 text-xs font-bold text-[#2d1c12] shadow-[0_14px_36px_rgba(0,0,0,0.35),0_0_28px_rgba(243,196,91,0.28)] ring-1 ring-white/30 transition-all duration-500 hover:-translate-y-0.5 hover:scale-[1.03] hover:rounded-2xl hover:from-[#f4cc69] hover:via-[#fff0a8] hover:to-[#c58a1f] hover:shadow-[0_18px_42px_rgba(0,0,0,0.42),0_0_38px_rgba(243,196,91,0.45)] focus:outline-none focus:ring-4 focus:ring-amber-200/55 sm:gap-2 sm:px-3.5 sm:py-2 sm:text-sm md:px-4 md:py-2.5 md:text-base"
+                          className="welcome-hero-cta pointer-events-auto group relative inline-flex items-center gap-1.5 overflow-hidden rounded-xl border border-amber-100/80 bg-gradient-to-r from-[#c58a1f] via-[#f3c45b] to-[#b87918] px-2.5 py-1 text-[11px] font-bold text-[#2d1c12] shadow-[0_14px_36px_rgba(0,0,0,0.35),0_0_28px_rgba(243,196,91,0.28)] ring-1 ring-white/30 transition-all duration-500 hover:-translate-y-0.5 hover:scale-[1.03] hover:rounded-2xl hover:from-[#f4cc69] hover:via-[#fff0a8] hover:to-[#c58a1f] hover:shadow-[0_18px_42px_rgba(0,0,0,0.42),0_0_38px_rgba(243,196,91,0.45)] focus:outline-none focus:ring-4 focus:ring-amber-200/55 sm:gap-2 sm:px-3 sm:py-1.5 sm:text-xs md:px-4 md:py-2.5 md:text-base"
                           onClick={(event) => event.stopPropagation()}
                         >
                           <span className="relative z-10">{currentSlide.link_label || "Learn More"}</span>
