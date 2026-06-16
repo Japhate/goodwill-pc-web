@@ -354,15 +354,11 @@ export default function HeroSlideshow({ onReady }) {
           link_label: activeLandingImage?.link_label || "Learn More",
         });
         const active = data.filter((s) => s.is_active !== false && !isPermanentWelcomeHeroSlide(s));
-        if (active.length > 0) {
-          setSlides(active);
-        } else {
-          setSlides(FALLBACK_SLIDES.filter((slide) => !isPermanentWelcomeHeroSlide(slide)));
-        }
+        setSlides(active);
       } catch {
         setAnnouncements([]);
         setLandingImage(DEFAULT_LANDING_IMAGE);
-        setSlides(FALLBACK_SLIDES.filter((slide) => !isPermanentWelcomeHeroSlide(slide)));
+        setSlides([]);
       }
     };
     loadSlides();
