@@ -23,12 +23,14 @@ import BannerList from '@/components/admin/BannerList';
 import BannerForm from '@/components/admin/BannerForm';
 import HeroSlideList from '@/components/admin/HeroSlideList';
 import HeroSlideForm from '@/components/admin/HeroSlideForm';
+import LandingImageManager from '@/components/admin/LandingImageManager';
 import SitePopupList from '@/components/admin/SitePopupList';
 import SitePopupForm from '@/components/admin/SitePopupForm';
 import NewsletterAdmin from '@/components/admin/NewsletterAdmin';
 import DeveloperPanel from '@/components/admin/DeveloperPanel';
 import PageLoadingScreen from '@/components/PageLoadingScreen';
 import { HeroSlide } from '@/entities/HeroSlide';
+import { LandingImage } from '@/entities/LandingImage';
 import { firebaseAuth, firebaseEnabled } from '@/lib/firebase';
 import { localApi } from '@/api/localApiClient';
 import { collection, doc, getDocs, updateDoc } from 'firebase/firestore';
@@ -62,6 +64,8 @@ const ADMIN_ROLES = {
   SITE_ADMIN: 'site_admin',
   SITE_DEVELOPER: 'site_developer',
 };
+const LANDING_HERO_SLIDE_ID = 'hero-1';
+const LANDING_HERO_IMAGE_URL = '/images/hero/goodwill-presbyterian-church-hero.png';
 const FORM_LOG_META = {
   announcement: { section: 'Hero Slides & Announcements', itemType: 'announcement' },
   worshipEvent: { section: 'Calendar of Worship', itemType: 'worship event' },
@@ -93,6 +97,13 @@ function getSaveErrorMessage(error) {
   }
 
   return 'Unable to save this item. Please refresh and try again.';
+}
+
+function isLegacyLandingHeroSlide(slide) {
+  const altText = String(slide?.alt_text || '').toLowerCase();
+  return slide?.id === LANDING_HERO_SLIDE_ID
+    || slide?.image_url === LANDING_HERO_IMAGE_URL
+    || (altText.includes('welcome') && altText.includes('goodwill'));
 }
 
 function prepareSitePopupData(data) {
@@ -225,6 +236,7 @@ export default function AdminPage() {
   const [bulletins, setBulletins] = useState([]);
   const [banners, setBanners] = useState([]);
   const [heroSlides, setHeroSlides] = useState([]);
+  const [landingImages, setLandingImages] = useState([]);
   const [sitePopups, setSitePopups] = useState([]);
   const [newsletterSubscribers, setNewsletterSubscribers] = useState([]);
   const [emailTemplates, setEmailTemplates] = useState([]);
@@ -421,6 +433,7 @@ export default function AdminPage() {
       ['bulletins', loadBulletins],
       ['homepage banners', loadBanners],
       ['hero slides', loadHeroSlides],
+      ['landing image', loadLandingImages],
       ['homepage popups', loadSitePopups],
       ['newsletter', loadNewsletterAdmin],
     ];
@@ -778,7 +791,12 @@ export default function AdminPage() {
 
   const loadHeroSlides = async () => {
     const data = await HeroSlide.list('order', 50);
-    setHeroSlides(data);
+    setHeroSlides(data.filter((slide) => !isLegacyLandingHeroSlide(slide)));
+  };
+
+  const loadLandingImages = async () => {
+    const data = await LandingImage.list('-updated_date', 10);
+    setLandingImages(data);
   };
 
   const loadSitePopups = async () => {
@@ -2440,6 +2458,11 @@ export default function AdminPage() {
                 searchTerm={inactiveHeroAnnouncementSearch}
               />
             </section>
+
+            <LandingImageManager
+              landingImage={landingImages[0]}
+              onSaved={loadLandingImages}
+            />
           </div>
         );
       case 'sitePopups':

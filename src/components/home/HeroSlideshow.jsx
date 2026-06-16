@@ -9,7 +9,7 @@ import { createSpecialServiceHeroSlide, getActiveSpecialServiceNotice } from "@/
 // Fallback slides if no slides are in the database
 const FALLBACK_SLIDES = [
   {
-    image_url: "/images/hero/goodwill-presbyterian-church-hero.jpg",
+    image_url: "/images/hero/goodwill-presbyterian-church-hero.png",
     alt_text: "Welcome to Goodwill Presbyterian Church",
     link_url: "/About",
     link_label: "Learn More",
@@ -144,15 +144,25 @@ const BIBLE_STUDY_END_MIN = 0;
 const SHOW_HERO_EXTERNAL_ACTION_BUTTON = false;
 const SHOW_BIBLE_STUDY_COUNTDOWN_OVERLAY = false;
 const PERMANENT_WELCOME_HERO_ID = "hero-1";
-const PERMANENT_WELCOME_HERO_IMAGE = "/images/hero/goodwill-presbyterian-church-hero.jpg";
+const PERMANENT_WELCOME_HERO_IMAGE = "/images/hero/goodwill-presbyterian-church-hero.png";
 const ABOUT_PAGE_URL = "/About";
+const DEFAULT_LANDING_IMAGE = {
+  id: "landing-image",
+  image_url: PERMANENT_WELCOME_HERO_IMAGE,
+  alt_text: "Welcome to Goodwill Presbyterian Church",
+  link_url: ABOUT_PAGE_URL,
+  link_label: "Learn More",
+  is_landing_image: true,
+  is_active: true,
+};
 
 function isPermanentWelcomeHeroSlide(slide) {
   if (!slide) return false;
 
   const altText = String(slide.alt_text || "").toLowerCase();
 
-  return slide.id === PERMANENT_WELCOME_HERO_ID
+  return slide.is_landing_image === true
+    || slide.id === PERMANENT_WELCOME_HERO_ID
     || slide.image_url === PERMANENT_WELCOME_HERO_IMAGE
     || (altText.includes("welcome") && altText.includes("goodwill"));
 }
@@ -271,6 +281,7 @@ function ZoomCountdownOverlay() {
 
 export default function HeroSlideshow({ onReady }) {
   const [slides, setSlides] = useState([]);
+  const [landingImage, setLandingImage] = useState(DEFAULT_LANDING_IMAGE);
   const [announcements, setAnnouncements] = useState([]);
   const [failedAnnouncementImageIds, setFailedAnnouncementImageIds] = useState(() => new Set());
   const [managedBanners, setManagedBanners] = useState(null);
@@ -325,20 +336,33 @@ export default function HeroSlideshow({ onReady }) {
   useEffect(() => {
     const loadSlides = async () => {
       try {
-        const [data, announcementData] = await Promise.all([
+        const [data, announcementData, landingImageData] = await Promise.all([
           localApi.entities.HeroSlide.list('order', 50),
           localApi.entities.AnnouncementsEvents.list('-created_date', 200).catch(() => []),
+          localApi.entities.LandingImage.list('-updated_date', 10).catch(() => []),
         ]);
         setAnnouncements(Array.isArray(announcementData) ? announcementData : []);
-        const active = data.filter(s => s.is_active !== false);
+        const activeLandingImage = Array.isArray(landingImageData)
+          ? landingImageData.find((item) => item?.is_active !== false && item?.image_url)
+          : null;
+        setLandingImage({
+          ...DEFAULT_LANDING_IMAGE,
+          ...(activeLandingImage || {}),
+          id: activeLandingImage?.id || DEFAULT_LANDING_IMAGE.id,
+          is_landing_image: true,
+          link_url: activeLandingImage?.link_url || ABOUT_PAGE_URL,
+          link_label: activeLandingImage?.link_label || "Learn More",
+        });
+        const active = data.filter((s) => s.is_active !== false && !isPermanentWelcomeHeroSlide(s));
         if (active.length > 0) {
           setSlides(active);
         } else {
-          setSlides(FALLBACK_SLIDES);
+          setSlides(FALLBACK_SLIDES.filter((slide) => !isPermanentWelcomeHeroSlide(slide)));
         }
       } catch {
         setAnnouncements([]);
-        setSlides(FALLBACK_SLIDES);
+        setLandingImage(DEFAULT_LANDING_IMAGE);
+        setSlides(FALLBACK_SLIDES.filter((slide) => !isPermanentWelcomeHeroSlide(slide)));
       }
     };
     loadSlides();
@@ -384,8 +408,10 @@ export default function HeroSlideshow({ onReady }) {
           return zoomSlides.length > 0 ? zoomSlides : slides;
         })();
 
-    return baseSlides;
-  }, [isBibleStudyPinnedTime, now, slides, specialServiceSlide]);
+    if (isBibleStudyPinnedTime) return baseSlides;
+
+    return landingImage?.image_url ? [landingImage, ...baseSlides] : baseSlides;
+  }, [isBibleStudyPinnedTime, landingImage, now, slides, specialServiceSlide]);
   const currentSlide = activeSlides[current] || activeSlides[0];
   const nextSlide = activeSlides.length > 1
     ? activeSlides[(current + 1) % activeSlides.length]
@@ -549,11 +575,11 @@ export default function HeroSlideshow({ onReady }) {
 
           @keyframes welcomeHeroImageZoom {
             from { transform: scale(1); }
-            to { transform: scale(1.16); }
+            to { transform: scale(1.1); }
           }
 
           .welcome-hero-image {
-            animation: welcomeHeroImageZoom 10s ease-out forwards;
+            animation: welcomeHeroImageZoom 16s ease-out forwards;
             transform-origin: center center;
             will-change: transform;
           }

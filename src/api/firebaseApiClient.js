@@ -81,6 +81,25 @@ async function deleteReplacedHeroImageFile(id, previousItem, nextItem) {
   await deleteHeroImageFile(previousItem);
 }
 
+async function deleteLandingImageFile(item) {
+  if (!isManagedStorageUrl(item?.image_url, "landing-images")) return;
+
+  try {
+    await deleteObject(ref(firebaseStorage, item.image_url));
+  } catch (error) {
+    if (error?.code !== "storage/object-not-found") throw error;
+  }
+}
+
+async function deleteReplacedLandingImageFile(previousItem, nextItem) {
+  const previousUrl = previousItem?.image_url;
+  const nextUrl = nextItem?.image_url;
+  if (!previousUrl || previousUrl === nextUrl) return;
+  if (!isManagedStorageUrl(previousUrl, "landing-images")) return;
+
+  await deleteLandingImageFile(previousItem);
+}
+
 async function deleteStoredFile(fileUrl, folder) {
   if (!isManagedStorageUrl(fileUrl, folder)) return;
 
@@ -189,7 +208,7 @@ function firebaseEntity(entityName) {
       return { ...item, id: created.id };
     },
     update: async (id, data) => {
-      const previousSnapshot = entityName === "HeroSlide"
+      const previousSnapshot = entityName === "HeroSlide" || entityName === "LandingImage"
         ? await getDoc(doc(firestore, entityName, id))
         : null;
       const item = { ...data, updated_date: new Date().toISOString() };
@@ -197,14 +216,19 @@ function firebaseEntity(entityName) {
       if (entityName === "HeroSlide" && previousSnapshot?.exists()) {
         await deleteReplacedHeroImageFile(id, previousSnapshot.data(), item);
       }
+      if (entityName === "LandingImage" && previousSnapshot?.exists()) {
+        await deleteReplacedLandingImageFile(previousSnapshot.data(), item);
+      }
       return { id, ...item };
     },
     delete: async (id) => {
-      if (entityName === "HeroSlide" || entityName === "Bulletins" || entityName === "NewsletterBroadcasts") {
+      if (entityName === "HeroSlide" || entityName === "LandingImage" || entityName === "Bulletins" || entityName === "NewsletterBroadcasts") {
         const itemSnapshot = await getDoc(doc(firestore, entityName, id));
         if (itemSnapshot.exists()) {
           if (entityName === "HeroSlide") {
             await deleteHeroImageFile(itemSnapshot.data());
+          } else if (entityName === "LandingImage") {
+            await deleteLandingImageFile(itemSnapshot.data());
           } else if (entityName === "Bulletins") {
             await deleteBulletinFiles(id, itemSnapshot.data());
           } else {
@@ -251,6 +275,7 @@ async function firebaseUser() {
 
 const UPLOAD_FOLDERS = {
   heroImage: "homepage-hero-images",
+  landingImage: "landing-images",
   bulletinPdf: "bulletins-pdfs",
   bulletinThumbnail: "bulletin-thumbnails",
   announcementImage: "announcement-images",
@@ -285,7 +310,7 @@ export const firebaseApi = {
         await firebaseUser();
         const uploadRef = ref(firebaseStorage, uploadPath(file, destination));
         const metadata = { contentType: file.type };
-        if (destination === "heroImage") {
+        if (destination === "heroImage" || destination === "landingImage") {
           metadata.cacheControl = "public,max-age=31536000";
         }
         await uploadBytes(uploadRef, file, metadata);

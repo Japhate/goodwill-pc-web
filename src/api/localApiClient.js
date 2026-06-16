@@ -23,7 +23,7 @@ const seedData = {
       id: 'hero-1',
       order: 1,
       is_active: true,
-      image_url: '/images/hero/goodwill-presbyterian-church-hero.jpg',
+      image_url: '/images/hero/goodwill-presbyterian-church-hero.png',
       alt_text: 'Welcome to Goodwill Presbyterian Church',
       link_url: '/About',
       link_label: 'Learn More',
@@ -199,6 +199,17 @@ const seedData = {
       alt_text: 'Vacation Bible School',
       link_url: '',
       link_label: '',
+    },
+  ],
+  LandingImage: [
+    {
+      id: 'landing-image',
+      image_url: '/images/hero/goodwill-presbyterian-church-hero.png',
+      alt_text: 'Welcome to Goodwill Presbyterian Church',
+      link_url: '/About',
+      link_label: 'Learn More',
+      is_active: true,
+      created_date: '2026-06-16T00:00:00.000Z',
     },
   ],
   Sermons: [

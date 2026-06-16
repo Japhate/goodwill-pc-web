@@ -51,6 +51,11 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    match /LandingImage/{documentId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     match /Bulletins/{documentId} {
       allow read: if true;
       allow write: if isAdmin();

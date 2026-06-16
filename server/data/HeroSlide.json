@@ -15,7 +15,7 @@
     "id": "hero-1",
     "order": 1,
     "is_active": true,
-    "image_url": "/images/hero/goodwill-presbyterian-church-hero.jpg",
+    "image_url": "/images/hero/goodwill-presbyterian-church-hero.png",
     "alt_text": "Welcome to Goodwill Presbyterian Church",
     "link_url": "/About",
     "link_label": "Learn More"
