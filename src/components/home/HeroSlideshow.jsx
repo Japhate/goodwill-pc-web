@@ -269,6 +269,7 @@ function ZoomCountdownOverlay() {
 export default function HeroSlideshow({ onReady }) {
   const [slides, setSlides] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
+  const [failedAnnouncementImageIds, setFailedAnnouncementImageIds] = useState(() => new Set());
   const [managedBanners, setManagedBanners] = useState(null);
   const [current, setCurrent] = useState(0);
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
@@ -388,6 +389,7 @@ export default function HeroSlideshow({ onReady }) {
     : null;
   const getLinkedAnnouncementImage = (slide) => {
     if (!slide?.announcement_id) return "";
+    if (failedAnnouncementImageIds.has(String(slide.announcement_id))) return "";
     const announcement = announcements.find((item) => String(item.id) === String(slide.announcement_id));
     return announcement?.image_upload || "";
   };
@@ -487,6 +489,19 @@ export default function HeroSlideshow({ onReady }) {
     onReady?.();
   };
 
+  const handleCurrentImageError = () => {
+    const linkedAnnouncementImage = getLinkedAnnouncementImage(currentSlide);
+    if (currentSlide?.announcement_id && linkedAnnouncementImage && linkedAnnouncementImage !== currentSlide.image_url) {
+      setFailedAnnouncementImageIds((currentIds) => {
+        const nextIds = new Set(currentIds);
+        nextIds.add(String(currentSlide.announcement_id));
+        return nextIds;
+      });
+    }
+
+    handleCurrentImageReady();
+  };
+
   return (
     <section ref={sectionRef} className="relative w-full bg-white">
       {!isTickerClosed && bannerMessages.length > 0 && (
@@ -539,7 +554,7 @@ export default function HeroSlideshow({ onReady }) {
                 fetchPriority="high"
                 loading="eager"
                 onLoad={handleCurrentImageReady}
-                onError={handleCurrentImageReady}
+                onError={handleCurrentImageError}
               />
               {/* Link overlay buttons */}
               {(welcomeHeroUrl || relatedAnnouncementUrl || showExternalSlideButton) && (

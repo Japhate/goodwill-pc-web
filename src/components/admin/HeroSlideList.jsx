@@ -103,6 +103,10 @@ function SlideGrid({
   const allSelected = slides.length > 0 && selectedIds.length === slides.length;
   const isDraggable = mode === "visible" && typeof onReorder === "function";
   const slideStateLabel = mode === "visible" ? "active" : "inactive";
+  const getSlideImageUrl = (slide) => {
+    const linkedAnnouncement = getLinkedAnnouncementForSlide?.(slide);
+    return linkedAnnouncement?.image_upload || slide.image_url || "";
+  };
 
   const handleDragStart = (event, slideId) => {
     if (!isDraggable) return;
@@ -445,10 +449,6 @@ export default function HeroSlideList({
   const [internalSelectedVisibleIds, setInternalSelectedVisibleIds] = useState([]);
   const [internalSelectedHiddenIds, setInternalSelectedHiddenIds] = useState([]);
   const [viewMode, setViewMode] = useState("grid");
-  const getSlideImageUrl = (slide) => {
-    const linkedAnnouncement = getLinkedAnnouncementForSlide?.(slide);
-    return linkedAnnouncement?.image_upload || slide.image_url || "";
-  };
   const selectedVisibleIds = controlledSelectedVisibleIds ?? internalSelectedVisibleIds;
   const selectedHiddenIds = controlledSelectedHiddenIds ?? internalSelectedHiddenIds;
   const setSelectedVisibleIds = (nextSelection) => {
