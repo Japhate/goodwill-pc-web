@@ -9,7 +9,7 @@ import { createSpecialServiceHeroSlide, getActiveSpecialServiceNotice } from "@/
 // Fallback slides if no slides are in the database
 const FALLBACK_SLIDES = [
   {
-    image_url: "/images/hero/goodwill-presbyterian-church-hero.png",
+    image_url: "/images/hero/goodwill-presbyterian-church-hero.jpg",
     alt_text: "Welcome to Goodwill Presbyterian Church",
     link_url: "/About",
     link_label: "Learn More",
@@ -144,14 +144,17 @@ const BIBLE_STUDY_END_MIN = 0;
 const SHOW_HERO_EXTERNAL_ACTION_BUTTON = false;
 const SHOW_BIBLE_STUDY_COUNTDOWN_OVERLAY = false;
 const PERMANENT_WELCOME_HERO_ID = "hero-1";
-const PERMANENT_WELCOME_HERO_IMAGE = "/images/hero/goodwill-presbyterian-church-hero.png";
+const PERMANENT_WELCOME_HERO_IMAGE = "/images/hero/goodwill-presbyterian-church-hero.jpg";
 const ABOUT_PAGE_URL = "/About";
 
 function isPermanentWelcomeHeroSlide(slide) {
   if (!slide) return false;
 
+  const altText = String(slide.alt_text || "").toLowerCase();
+
   return slide.id === PERMANENT_WELCOME_HERO_ID
-    || slide.image_url === PERMANENT_WELCOME_HERO_IMAGE;
+    || slide.image_url === PERMANENT_WELCOME_HERO_IMAGE
+    || (altText.includes("welcome") && altText.includes("goodwill"));
 }
 
 function isZoomBibleStudySlide(slide) {
@@ -397,6 +400,8 @@ export default function HeroSlideshow({ onReady }) {
   const currentImageUrl = getSlideImageUrl(currentSlide);
   const nextImageUrl = getSlideImageUrl(nextSlide);
   const isPermanentWelcomeHero = isPermanentWelcomeHeroSlide(currentSlide);
+  const isFirstLandingSlide = current === 0 && !currentSlide?.is_priority_announcement && !isZoomBibleStudySlide(currentSlide);
+  const showWelcomeHeroIntro = isPermanentWelcomeHero || isFirstLandingSlide;
   const welcomeHeroUrl = isPermanentWelcomeHero ? ABOUT_PAGE_URL : "";
   const relatedAnnouncementUrl = !isPermanentWelcomeHero && currentSlide?.announcement_id
     ? `/Updates#announcement-${currentSlide.announcement_id}`
@@ -504,6 +509,68 @@ export default function HeroSlideshow({ onReady }) {
 
   return (
     <section ref={sectionRef} className="relative w-full bg-white">
+      <style>
+        {`
+          @keyframes welcomeHeroTextSettle {
+            0% {
+              opacity: 0;
+              transform: translate3d(-36px, 16px, 0);
+              filter: blur(12px);
+            }
+            55% {
+              opacity: 1;
+              transform: translate3d(0, 0, 0);
+              filter: blur(0);
+            }
+            100% {
+              opacity: 1;
+              transform: translate3d(0, -4px, 0);
+              filter: blur(0);
+            }
+          }
+
+          @keyframes welcomeHeroTextFloat {
+            0%, 100% { transform: translate3d(0, -4px, 0); }
+            25% { transform: translate3d(8px, -10px, 0); }
+            50% { transform: translate3d(16px, -5px, 0); }
+            75% { transform: translate3d(7px, 2px, 0); }
+          }
+
+          @keyframes welcomeHeroLineReveal {
+            from {
+              opacity: 0;
+              transform: scaleX(0);
+            }
+            to {
+              opacity: 1;
+              transform: scaleX(1);
+            }
+          }
+
+          @keyframes welcomeHeroImageZoom {
+            from { transform: scale(1); }
+            to { transform: scale(1.16); }
+          }
+
+          .welcome-hero-image {
+            animation: welcomeHeroImageZoom 10s ease-out forwards;
+            transform-origin: center center;
+            will-change: transform;
+          }
+
+          .welcome-hero-copy {
+            animation:
+              welcomeHeroTextSettle 1.45s cubic-bezier(.16, 1, .3, 1) .45s both,
+              welcomeHeroTextFloat 14s ease-in-out 2.05s infinite;
+            will-change: transform;
+          }
+
+          .welcome-hero-line {
+            animation: welcomeHeroLineReveal .9s ease-out 1.35s both;
+          }
+        `}
+      </style>
+
       {!isTickerClosed && bannerMessages.length > 0 && (
         <div className={`homepage-ticker relative text-white border-y ${isLiveTicker ? 'bg-red-700 border-red-200/40' : 'bg-[#3f2a1f] border-amber-300/30'}`}>
           <div className="homepage-ticker__track h-6 pr-12">
@@ -548,7 +615,7 @@ export default function HeroSlideshow({ onReady }) {
               <img
                 src={currentImageUrl}
                 alt={currentSlide.alt_text || "Slide"}
-                className="block h-full w-full object-cover md:object-contain"
+                className={`block h-full w-full object-cover ${showWelcomeHeroIntro ? "welcome-hero-image" : "md:object-contain"}`}
                 draggable={false}
                 decoding="async"
                 fetchPriority="high"
@@ -556,13 +623,30 @@ export default function HeroSlideshow({ onReady }) {
                 onLoad={handleCurrentImageReady}
                 onError={handleCurrentImageError}
               />
+              {showWelcomeHeroIntro && (
+                <div className="pointer-events-none absolute inset-0 z-[25] flex items-center justify-start bg-gradient-to-r from-black/80 via-black/42 to-transparent px-6 text-left sm:px-10 md:px-14">
+                  <div className="welcome-hero-copy ml-[5vw] max-w-[min(78vw,720px)] sm:ml-[8vw] md:ml-[10vw] lg:ml-[12vw]">
+                    <p
+                      className="mb-2 text-xs font-semibold uppercase tracking-[0.24em] text-amber-200 drop-shadow-[0_2px_8px_rgba(0,0,0,0.85)] sm:text-sm md:mb-3 md:text-base"
+                    >
+                      Welcome to
+                    </p>
+                    <h1
+                      className="text-balance font-serif text-3xl font-bold leading-tight text-white drop-shadow-[0_4px_18px_rgba(0,0,0,0.9)] sm:text-5xl md:text-6xl lg:text-7xl"
+                    >
+                      Goodwill Presbyterian Church, USA
+                    </h1>
+                    <div className="welcome-hero-line mt-3 h-px w-32 origin-left bg-gradient-to-r from-amber-200 via-white/70 to-transparent sm:w-48 md:mt-5" />
+                  </div>
+                </div>
+              )}
               {/* Link overlay buttons */}
               {(welcomeHeroUrl || relatedAnnouncementUrl || showExternalSlideButton) && (
                 <div
                   className={
                     currentSlide.is_priority_announcement
-                      ? "absolute bottom-3 left-1/2 hidden -translate-x-1/2 flex-wrap items-center justify-center gap-2 md:flex"
-                      : "absolute bottom-3 left-1/2 flex -translate-x-1/2 flex-wrap items-center justify-center gap-2 sm:bottom-4 md:bottom-6"
+                      ? "absolute bottom-3 left-1/2 z-20 hidden -translate-x-1/2 flex-wrap items-center justify-center gap-2 md:flex"
+                      : "absolute bottom-3 left-1/2 z-20 flex -translate-x-1/2 flex-wrap items-center justify-center gap-2 sm:bottom-4 md:bottom-6"
                   }
                 >
                   {relatedAnnouncementUrl && (
