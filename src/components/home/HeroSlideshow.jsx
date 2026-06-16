@@ -141,7 +141,7 @@ const BIBLE_STUDY_START_HOUR = 18; // 6:00 PM
 const BIBLE_STUDY_START_MIN = 0;
 const BIBLE_STUDY_END_HOUR = 19;   // 7:00 PM
 const BIBLE_STUDY_END_MIN = 0;
-const SHOW_HERO_EXTERNAL_ACTION_BUTTON = false;
+const SHOW_HERO_EXTERNAL_ACTION_BUTTON = true;
 const SHOW_BIBLE_STUDY_COUNTDOWN_OVERLAY = false;
 const PERMANENT_WELCOME_HERO_ID = "hero-1";
 const PERMANENT_WELCOME_HERO_IMAGE = "/images/hero/goodwill-presbyterian-church-hero.png";
@@ -189,6 +189,13 @@ function isPrioritySlideActive(slide, now) {
   if (endsAt && now >= endsAt) return false;
 
   return true;
+}
+
+function normalizeMatchText(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
 }
 
 // Get this Wednesday's (or next Wednesday's) Bible Study times
@@ -414,27 +421,44 @@ export default function HeroSlideshow({ onReady }) {
     : null;
   const getLinkedAnnouncement = (slide) => {
     if (!slide?.announcement_id) return "";
-    if (failedAnnouncementImageIds.has(String(slide.announcement_id))) return "";
     return announcements.find((item) => String(item.id) === String(slide.announcement_id)) || null;
   };
+  const getAnnouncementForSlide = (slide) => {
+    const linked = getLinkedAnnouncement(slide);
+    if (linked) return linked;
+
+    const slideTitle = normalizeMatchText(slide?.alt_text);
+    if (!slideTitle) return null;
+
+    return announcements.find((item) => {
+      const announcementTitle = normalizeMatchText(item?.title);
+      return announcementTitle && (
+        announcementTitle === slideTitle
+        || announcementTitle.includes(slideTitle)
+        || slideTitle.includes(announcementTitle)
+      );
+    }) || null;
+  };
   const getLinkedAnnouncementImage = (slide) => {
+    if (slide?.announcement_id && failedAnnouncementImageIds.has(String(slide.announcement_id))) return "";
     const announcement = getLinkedAnnouncement(slide);
     return announcement?.image_upload || "";
   };
   const getSlideImageUrl = (slide) => getLinkedAnnouncementImage(slide) || slide?.image_url || "";
   const currentImageUrl = getSlideImageUrl(currentSlide);
   const nextImageUrl = getSlideImageUrl(nextSlide);
-  const linkedAnnouncement = getLinkedAnnouncement(currentSlide);
+  const linkedAnnouncement = getAnnouncementForSlide(currentSlide);
   const isPermanentWelcomeHero = isPermanentWelcomeHeroSlide(currentSlide);
   const isFirstLandingSlide = current === 0 && !currentSlide?.is_priority_announcement && !isZoomBibleStudySlide(currentSlide);
   const showWelcomeHeroIntro = isPermanentWelcomeHero || isFirstLandingSlide;
   const welcomeHeroUrl = isPermanentWelcomeHero ? ABOUT_PAGE_URL : "";
-  const relatedAnnouncementUrl = !isPermanentWelcomeHero && currentSlide?.announcement_id
-    ? `/Updates#announcement-${currentSlide.announcement_id}`
+  const relatedAnnouncementId = currentSlide?.announcement_id || linkedAnnouncement?.id || "";
+  const relatedAnnouncementUrl = !isPermanentWelcomeHero && relatedAnnouncementId
+    ? `/Updates#announcement-${relatedAnnouncementId}`
     : "";
-  const linkedLocationType = linkedAnnouncement?.location_type || "physical";
-  const linkedDirectionsUrl = String(linkedAnnouncement?.directions_url || "").trim();
-  const linkedPhysicalLocation = String(linkedAnnouncement?.location || "").trim();
+  const linkedLocationType = currentSlide?.location_type || linkedAnnouncement?.location_type || "physical";
+  const linkedDirectionsUrl = String(currentSlide?.directions_url || linkedAnnouncement?.directions_url || "").trim();
+  const linkedPhysicalLocation = String(currentSlide?.location || linkedAnnouncement?.location || "").trim();
   const directionsSlideUrl = ["physical", "both"].includes(linkedLocationType) && linkedPhysicalLocation && linkedDirectionsUrl
     ? linkedDirectionsUrl
     : "";
