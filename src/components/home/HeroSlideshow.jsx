@@ -529,7 +529,7 @@ export default function HeroSlideshow({ onReady }) {
       {/* Slides */}
       {currentSlide && (
         <div
-          className={`relative aspect-video w-full overflow-hidden bg-black ${primarySlideUrl ? "cursor-pointer" : ""}`}
+          className={`relative h-[68vw] min-h-[260px] max-h-[420px] w-full overflow-hidden bg-black sm:h-[60vw] md:aspect-video md:h-auto md:min-h-0 md:max-h-none ${primarySlideUrl ? "cursor-pointer" : ""}`}
           onClick={handleSlideClick}
           onKeyDown={handleSlideKeyDown}
           role={primarySlideUrl ? "link" : undefined}
@@ -548,7 +548,7 @@ export default function HeroSlideshow({ onReady }) {
               <img
                 src={currentImageUrl}
                 alt={currentSlide.alt_text || "Slide"}
-                className="block h-full w-full object-contain"
+                className="block h-full w-full object-cover md:object-contain"
                 draggable={false}
                 decoding="async"
                 fetchPriority="high"
