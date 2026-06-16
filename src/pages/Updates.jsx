@@ -422,7 +422,7 @@ export default function Updates() {
         </div>
       </section>
       <div className="fixed top-20 left-0 right-0 z-30 shadow-md" style={{ background: 'var(--header-bg)' }}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-[1500px] px-3 sm:px-5 lg:px-6">
             <div className="flex flex-wrap items-end justify-center gap-2 sm:gap-4 pt-3 pb-0">
                 {subNavLinks.map(link => (
                     <Button
@@ -508,7 +508,7 @@ export default function Updates() {
             </div>
 
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 gap-6">
               {filteredFeed.length > 0 ? (
                 filteredFeed.map((item) => {
                   const itemDate = parseDateAsLocal(item.date);
@@ -522,16 +522,16 @@ export default function Updates() {
                   <div
                     id={`announcement-${item.id}`}
                     key={item.id}
-                    className={`bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow duration-300 flex flex-col scroll-mt-[160px] md:scroll-mt-[140px] ${
+                    className={`flex flex-col overflow-hidden rounded-lg bg-white shadow-md transition-shadow duration-300 hover:shadow-xl scroll-mt-[160px] md:flex-row md:scroll-mt-[140px] ${
                       selectedAnnouncementId === String(item.id) ? "ring-4 ring-amber-400 ring-offset-4" : ""
                     }`}
                   >
                     {item.image_upload ? (
-                      <div className="flex aspect-[32/15] w-full items-center justify-center overflow-hidden bg-gray-950">
+                      <div className="flex aspect-[16/10] w-full shrink-0 items-center justify-center overflow-hidden bg-white md:aspect-auto md:min-h-[320px] md:w-[42%] lg:w-[38%]">
                         <img src={item.image_upload} alt={item.title} className="h-full w-full object-contain" />
                       </div>
                     ) : null}
-                    <div className="p-6 flex flex-col flex-grow">
+                    <div className="flex flex-grow flex-col p-5 md:p-6">
                       <div className="flex-grow">
                         <div className="mb-2 flex items-start justify-between gap-2">
                           <h3 className="text-xl font-bold text-gray-800">{item.title}</h3>
