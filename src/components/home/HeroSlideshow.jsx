@@ -569,6 +569,22 @@ export default function HeroSlideshow({ onReady }) {
             }
           }
 
+          @keyframes welcomeHeroCtaReveal {
+            from {
+              opacity: 0;
+              transform: translate3d(-12px, 10px, 0);
+            }
+            to {
+              opacity: 1;
+              transform: translate3d(0, 0, 0);
+            }
+          }
+
+          @keyframes welcomeHeroCtaSheen {
+            from { transform: translateX(-140%) skewX(-18deg); }
+            to { transform: translateX(220%) skewX(-18deg); }
+          }
+
           @keyframes welcomeHeroImageZoom {
             from { transform: scale(1); }
             to { transform: scale(1.1); }
@@ -589,6 +605,23 @@ export default function HeroSlideshow({ onReady }) {
 
           .welcome-hero-line {
             animation: welcomeHeroLineReveal .9s ease-out 1.35s both;
+          }
+
+          .welcome-hero-cta {
+            animation: welcomeHeroCtaReveal .8s ease-out 1.55s both;
+          }
+
+          .welcome-hero-cta::before {
+            content: "";
+            position: absolute;
+            top: -30%;
+            bottom: -30%;
+            left: 0;
+            width: 38%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,.58), transparent);
+            filter: blur(1px);
+            pointer-events: none;
+            animation: welcomeHeroCtaSheen 4.8s ease-in-out 2.4s infinite;
           }
         `}
       </style>
@@ -659,11 +692,21 @@ export default function HeroSlideshow({ onReady }) {
                       Goodwill Presbyterian Church, USA
                     </h1>
                     <div className="welcome-hero-line mt-3 h-px w-32 origin-left bg-gradient-to-r from-amber-200 via-white/70 to-transparent sm:w-48 md:mt-5" />
+                    {welcomeHeroUrl && (
+                      <a
+                        href={welcomeHeroUrl}
+                        className="welcome-hero-cta pointer-events-auto group relative mt-5 inline-flex items-center gap-2 overflow-hidden rounded-full border border-amber-100/80 bg-gradient-to-r from-[#c58a1f] via-[#f3c45b] to-[#b87918] px-5 py-2.5 text-sm font-bold text-[#2d1c12] shadow-[0_14px_36px_rgba(0,0,0,0.35),0_0_28px_rgba(243,196,91,0.28)] ring-1 ring-white/30 transition-all duration-500 hover:-translate-y-0.5 hover:scale-[1.03] hover:from-[#f4cc69] hover:via-[#fff0a8] hover:to-[#c58a1f] hover:shadow-[0_18px_42px_rgba(0,0,0,0.42),0_0_38px_rgba(243,196,91,0.45)] focus:outline-none focus:ring-4 focus:ring-amber-200/55 md:mt-7 md:px-6 md:py-3 md:text-base"
+                        onClick={(event) => event.stopPropagation()}
+                      >
+                        <span className="relative z-10">{currentSlide.link_label || "Learn More"}</span>
+                        <ArrowRight className="relative z-10 h-4 w-4 transition-transform duration-500 group-hover:translate-x-1 md:h-5 md:w-5" />
+                      </a>
+                    )}
                   </div>
                 </div>
               )}
               {/* Link overlay buttons */}
-              {(welcomeHeroUrl || relatedAnnouncementUrl || showExternalSlideButton) && (
+              {((!showWelcomeHeroIntro && welcomeHeroUrl) || relatedAnnouncementUrl || showExternalSlideButton) && (
                 <div
                   className={
                     currentSlide.is_priority_announcement
