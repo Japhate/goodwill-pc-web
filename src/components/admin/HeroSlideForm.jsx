@@ -7,7 +7,7 @@ import { Loader2, Upload } from "lucide-react";
 import ConfirmedDateTimePicker from "@/components/admin/ConfirmedDateTimePicker";
 
 const HERO_IMAGE_MAX_WIDTH = 1920;
-const HERO_IMAGE_MAX_HEIGHT = 900;
+const HERO_IMAGE_MAX_HEIGHT = 1080;
 const HERO_IMAGE_QUALITIES = [0.72, 0.66, 0.6, 0.54];
 const HERO_IMAGE_TARGET_BYTES = 420 * 1024;
 const DEFAULT_RELATED_ANNOUNCEMENT = {
@@ -393,7 +393,7 @@ export default function HeroSlideForm({ slide, announcement, announcementMode = 
             {validationErrors.image_url && <p className="text-xs font-semibold text-red-600 mt-2">{validationErrors.image_url}</p>}
             {uploadError && <p className="text-xs text-red-600 mt-2">{uploadError}</p>}
             <p className="mt-2 text-xs text-gray-500">
-              Recommended hero size: 1920 x 900 px. Uploaded images are converted to optimized JPG and compressed before they are saved.
+              Recommended hero size: 1920 x 1080 px. Uploaded images are converted to optimized JPG and compressed before they are saved.
             </p>
             {uploadedImages.length > 1 ? (
               <>
@@ -404,14 +404,14 @@ export default function HeroSlideForm({ slide, announcement, announcementMode = 
                 </p>
                 <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {uploadedImages.map((imageUrl, index) => (
-                    <div key={imageUrl} className="flex aspect-[32/15] w-full items-center justify-center rounded-md border bg-gray-950">
+                    <div key={imageUrl} className="flex aspect-video w-full items-center justify-center rounded-md border bg-gray-950">
                       <img src={imageUrl} alt={`Preview ${index + 1}`} className="h-full w-full object-contain" />
                     </div>
                   ))}
                 </div>
               </>
             ) : formData.image_url && (
-              <div className="mt-2 flex aspect-[32/15] w-full items-center justify-center rounded-md border bg-gray-950">
+              <div className="mt-2 flex aspect-video w-full items-center justify-center rounded-md border bg-gray-950">
                 <img src={formData.image_url} alt="Preview" className="h-full w-full object-contain" />
               </div>
             )}

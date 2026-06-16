@@ -2236,7 +2236,7 @@ export default function AdminPage() {
               count: upload.count,
               filenames: upload.filenames || [],
               original_filenames: upload.originalFilenames || [],
-              processed_dimensions: '1920x900',
+              processed_dimensions: '1920x1080',
             },
           })}
         />;
@@ -2265,7 +2265,7 @@ export default function AdminPage() {
               count: upload.count,
               filenames: upload.filenames || [],
               original_filenames: upload.originalFilenames || [],
-              processed_dimensions: '1920x900',
+              processed_dimensions: '1920x1080',
             },
           })}
         />;

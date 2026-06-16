@@ -529,7 +529,7 @@ export default function HeroSlideshow({ onReady }) {
       {/* Slides */}
       {currentSlide && (
         <div
-          className={`relative aspect-[32/15] w-full overflow-hidden bg-black ${primarySlideUrl ? "cursor-pointer" : ""}`}
+          className={`relative aspect-video w-full overflow-hidden bg-black ${primarySlideUrl ? "cursor-pointer" : ""}`}
           onClick={handleSlideClick}
           onKeyDown={handleSlideKeyDown}
           role={primarySlideUrl ? "link" : undefined}

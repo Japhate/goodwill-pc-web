@@ -226,7 +226,7 @@ function SlideGrid({
                   <div className="rounded-full bg-black/70 px-2 py-1 text-xs text-white">
                     #{index + 1}
                   </div>
-                  <div className="flex aspect-[32/15] w-40 shrink-0 items-center justify-center rounded bg-gray-950 md:w-52">
+                  <div className="flex aspect-video w-40 shrink-0 items-center justify-center rounded bg-gray-950 md:w-52">
                     <img
                       src={getSlideImageUrl(slide)}
                       alt={slide.alt_text || "Slide"}
@@ -321,7 +321,7 @@ function SlideGrid({
               className={`overflow-hidden ${isDraggable ? "cursor-grab active:cursor-grabbing" : ""} ${selectedIds.includes(slide.id) ? "ring-2 ring-amber-500" : ""}`}
             >
               <div className="relative">
-                <div className="flex aspect-[32/15] w-full items-center justify-center bg-gray-950">
+                <div className="flex aspect-video w-full items-center justify-center bg-gray-950">
                   <img
                     src={getSlideImageUrl(slide)}
                     alt={slide.alt_text || "Slide"}
