@@ -266,7 +266,7 @@ function ZoomCountdownOverlay() {
   );
 }
 
-export default function HeroSlideshow() {
+export default function HeroSlideshow({ onReady }) {
   const [slides, setSlides] = useState([]);
   const [managedBanners, setManagedBanners] = useState(null);
   const [current, setCurrent] = useState(0);
@@ -275,6 +275,7 @@ export default function HeroSlideshow() {
   const [now, setNow] = useState(new Date());
   const timerRef = useRef(null);
   const sectionRef = useRef(null);
+  const hasReportedReadyRef = useRef(false);
 
   const currentMinutes = now.getHours() * 60 + now.getMinutes();
   const isLiveServiceBannerTime = now.getDay() === 0 && currentMinutes >= 10 * 60 + 30 && currentMinutes < 12 * 60;
@@ -468,6 +469,12 @@ export default function HeroSlideshow() {
     }
   };
 
+  const handleCurrentImageReady = () => {
+    if (hasReportedReadyRef.current) return;
+    hasReportedReadyRef.current = true;
+    onReady?.();
+  };
+
   return (
     <section ref={sectionRef} className="relative w-full bg-white">
       {!isTickerClosed && bannerMessages.length > 0 && (
@@ -519,6 +526,8 @@ export default function HeroSlideshow() {
                 decoding="async"
                 fetchPriority="high"
                 loading="eager"
+                onLoad={handleCurrentImageReady}
+                onError={handleCurrentImageReady}
               />
               {/* Link overlay buttons */}
               {(welcomeHeroUrl || relatedAnnouncementUrl || showExternalSlideButton) && (

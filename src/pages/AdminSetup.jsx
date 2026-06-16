@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { CheckCircle2, Loader2, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import PageLoadingScreen from "@/components/PageLoadingScreen";
 
 function passwordMeetsRules(password) {
   return password.length >= 6
@@ -134,9 +135,8 @@ export default function AdminSetup() {
         </div>
 
         {loadingInvite ? (
-          <div className="flex items-center justify-center p-10 text-amber-700">
-            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-            Loading invitation...
+          <div className="flex items-center justify-center p-10">
+            <PageLoadingScreen compact backgroundClassName="bg-transparent" className="py-2" />
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-5 p-6" noValidate>

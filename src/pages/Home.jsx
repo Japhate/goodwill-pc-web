@@ -11,6 +11,7 @@ import { NewsletterSubscriptions } from "@/entities/NewsletterSubscriptions";
 import { createSpecialServicePopup, getActiveSpecialServiceNotice } from "@/lib/specialServiceNotice";
 import { SitePopups } from "@/entities/SitePopups";
 import SitePopupModal, { getActivePopup } from "@/components/home/SitePopupModal";
+import HeritageSealLoader from "@/components/HeritageSealLoader";
 
 const SERMON_BACKGROUND_VIDEO_URL = "/videos/latest-sermon-spiritual-skies.mp4";
 
@@ -64,12 +65,17 @@ export default function Home() {
   const [hasLiveSermon, setHasLiveSermon] = useState(false); // NEW: Track if there's a Live sermon in DB
   const [liveSermon, setLiveSermon] = useState(null); // NEW: Store the actual live sermon object
   const [shouldLoadSermonBgVideo, setShouldLoadSermonBgVideo] = useState(false);
+  const [isHomeDataReady, setIsHomeDataReady] = useState(false);
+  const [isHeroReady, setIsHeroReady] = useState(false);
+  const [isLoaderMinimumDone, setIsLoaderMinimumDone] = useState(false);
+  const [isLoaderFallbackDone, setIsLoaderFallbackDone] = useState(false);
   const activeSpecialServiceNotice = getActiveSpecialServiceNotice();
   const inPersonOnlyNotice = activeSpecialServiceNotice?.liveStreamAvailable === false ? activeSpecialServiceNotice : null;
   const serviceLabel = activeSpecialServiceNotice?.serviceLabel || "Sunday Morning Service @ 10:30 AM";
   const serviceLocationLabel = activeSpecialServiceNotice?.locationLabel || "295 N Brick Church Road, Mayesville, SC 29104";
   const serviceDirectionsUrl = activeSpecialServiceNotice?.directionsUrl || "https://www.google.com/maps/search/?api=1&query=295+N+Brick+Church+Rd,+Mayesville,+SC+29104";
   const activeSitePopup = useMemo(() => getActivePopup(sitePopups), [sitePopups]);
+  const isHomepageReady = (isHomeDataReady && isHeroReady && isLoaderMinimumDone) || isLoaderFallbackDone;
 
   // Scripture verses that rotate
   const scriptureVerses = [
@@ -200,6 +206,16 @@ export default function Home() {
     
     return currentTime >= serviceStart && currentTime < serviceEnd;
   };
+
+  useEffect(() => {
+    const minimumTimer = window.setTimeout(() => setIsLoaderMinimumDone(true), 700);
+    const fallbackTimer = window.setTimeout(() => setIsLoaderFallbackDone(true), 3600);
+
+    return () => {
+      window.clearTimeout(minimumTimer);
+      window.clearTimeout(fallbackTimer);
+    };
+  }, []);
 
   // Check for scheduled announcement events that are live right now.
   useEffect(() => {
@@ -388,6 +404,8 @@ export default function Home() {
         
       } catch (error) {
         console.error("Error loading homepage data:", error);
+      } finally {
+        setIsHomeDataReady(true);
       }
     };
     loadData();
@@ -862,6 +880,19 @@ export default function Home() {
           `}
           </style>
 
+      <div
+        className={`fixed inset-0 z-[9999] flex items-center justify-center bg-[#f8f1e5] text-[#3f2a1f] transition-opacity ease-in-out ${isHomepageReady ? "pointer-events-none opacity-0" : "opacity-100"}`}
+        style={{ transitionDuration: "1400ms" }}
+        role="status"
+        aria-live="polite"
+        aria-label="Loading homepage"
+      >
+        <div className="relative flex w-full max-w-sm flex-col items-center px-6 text-center">
+          <div className="absolute h-56 w-56 rounded-full bg-amber-300/20 blur-3xl"></div>
+          <HeritageSealLoader showText />
+        </div>
+      </div>
+
       {/* Floating Background Elements Throughout Page */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
         {/* Top Layer */}
@@ -900,7 +931,7 @@ export default function Home() {
 
       {/* Hero Slideshow Section */}
       <div>
-        <HeroSlideshow />
+        <HeroSlideshow onReady={() => setIsHeroReady(true)} />
       </div>
 
       {/* New to Goodwill Section */}

@@ -8,6 +8,7 @@ import { createPageUrl } from "@/utils";
 import { AnnouncementsEvents } from "@/entities/AnnouncementsEvents";
 import { Sermons } from "@/entities/Sermons";
 import { format } from "date-fns";
+import PageLoadingScreen from "@/components/PageLoadingScreen";
 
 const SearchModal = ({ isOpen, onClose }) => {
     const [query, setQuery] = useState("");
@@ -109,7 +110,7 @@ const SearchModal = ({ isOpen, onClose }) => {
                             <div className="max-h-[60vh] overflow-y-auto">
                                 {loading && (
                                     <div className="p-8 text-center text-gray-500">
-                                        <div className="animate-spin w-8 h-8 border-2 border-amber-600 border-t-transparent rounded-full mx-auto mb-4"></div>
+                                        <PageLoadingScreen compact backgroundClassName="bg-transparent" className="mb-4 py-1" />
                                         Loading search data...
                                     </div>
                                 )}

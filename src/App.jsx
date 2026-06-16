@@ -5,12 +5,14 @@ import { queryClientInstance } from '@/lib/query-client'
 import VisualEditAgent from '@/lib/VisualEditAgent'
 import NavigationTracker from '@/lib/NavigationTracker'
 import { pagesConfig } from './pages.config'
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import Unsubscribe from './pages/Unsubscribe';
 import AdminSetup from './pages/AdminSetup';
+import HeritageSealLoader from '@/components/HeritageSealLoader';
+import PageLoadingScreen from '@/components/PageLoadingScreen';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -22,13 +24,29 @@ const LayoutWrapper = ({ children, currentPageName }) => Layout ?
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, isAuthenticated, navigateToLogin } = useAuth();
+  const location = useLocation();
+  const isHomeRoute = location.pathname === '/' || location.pathname.toLowerCase() === `/${mainPageKey.toLowerCase()}`;
 
-  // Show loading spinner while checking app public settings or auth
+  // Show the branded loader while checking app public settings or auth.
   if (isLoadingPublicSettings || isLoadingAuth) {
+    if (isHomeRoute) {
+      return (
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#f8f1e5]"
+          role="status"
+          aria-live="polite"
+          aria-label="Loading homepage"
+        >
+          <div className="relative flex w-full max-w-sm flex-col items-center px-6 text-center">
+            <div className="absolute h-56 w-56 rounded-full bg-amber-300/20 blur-3xl"></div>
+            <HeritageSealLoader showText />
+          </div>
+        </div>
+      );
+    }
+
     return (
-      <div className="fixed inset-0 flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
-      </div>
+      <PageLoadingScreen fixed />
     );
   }
 
@@ -65,7 +83,7 @@ const AuthenticatedApp = () => {
       <Route path="/AdminSetup" element={<AdminSetup />} />
       <Route path="/Unsubscribe" element={<Unsubscribe />} />
       <Route path="*" element={<PageNotFound />} />
-      </Routes>
+    </Routes>
   );
 };
 

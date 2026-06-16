@@ -27,6 +27,7 @@ import SitePopupList from '@/components/admin/SitePopupList';
 import SitePopupForm from '@/components/admin/SitePopupForm';
 import NewsletterAdmin from '@/components/admin/NewsletterAdmin';
 import DeveloperPanel from '@/components/admin/DeveloperPanel';
+import PageLoadingScreen from '@/components/PageLoadingScreen';
 import { HeroSlide } from '@/entities/HeroSlide';
 import { firebaseAuth, firebaseEnabled } from '@/lib/firebase';
 import { localApi } from '@/api/localApiClient';
@@ -1982,9 +1983,7 @@ export default function AdminPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center pt-20">
-        <Loader2 className="w-12 h-12 animate-spin text-amber-600" />
-      </div>
+      <PageLoadingScreen backgroundClassName="bg-gray-100" />
     );
   }
 

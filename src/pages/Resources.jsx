@@ -6,10 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PlayCircle, BookOpen, Calendar, User, FileText, Youtube, Download, Loader2, Radio, Clock, PlaySquare, X, MapPin, LayoutGrid, List, Search } from "lucide-react";
+import { PlayCircle, BookOpen, Calendar, User, FileText, Youtube, Download, Radio, Clock, PlaySquare, X, MapPin, LayoutGrid, List, Search } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { AnimatePresence, motion } from "framer-motion";
 import { getActiveSpecialServiceNotice, getSpecialServiceDateTime } from "@/lib/specialServiceNotice";
+import PageLoadingScreen from "@/components/PageLoadingScreen";
 
 // Helper function to extract video ID from YouTube URL
 const getYoutubeVideoId = (url) => {
@@ -578,9 +579,7 @@ export default function Resources() {
 
   if (loading) {
     return (
-      <div className="min-h-screen" style={{ background: '#fdf8f0' }} className="flex items-center justify-center">
-        <Loader2 className="w-12 h-12 animate-spin text-amber-600" />
-      </div>
+      <PageLoadingScreen backgroundClassName="bg-[#fdf8f0]" />
     );
   }
 

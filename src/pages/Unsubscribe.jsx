@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { CheckCircle, AlertCircle } from 'lucide-react';
 import { NewsletterSubscriptions } from '@/entities/NewsletterSubscriptions';
+import PageLoadingScreen from '@/components/PageLoadingScreen';
 
 export default function Unsubscribe() {
   const [status, setStatus] = useState('loading');
@@ -68,7 +69,7 @@ export default function Unsubscribe() {
         <CardContent className="space-y-4">
           {status === 'loading' && (
             <div className="flex flex-col items-center gap-3">
-              <Loader2 className="w-8 h-8 text-amber-600 animate-spin" />
+              <PageLoadingScreen compact backgroundClassName="bg-transparent" className="py-1" />
               <p className="text-gray-600 text-center">{message}</p>
             </div>
           )}

@@ -9,6 +9,7 @@ import ReactMarkdown from "react-markdown";
 import { groupBy } from 'lodash';
 import { Badge } from "@/components/ui/badge";
 import { getActiveSpecialServiceNotice } from "@/lib/specialServiceNotice";
+import PageLoadingScreen from "@/components/PageLoadingScreen";
 
 // Helper to parse date string as local time to avoid timezone shifts
 // and handle potential invalid date values gracefully.
@@ -398,9 +399,7 @@ export default function Updates() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-screen">
-        <div className="w-16 h-16 border-4 border-amber-600 border-dashed rounded-full animate-spin"></div>
-      </div>
+      <PageLoadingScreen backgroundClassName="bg-[#fdf8f0]" />
     );
   }
 
