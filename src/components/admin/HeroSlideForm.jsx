@@ -133,7 +133,7 @@ export default function HeroSlideForm({ slide, announcement, announcementMode = 
     alt_text: slide?.alt_text || announcement?.title || "",
     link_url: "",
     link_label: "More",
-    details_button_label: "More",
+    details_button_label: "Read More",
     announcement_id: "",
     is_zoom_bible_study: false,
     is_priority_announcement: false,
@@ -557,9 +557,9 @@ export default function HeroSlideForm({ slide, announcement, announcementMode = 
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">Details Button Label</label>
                   <Input
-                    value={formData.details_button_label || "More"}
+                    value={formData.details_button_label || "Read More"}
                     onChange={(e) => handleChange("details_button_label", e.target.value)}
-                    placeholder="More"
+                    placeholder="Read More"
                     disabled={!canEditDetailsButtonLabel}
                   />
                   <p className="mt-1 text-xs text-gray-500">

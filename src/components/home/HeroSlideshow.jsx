@@ -886,7 +886,7 @@ export default function HeroSlideshow({ onReady }) {
                       onClick={(e) => e.stopPropagation()}
                     >
                       <ExternalLink className="w-4 h-4" />
-                      {currentSlide.details_button_label || currentSlide.link_label || "More"}
+                      {currentSlide.details_button_label || currentSlide.link_label || "Read More"}
                     </a>
                   )}
                   {welcomeHeroUrl && (
@@ -970,7 +970,7 @@ export default function HeroSlideshow({ onReady }) {
               className="inline-flex items-center justify-center gap-1 rounded-full border border-white/45 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white shadow-[0_8px_24px_rgba(0,0,0,0.18)] backdrop-blur-[2px] transition-all hover:border-amber-500 hover:bg-gradient-to-r hover:from-amber-500 hover:to-amber-600 hover:text-white hover:shadow-xl"
             >
               <ExternalLink className="h-4 w-4" />
-              {currentSlide.details_button_label || currentSlide.link_label || "More"}
+              {currentSlide.details_button_label || currentSlide.link_label || "Read More"}
             </a>
           )}
           {externalActionButtons.map((button) => (
