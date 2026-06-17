@@ -106,6 +106,13 @@ function isLegacyLandingHeroSlide(slide) {
     || (altText.includes('welcome') && altText.includes('goodwill'));
 }
 
+function normalizeMatchText(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
 function prepareSitePopupData(data) {
   const { id: _id, is_unsaved_fallback: _isUnsavedFallback, ...popupData } = data || {};
   return popupData;
@@ -1323,13 +1330,49 @@ export default function AdminPage() {
       const { id: _id, ...slideData } = slide;
       return HeroSlide.update(id, { ...slideData, is_active: isActive });
     }));
+    const selectedSlides = ids.map((id) => slidesById.get(String(id))).filter(Boolean);
+    const announcementIdsToHide = !isActive
+      ? Array.from(new Set(selectedSlides.map((slide) => {
+          if (slide.announcement_id) return String(slide.announcement_id);
+
+          const slideTitle = normalizeMatchText(slide.alt_text);
+          if (!slideTitle) return "";
+
+          const matchedAnnouncement = announcements.find((announcement) => {
+            const announcementTitle = normalizeMatchText(announcement.title);
+            return announcementTitle && (
+              announcementTitle === slideTitle
+              || announcementTitle.includes(slideTitle)
+              || slideTitle.includes(announcementTitle)
+            );
+          });
+          return matchedAnnouncement?.id ? String(matchedAnnouncement.id) : "";
+        }).filter(Boolean)))
+      : [];
+    const announcementResults = await Promise.allSettled(announcementIdsToHide.map((announcementId) => {
+      const announcement = announcements.find((item) => String(item.id) === String(announcementId));
+      if (!announcement) throw new Error(`Announcement ${announcementId} was not found.`);
+      const { id: _id, ...announcementData } = announcement;
+      return AnnouncementsEvents.update(announcementId, { ...announcementData, status: 'Hidden' });
+    }));
 
     await loadHeroSlides();
+    if (announcementIdsToHide.length > 0) {
+      await loadAnnouncements();
+    }
 
     const failedUpdates = results.filter((result) => result.status === 'rejected');
-    if (failedUpdates.length > 0) {
-      console.error(`Unable to ${actionLabel} some selected hero slides:`, failedUpdates);
-      window.alert(`${failedUpdates.length} selected ${failedUpdates.length === 1 ? 'hero slide was' : 'hero slides were'} not updated. Please try again.`);
+    const failedAnnouncementUpdates = announcementResults.filter((result) => result.status === 'rejected');
+    if (failedUpdates.length > 0 || failedAnnouncementUpdates.length > 0) {
+      console.error(`Unable to ${actionLabel} some selected hero slides or announcements:`, { failedUpdates, failedAnnouncementUpdates });
+      const messages = [];
+      if (failedUpdates.length > 0) {
+        messages.push(`${failedUpdates.length} selected ${failedUpdates.length === 1 ? 'hero slide was' : 'hero slides were'} not updated`);
+      }
+      if (failedAnnouncementUpdates.length > 0) {
+        messages.push(`${failedAnnouncementUpdates.length} linked ${failedAnnouncementUpdates.length === 1 ? 'announcement was' : 'announcements were'} not hidden`);
+      }
+      window.alert(`${messages.join(' and ')}. Please try again.`);
       return false;
     }
 
@@ -1339,7 +1382,7 @@ export default function AdminPage() {
       itemType: slideLabel,
       itemId: ids.join(', '),
       itemLabel: `${ids.length} selected ${slideLabel}`,
-      details: { is_active: isActive },
+      details: { is_active: isActive, hiddenAnnouncementIds: announcementIdsToHide },
     });
 
     return true;
