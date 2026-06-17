@@ -212,6 +212,15 @@ function getVirtualJoinLabel(platform) {
   return `Join ${cleanPlatform}`;
 }
 
+function warmHeroImage(url) {
+  if (!url || typeof window === "undefined") return;
+
+  const image = new Image();
+  image.decoding = "async";
+  image.src = url;
+  image.decode?.().catch(() => {});
+}
+
 // Get this Wednesday's (or next Wednesday's) Bible Study times
 function getNextBibleStudy(now) {
   const d = new Date(now);
@@ -551,10 +560,29 @@ export default function HeroSlideshow({ onReady }) {
   useEffect(() => {
     if (!nextImageUrl) return;
 
-    const image = new Image();
-    image.decoding = "async";
-    image.src = nextImageUrl;
+    warmHeroImage(nextImageUrl);
   }, [nextImageUrl]);
+
+  useEffect(() => {
+    if (!currentImageUrl) return undefined;
+
+    warmHeroImage(currentImageUrl);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        warmHeroImage(currentImageUrl);
+        if (nextImageUrl) warmHeroImage(nextImageUrl);
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("pageshow", handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("pageshow", handleVisibilityChange);
+    };
+  }, [currentImageUrl, nextImageUrl]);
 
   const handleNext = () => {
     setCurrent(prev => (prev + 1) % activeSlides.length);
@@ -739,7 +767,13 @@ export default function HeroSlideshow({ onReady }) {
       {currentSlide && (
         <div
           className={`relative w-full overflow-hidden bg-[#f7edcf] ${primarySlideUrl ? "cursor-pointer" : ""}`}
-          style={{ aspectRatio: showWelcomeHeroIntro ? "16 / 9" : currentImageAspectRatio }}
+          style={{
+            aspectRatio: showWelcomeHeroIntro ? "16 / 9" : currentImageAspectRatio,
+            backgroundImage: currentImageUrl ? `url("${currentImageUrl}")` : undefined,
+            backgroundPosition: "center",
+            backgroundRepeat: "no-repeat",
+            backgroundSize: showWelcomeHeroIntro ? "cover" : "contain",
+          }}
           onClick={handleSlideClick}
           onKeyDown={handleSlideKeyDown}
           role={primarySlideUrl ? "link" : undefined}
