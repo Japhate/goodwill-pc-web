@@ -351,27 +351,6 @@ export default function Updates() {
       : upcomingAndUndatedEvents.filter(item => (item.category || 'church_wide') === activeCategory);
   }, [upcomingAndUndatedEvents, activeCategory]);
 
-  const groupedEvents = React.useMemo(() => {
-    const getMonthSortValue = (monthGroup = "") => {
-      if (monthGroup === "Ongoing Events") return -1;
-      const parsedMonth = new Date(`${monthGroup} 1`);
-      return Number.isNaN(parsedMonth.getTime()) ? Number.MAX_SAFE_INTEGER : parsedMonth.getTime();
-    };
-
-    const sortedEvents = [...worshipEvents].sort((a, b) => {
-      const monthSort = getMonthSortValue(a.month_group) - getMonthSortValue(b.month_group);
-      if (monthSort !== 0) return monthSort;
-      const dateA = parseDateAsLocal(a.event_date);
-      const dateB = parseDateAsLocal(b.event_date);
-      if (dateA && dateB) return dateA.getTime() - dateB.getTime();
-      if (dateA) return -1;
-      if (dateB) return 1;
-      return 0;
-    });
-
-    return groupBy(sortedEvents, (event) => event.month_group || "Unscheduled");
-  }, [worshipEvents]);
-
   const categories = {
     church_wide: "Church-Wide",
     mens_ministry: "Men's Ministry",
@@ -379,6 +358,79 @@ export default function Updates() {
     youth_ministry: "Youth Ministry",
     session_leadership: "Session & Leadership",
   };
+
+  const calendarEvents = useMemo(() => {
+    const worshipCalendarItems = worshipEvents.map((event) => ({
+      id: `worship-${event.id}`,
+      source: "worship",
+      title: event.title,
+      date: event.event_date,
+      endDate: "",
+      time: event.event_time,
+      endTime: event.end_time,
+      monthGroup: event.month_group,
+      description: event.description || "",
+      location: "",
+      categoryLabel: "Worship",
+      isCompleted: event.is_completed || false,
+      announcementUrl: "",
+      calendarUrl: "",
+    }));
+
+    const announcementCalendarItems = upcomingAndUndatedEvents
+      .filter((item) => parseDateAsLocal(item.date))
+      .map((item) => ({
+        id: `announcement-${item.id}`,
+        source: "announcement",
+        title: item.title,
+        date: item.date,
+        endDate: item.end_date,
+        time: item.time,
+        endTime: item.end_time,
+        monthGroup: "",
+        description: stripMarkdown(item.content || "").replace(/\s+/g, " ").slice(0, 190),
+        location: hasPhysicalLocation(item) ? item.location || "" : "",
+        platform: hasVirtualLocation(item) ? item.virtual_platform || "Online" : "",
+        categoryLabel: categories[item.category] || "Church-Wide",
+        isCompleted: false,
+        announcementUrl: `#announcement-${item.id}`,
+        calendarUrl: getGoogleCalendarUrl(item),
+      }));
+
+    return [...worshipCalendarItems, ...announcementCalendarItems].sort((a, b) => {
+      const aDate = parseDateAsLocal(a.date);
+      const bDate = parseDateAsLocal(b.date);
+      if (aDate && bDate) return aDate.getTime() - bDate.getTime();
+      if (aDate) return -1;
+      if (bDate) return 1;
+      return String(a.monthGroup || "").localeCompare(String(b.monthGroup || ""));
+    });
+  }, [upcomingAndUndatedEvents, worshipEvents]);
+
+  const groupedEvents = React.useMemo(() => {
+    const getMonthSortValue = (monthGroup = "") => {
+      if (monthGroup === "Ongoing Events") return -1;
+      const parsedMonth = new Date(`${monthGroup} 1`);
+      return Number.isNaN(parsedMonth.getTime()) ? Number.MAX_SAFE_INTEGER : parsedMonth.getTime();
+    };
+
+    const sortedEvents = [...calendarEvents].sort((a, b) => {
+      const aMonthGroup = a.monthGroup || (parseDateAsLocal(a.date) ? format(parseDateAsLocal(a.date), "MMMM yyyy") : "Ongoing Events");
+      const bMonthGroup = b.monthGroup || (parseDateAsLocal(b.date) ? format(parseDateAsLocal(b.date), "MMMM yyyy") : "Ongoing Events");
+      const monthSort = getMonthSortValue(aMonthGroup) - getMonthSortValue(bMonthGroup);
+      if (monthSort !== 0) return monthSort;
+      const dateA = parseDateAsLocal(a.date);
+      const dateB = parseDateAsLocal(b.date);
+      if (dateA && dateB) return dateA.getTime() - dateB.getTime();
+      if (dateA) return -1;
+      if (dateB) return 1;
+      return 0;
+    });
+
+    return groupBy(sortedEvents, (event) => (
+      event.monthGroup || (parseDateAsLocal(event.date) ? format(parseDateAsLocal(event.date), "MMMM yyyy") : "Ongoing Events")
+    ));
+  }, [calendarEvents]);
 
   useEffect(() => {
     const handleHashNavigation = () => {
@@ -720,66 +772,124 @@ export default function Updates() {
                 <p className="text-lg text-gray-600">Spiritual Growth and Celebratory Events and Services</p>
               </div>
 
-              <div className="max-w-4xl mx-auto space-y-8">
-                {Object.entries(groupedEvents).map(([month, events]) => (
-                  <div key={month}>
-                    <h3 className="text-2xl font-semibold text-amber-700 mb-4 border-b-2 border-amber-200 pb-2">{month}</h3>
-                    <ul className="space-y-3">
-                      {events.map(event => {
-                        const eventDate = parseDateAsLocal(event.event_date);
-                        const isCompleted = event.is_completed || false;
-                        const eventTimeLabel = formatTimeRange(event.event_time, event.end_time);
-                        return (
-                        <li key={event.id} className={`bg-white p-4 rounded-lg shadow-sm flex items-start gap-4 transition-all duration-300 ${
-                          isCompleted
-                            ? 'border-l-4 border-green-500 bg-green-50/50'
-                            : 'border-l-4 border-amber-400 hover:shadow-md'
-                        }`}>
-                          <div className="text-center border-r pr-4">
-                            {month !== "Ongoing Events" && eventDate && (
-                              <>
-                                <div className="text-sm text-red-600 font-bold">{format(eventDate, 'MMM')}</div>
-                                <div className="text-2xl font-bold text-gray-800">{format(eventDate, 'dd')}</div>
-                              </>
-                            )}
-                            {month === "Ongoing Events" && (
-                              <div className="text-lg font-bold text-gray-800 flex items-center justify-center h-full w-full">
-                                <Clock className="w-6 h-6 text-gray-500" />
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex-1">
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="flex-1">
-                                <p className="font-semibold text-gray-900 mb-1">
-                                  {event.title}
-                                </p>
-                                {eventTimeLabel && (
-                                  <p className="mb-1 flex items-center gap-1.5 text-sm font-semibold text-amber-700">
-                                    <Clock className="h-4 w-4" />
-                                    {eventTimeLabel}
-                                  </p>
+              <div className="mx-auto max-w-5xl space-y-8">
+                {Object.entries(groupedEvents).length > 0 ? (
+                  Object.entries(groupedEvents).map(([month, events]) => (
+                    <div key={month} className="rounded-xl border border-amber-200 bg-white/75 p-4 shadow-sm md:p-5">
+                      <div className="mb-4 flex items-center justify-between gap-3 border-b border-amber-200 pb-3">
+                        <h3 className="text-2xl font-semibold text-amber-800">{month}</h3>
+                        <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">
+                          {events.length} {events.length === 1 ? "event" : "events"}
+                        </Badge>
+                      </div>
+                      <ul className="space-y-3">
+                        {events.map(event => {
+                          const eventDate = parseDateAsLocal(event.date);
+                          const eventEndDate = parseDateAsLocal(event.endDate);
+                          const isCompleted = event.isCompleted || false;
+                          const eventTimeLabel = formatTimeRange(event.time, event.endTime);
+                          const eventDateLabel = formatDateRange(eventDate, eventEndDate);
+                          return (
+                          <li key={event.id} className={`rounded-lg border bg-white p-4 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md ${
+                            isCompleted
+                              ? 'border-green-200'
+                              : 'border-amber-200'
+                          }`}>
+                            <div className="flex flex-col gap-4 md:flex-row md:items-start">
+                              <div className="flex w-full shrink-0 items-center gap-3 md:w-28 md:flex-col md:gap-1 md:border-r md:border-amber-100 md:pr-4 md:text-center">
+                                {eventDate ? (
+                                  <>
+                                    <div className="rounded-md bg-amber-700 px-2 py-1 text-xs font-bold uppercase tracking-wide text-white md:w-full">
+                                      {format(eventDate, 'MMM')}
+                                    </div>
+                                    <div className="font-serif text-3xl font-bold leading-none text-gray-900 md:text-4xl">{format(eventDate, 'dd')}</div>
+                                    <div className="text-xs font-semibold text-gray-500">{format(eventDate, 'EEE')}</div>
+                                  </>
+                                ) : (
+                                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 md:h-20 md:w-20">
+                                    <Clock className="h-7 w-7 text-amber-700" />
+                                  </div>
                                 )}
-                                {event.description && <p className="text-sm text-gray-600">{event.description}</p>}
                               </div>
-                              {isCompleted ? (
-                                <div className="flex items-center gap-1.5 bg-green-100 px-3 py-1 rounded-full flex-shrink-0">
-                                  <CheckCircle className="w-4 h-4 text-green-600" />
-                                  <span className="text-xs font-medium text-green-700">Completed</span>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                  <div className="min-w-0">
+                                    <div className="mb-2 flex flex-wrap items-center gap-2">
+                                      <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-800">
+                                        {event.categoryLabel}
+                                      </Badge>
+                                      {isCompleted ? (
+                                        <span className="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-2.5 py-1 text-xs font-semibold text-green-700">
+                                          <CheckCircle className="h-3.5 w-3.5" />
+                                          Completed
+                                        </span>
+                                      ) : (
+                                        <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800">
+                                          <Clock className="h-3.5 w-3.5" />
+                                          Upcoming
+                                        </span>
+                                      )}
+                                    </div>
+                                    <p className="text-lg font-bold leading-snug text-gray-950">{event.title}</p>
+                                  </div>
+                                  <div className="flex shrink-0 flex-wrap gap-2">
+                                    {event.calendarUrl && (
+                                      <a href={event.calendarUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 rounded-md border border-amber-200 px-2.5 py-1 text-xs font-semibold text-amber-800 transition hover:bg-amber-50">
+                                        <Calendar className="h-3.5 w-3.5" />
+                                        Add
+                                      </a>
+                                    )}
+                                    {event.announcementUrl && (
+                                      <a href={event.announcementUrl} className="inline-flex items-center gap-1 rounded-md bg-amber-700 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-amber-800">
+                                        <ExternalLink className="h-3.5 w-3.5" />
+                                        Details
+                                      </a>
+                                    )}
+                                  </div>
                                 </div>
-                              ) : (
-                                <div className="flex items-center gap-1.5 bg-amber-100 px-3 py-1 rounded-full flex-shrink-0">
-                                  <Clock className="w-4 h-4 text-amber-600" />
-                                  <span className="text-xs font-medium text-amber-700">Upcoming</span>
+                                <div className="mt-3 grid gap-2 text-sm text-gray-700 sm:grid-cols-2">
+                                  {eventDateLabel && (
+                                    <p className="flex items-center gap-2">
+                                      <Calendar className="h-4 w-4 shrink-0 text-amber-700" />
+                                      <span>{eventDateLabel}</span>
+                                    </p>
+                                  )}
+                                  {eventTimeLabel && (
+                                    <p className="flex items-center gap-2">
+                                      <Clock className="h-4 w-4 shrink-0 text-amber-700" />
+                                      <span>{eventTimeLabel}</span>
+                                    </p>
+                                  )}
+                                  {event.location && (
+                                    <p className="flex items-start gap-2">
+                                      <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
+                                      <span>{event.location}</span>
+                                    </p>
+                                  )}
+                                  {event.platform && (
+                                    <p className="flex items-start gap-2">
+                                      <ExternalLink className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
+                                      <span>{event.platform}</span>
+                                    </p>
+                                  )}
                                 </div>
-                              )}
+                                {event.description && (
+                                  <p className="mt-3 text-sm leading-relaxed text-gray-600">{event.description}{event.description.length >= 190 ? "..." : ""}</p>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        </li>
-                      )})}
-                    </ul>
+                          </li>
+                        )})}
+                      </ul>
+                    </div>
+                  ))
+                ) : (
+                  <div className="rounded-xl border border-dashed border-amber-300 bg-white/80 px-6 py-12 text-center shadow-sm">
+                    <Calendar className="mx-auto mb-3 h-12 w-12 text-amber-600" />
+                    <h3 className="text-xl font-semibold text-gray-900">No worship calendar events yet</h3>
+                    <p className="mt-2 text-gray-600">Dated announcements will appear here automatically.</p>
                   </div>
-                ))}
+                )}
               </div>
             </div>
           </section>
