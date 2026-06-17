@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import { AnnouncementsEvents } from "@/entities/AnnouncementsEvents";
+import { HeroSlide } from "@/entities/HeroSlide";
 import { WorshipEvent } from "@/entities/WorshipEvent";
 import { Calendar, Check, Clock, Copy, Mail, MapPin, Image, CheckCircle, ExternalLink, FileText, Phone } from "lucide-react";
 import { format, isBefore, startOfDay, parseISO, isValid } from "date-fns";
@@ -62,6 +63,13 @@ const getLocationType = (item) => {
 
 const hasPhysicalLocation = (item) => ["physical", "both"].includes(getLocationType(item));
 const hasVirtualLocation = (item) => ["virtual", "both"].includes(getLocationType(item));
+
+const isHiddenStatus = (status) => String(status || "").trim().toLowerCase() === "hidden";
+
+const normalizeMatchText = (value) => String(value || "")
+  .toLowerCase()
+  .replace(/[^a-z0-9]+/g, " ")
+  .trim();
 
 const getVirtualActionLabel = (platform, url = "") => {
   const cleanPlatform = String(platform || "").trim();
@@ -215,12 +223,48 @@ export default function Updates() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [announcementRes, worshipEventsRes] = await Promise.all([
+      const [announcementRes, worshipEventsRes, heroSlideRes] = await Promise.all([
         AnnouncementsEvents.list('-created_date', 200),
-        WorshipEvent.list('event_date', 100)
+        WorshipEvent.list('event_date', 100),
+        HeroSlide.list('order', 200).catch(() => [])
       ]);
-      // Filter out Hidden announcements
-      const visibleAnnouncements = announcementRes.filter(a => a.status !== 'Hidden');
+      const activeLinkedAnnouncementIds = new Set(
+        heroSlideRes
+          .filter((slide) => slide.is_active !== false && slide.announcement_id)
+          .map((slide) => String(slide.announcement_id))
+      );
+      const hiddenLinkedAnnouncementIds = new Set(
+        heroSlideRes
+          .filter((slide) => slide.is_active === false && slide.announcement_id)
+          .map((slide) => String(slide.announcement_id))
+      );
+      const activeSlideTitles = new Set(
+        heroSlideRes
+          .filter((slide) => slide.is_active !== false && !slide.announcement_id)
+          .map((slide) => normalizeMatchText(slide.alt_text))
+          .filter(Boolean)
+      );
+      const hiddenSlideTitles = new Set(
+        heroSlideRes
+          .filter((slide) => slide.is_active === false && !slide.announcement_id)
+          .map((slide) => normalizeMatchText(slide.alt_text))
+          .filter(Boolean)
+      );
+      const visibleAnnouncements = announcementRes.filter((announcement) => {
+        if (isHiddenStatus(announcement.status)) return false;
+
+        const announcementId = String(announcement.id || "");
+        if (hiddenLinkedAnnouncementIds.has(announcementId) && !activeLinkedAnnouncementIds.has(announcementId)) {
+          return false;
+        }
+
+        const announcementTitle = normalizeMatchText(announcement.title);
+        if (announcementTitle && hiddenSlideTitles.has(announcementTitle) && !activeSlideTitles.has(announcementTitle)) {
+          return false;
+        }
+
+        return true;
+      });
       setFeedItems(visibleAnnouncements);
       setWorshipEvents(worshipEventsRes);
     } catch (error) {
@@ -236,13 +280,14 @@ export default function Updates() {
 
   const upcomingAndUndatedEvents = useMemo(() => {
     // Filter for Active and Timeless status only
-    const currentEvents = feedItems.filter(item => 
-      item.status === 'Active' || item.status === 'Timeless' || !item.status
-    );
+    const currentEvents = feedItems.filter((item) => {
+      const status = String(item.status || "").trim().toLowerCase();
+      return status === "active" || status === "timeless" || !status;
+    });
     
     return currentEvents.filter(item => {
       // Timeless items always show regardless of date
-      if (item.status === 'Timeless') return true;
+      if (String(item.status || "").trim().toLowerCase() === 'timeless') return true;
       const itemStartDate = parseDateAsLocal(item.date);
       const itemEndDate = parseDateAsLocal(item.end_date);
       const relevantDate = itemEndDate || itemStartDate;
