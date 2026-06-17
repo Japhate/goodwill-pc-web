@@ -394,8 +394,6 @@ export default function Updates() {
             if (id.startsWith('announcement-')) {
               if (upcomingAndUndatedEvents.some(item => `announcement-${item.id}` === id)) {
                 activeIdToSet = 'announcements-events';
-              } else if (sortedPastEvents.some(item => `announcement-${item.id}` === id)) {
-                activeIdToSet = 'past-events';
               }
             }
             setActiveSection(activeIdToSet);
@@ -415,7 +413,7 @@ export default function Updates() {
     return () => {
       window.removeEventListener('hashchange', handleHashNavigation);
     };
-  }, [location.pathname, loading, subNavLinks, upcomingAndUndatedEvents, sortedPastEvents]);
+  }, [location.pathname, loading, subNavLinks, upcomingAndUndatedEvents]);
 
   useEffect(() => {
     if (loading) return;

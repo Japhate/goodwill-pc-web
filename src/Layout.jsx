@@ -4,7 +4,7 @@ import { createPageUrl } from "@/utils";
 import {
     Home, Users, BookOpen, Facebook, Youtube, HandHeart,
     Video, Menu, X, Mail, Phone, ArrowUp, BookText,
-    Users2, HelpCircle, Megaphone, CalendarDays, Images, Youtube as YoutubeIcon, PlaySquare,
+    Users2, HelpCircle, Megaphone, CalendarDays, Youtube as YoutubeIcon, PlaySquare,
     FileText, Send, Sparkles, BookHeart, Map, MailQuestion, Handshake, Search, Settings
 } from "lucide-react";
 import SearchModal from "@/components/search/SearchModal";
@@ -89,9 +89,8 @@ export default function Layout({ children, currentPageName }) {
       href: createPageUrl('Updates'), 
       icon: Megaphone, 
       dropdown: [
-          { name: 'Announcements', href: createPageUrl('Updates') + '#announcements-events', icon: Megaphone },
-          { name: 'Calendar', href: createPageUrl('Updates') + '#calendar', icon: CalendarDays },
-          { name: 'Past Events', href: createPageUrl('Updates') + '#past-events', icon: Images },
+          { name: 'Announcements & Events', href: createPageUrl('Updates') + '#announcements-events', icon: Megaphone },
+          { name: 'Calendar of Worship', href: createPageUrl('Updates') + '#calendar', icon: CalendarDays },
       ] 
     },
     { 
