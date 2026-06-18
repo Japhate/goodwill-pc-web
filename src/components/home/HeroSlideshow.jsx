@@ -134,7 +134,6 @@ const FALLBACK_SLIDES = [
 
 const SLIDE_INTERVAL = 10000;
 
-const LIVE_SERVICE_BANNER_MESSAGE = "\u{1F534} Our Live service is happening now, click the Live button to join.";
 // Bible Study: pin the Zoom slide every Wednesday from 6:00 PM to 7:00 PM.
 const BIBLE_STUDY_ZOOM = "https://us06web.zoom.us/j/82013337566?pwd=mULnQC1Zjg5GWkoTTKGvx3PyAFaCeZ.1";
 const BIBLE_STUDY_START_HOUR = 18; // 6:00 PM
@@ -201,6 +200,27 @@ function normalizeMatchText(value) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
+}
+
+function getLinkedAnnouncementForSlide(slide, announcements = []) {
+  if (!slide) return null;
+
+  if (slide.announcement_id) {
+    const linked = announcements.find((item) => String(item.id) === String(slide.announcement_id));
+    if (linked) return linked;
+  }
+
+  const slideTitle = normalizeMatchText(slide.alt_text);
+  if (!slideTitle) return null;
+
+  return announcements.find((item) => {
+    const announcementTitle = normalizeMatchText(item?.title);
+    return announcementTitle && (
+      announcementTitle === slideTitle
+      || announcementTitle.includes(slideTitle)
+      || slideTitle.includes(announcementTitle)
+    );
+  }) || null;
 }
 
 function getVirtualJoinLabel(platform) {
@@ -333,29 +353,6 @@ function warmHeroImage(url) {
   image.decode?.().catch(() => {});
 }
 
-// Get this Wednesday's (or next Wednesday's) Bible Study times
-function getNextBibleStudy(now) {
-  const d = new Date(now);
-  // Day of week: 0=Sun, 3=Wed
-  const day = d.getDay();
-  const daysUntilWed = (3 - day + 7) % 7;
-  
-  const wed = new Date(d);
-  wed.setDate(d.getDate() + daysUntilWed);
-  wed.setHours(BIBLE_STUDY_START_HOUR, BIBLE_STUDY_START_MIN, 0, 0);
-
-  const wedEnd = new Date(wed);
-  wedEnd.setHours(BIBLE_STUDY_END_HOUR, BIBLE_STUDY_END_MIN, 0, 0);
-
-  // If today is Wednesday but we're already past 7:00 PM, get NEXT Wednesday
-  if (daysUntilWed === 0 && now >= wedEnd) {
-    wed.setDate(wed.getDate() + 7);
-    wedEnd.setDate(wedEnd.getDate() + 7);
-  }
-
-  return { start: wed, end: wedEnd };
-}
-
 function ZoomCountdownOverlay({ event, fallbackSchedule = null }) {
   const [now, setNow] = useState(new Date());
 
@@ -439,28 +436,43 @@ export default function HeroSlideshow({ onReady }) {
   const hasReportedReadyRef = useRef(false);
 
   const currentMinutes = now.getHours() * 60 + now.getMinutes();
-  const isLiveServiceBannerTime = now.getDay() === 0 && currentMinutes >= 10 * 60 + 30 && currentMinutes < 12 * 60;
   const isBibleStudyPinnedTime = now.getDay() === 3
     && currentMinutes >= BIBLE_STUDY_START_HOUR * 60 + BIBLE_STUDY_START_MIN
     && currentMinutes < BIBLE_STUDY_END_HOUR * 60 + BIBLE_STUDY_END_MIN;
-  const isLiveBibleStudyTime = isBibleStudyPinnedTime;
-  const isLiveBanner = isLiveServiceBannerTime || isLiveBibleStudyTime;
   const activeSpecialServiceNotice = useMemo(() => getActiveSpecialServiceNotice(now), [now]);
   const specialServiceSlide = useMemo(() => {
     if (!activeSpecialServiceNotice) return null;
 
     return createSpecialServiceHeroSlide(activeSpecialServiceNotice);
   }, [activeSpecialServiceNotice]);
+  const liveScheduledSlides = useMemo(() => {
+    return slides
+      .filter((slide) => slide?.is_active !== false)
+      .map((slide) => {
+        const event = getLinkedAnnouncementForSlide(slide, announcements) || slide;
+        return {
+          slide,
+          event,
+          timing: getVirtualEventTiming(event, now),
+        };
+      })
+      .filter(({ timing }) => timing.isLive);
+  }, [announcements, now, slides]);
+  const isLiveBanner = liveScheduledSlides.length > 0;
 
   const bannerMessages = useMemo(() => {
     if (activeSpecialServiceNotice) return [activeSpecialServiceNotice.message];
-    if (isLiveBibleStudyTime) {
-      const liveBibleStudyBanner = managedBanners?.find(isTimedBibleStudyBanner);
-      if (!liveBibleStudyBanner || liveBibleStudyBanner.status === "active" || liveBibleStudyBanner.status === "live") {
-        return [liveBibleStudyBanner?.message || LIVE_BIBLE_STUDY_BANNER_MESSAGE].filter(Boolean);
-      }
+    if (liveScheduledSlides.length > 0) {
+      return liveScheduledSlides
+        .map(({ slide, event }) => {
+          if (isZoomBibleStudySlide(slide) || isTimedBibleStudyBanner(event)) {
+            return LIVE_BIBLE_STUDY_BANNER_MESSAGE;
+          }
+          const title = String(event?.title || slide?.alt_text || "").trim();
+          return title ? `\u{1F534} ${title} is happening now.` : "";
+        })
+        .filter(Boolean);
     }
-    if (isLiveServiceBannerTime) return [LIVE_SERVICE_BANNER_MESSAGE];
 
     if (Array.isArray(managedBanners)) {
       const messages = managedBanners
@@ -472,12 +484,9 @@ export default function HeroSlideshow({ onReady }) {
     }
 
     return DEFAULT_HOMEPAGE_BANNER_MESSAGES;
-  }, [activeSpecialServiceNotice, isLiveBibleStudyTime, isLiveServiceBannerTime, managedBanners]);
+  }, [activeSpecialServiceNotice, liveScheduledSlides, managedBanners]);
 
-  const hasLiveManagedBanner = managedBanners?.some((banner) => (
-    banner.status === "live" && !isTimedBibleStudyBanner(banner)
-  )) || false;
-  const isLiveTicker = Boolean(activeSpecialServiceNotice) || isLiveBanner || hasLiveManagedBanner;
+  const isLiveTicker = Boolean(activeSpecialServiceNotice) || isLiveBanner;
   const currentBannerMessage = bannerMessages[currentBannerIndex] || bannerMessages[0];
 
   useEffect(() => {
@@ -610,15 +619,13 @@ export default function HeroSlideshow({ onReady }) {
     : "";
   const linkedVirtualEvent = linkedAnnouncement || currentSlide;
   const linkedVirtualTiming = getVirtualEventTiming(linkedVirtualEvent, now);
-  const bibleStudySchedule = getNextBibleStudy(now);
-  const isBibleStudyLive = isZoomBibleStudySlide(currentSlide) && now >= bibleStudySchedule.start && now < bibleStudySchedule.end;
-  const virtualEventIsLive = linkedVirtualTiming.isLive || isBibleStudyLive;
+  const virtualEventIsLive = linkedVirtualTiming.isLive;
   const virtualCountdownEvent = linkedVirtualEvent?.date ? linkedVirtualEvent : currentSlide;
   const showVirtualCountdownOverlay = SHOW_BIBLE_STUDY_COUNTDOWN_OVERLAY
     && !showWelcomeHeroIntro
     && !virtualEventIsLive
     && (virtualSlideUrl || isZoomBibleStudySlide(currentSlide) || linkedVirtualUrl)
-    && (virtualCountdownEvent?.date || isZoomBibleStudySlide(currentSlide));
+    && virtualCountdownEvent?.date;
   const explicitSlideUrl = currentSlide?.link_url || "";
   const isExplicitExternalUrl = /^https?:\/\//i.test(explicitSlideUrl);
   const internalSlideUrl = !welcomeHeroUrl && explicitSlideUrl.startsWith("/") ? explicitSlideUrl : "";
@@ -1063,7 +1070,7 @@ export default function HeroSlideshow({ onReady }) {
           {showVirtualCountdownOverlay && (
             <ZoomCountdownOverlay
               event={virtualCountdownEvent}
-              fallbackSchedule={isZoomBibleStudySlide(currentSlide) && !virtualCountdownEvent?.date ? bibleStudySchedule : null}
+              fallbackSchedule={null}
             />
           )}
         </div>
