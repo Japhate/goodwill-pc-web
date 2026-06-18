@@ -21,6 +21,8 @@ export default function AnnouncementForm({ announcement, onSubmit, onCancel }) {
     virtual_platform: '',
     zoom_link: '',
     chat_link: '',
+    one_tap_mobile: '',
+    call_in_numbers: '',
     meeting_id: '',
     meeting_passcode: '',
     contact_email: '',
@@ -208,6 +210,20 @@ export default function AnnouncementForm({ announcement, onSubmit, onCancel }) {
             <div>
               <label htmlFor="chat_link" className="block text-sm font-medium text-gray-700 mb-1">Chat Link</label>
               <Input id="chat_link" type="url" placeholder="https://..." value={formData.chat_link || ''} onChange={e => handleChange('chat_link', e.target.value)} />
+            </div>
+            <div>
+              <label htmlFor="one_tap_mobile" className="block text-sm font-medium text-gray-700 mb-1">One-Tap Mobile</label>
+              <Input id="one_tap_mobile" placeholder="+1-507-473-4847" value={formData.one_tap_mobile || ''} onChange={e => handleChange('one_tap_mobile', e.target.value)} />
+            </div>
+            <div>
+              <label htmlFor="call_in_numbers" className="block text-sm font-medium text-gray-700 mb-1">Call-in Numbers</label>
+              <Textarea
+                id="call_in_numbers"
+                placeholder={"+1-507-473-4847\n+1-564-217-2000"}
+                value={formData.call_in_numbers || ''}
+                onChange={e => handleChange('call_in_numbers', e.target.value)}
+                rows={3}
+              />
             </div>
             <div>
               <label htmlFor="meeting_id" className="block text-sm font-medium text-gray-700 mb-1">Meeting ID</label>

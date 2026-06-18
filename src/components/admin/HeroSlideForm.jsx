@@ -23,6 +23,8 @@ const DEFAULT_RELATED_ANNOUNCEMENT = {
   virtual_platform: "",
   zoom_link: "",
   chat_link: "",
+  one_tap_mobile: "",
+  call_in_numbers: "",
   meeting_id: "",
   meeting_passcode: "",
   contact_email: "",
@@ -492,6 +494,20 @@ export default function HeroSlideForm({ slide, announcement, announcementMode = 
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">Chat Link</label>
                   <Input type="url" placeholder="https://..." value={relatedAnnouncementDraft.chat_link || ""} onChange={(e) => handleRelatedAnnouncementChange("chat_link", e.target.value)} />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">One-Tap Mobile</label>
+                  <Input placeholder="+1-507-473-4847" value={relatedAnnouncementDraft.one_tap_mobile || ""} onChange={(e) => handleRelatedAnnouncementChange("one_tap_mobile", e.target.value)} />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Call-in Numbers</label>
+                  <textarea
+                    placeholder={"+1-507-473-4847\n+1-564-217-2000"}
+                    value={relatedAnnouncementDraft.call_in_numbers || ""}
+                    onChange={(e) => handleRelatedAnnouncementChange("call_in_numbers", e.target.value)}
+                    rows={3}
+                    className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">Meeting ID</label>

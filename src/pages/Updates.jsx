@@ -56,7 +56,7 @@ const formatTimeRange = (startTime, endTime) => {
 
 const getLocationType = (item) => {
   if (item.location_type) return item.location_type;
-  const hasVirtualDetails = item.virtual_platform || item.zoom_link || item.meeting_id || item.meeting_passcode;
+  const hasVirtualDetails = item.virtual_platform || item.zoom_link || item.chat_link || item.one_tap_mobile || item.call_in_numbers || item.meeting_id || item.meeting_passcode;
   if ((item.location || item.directions_url) && hasVirtualDetails) return "both";
   return hasVirtualDetails ? "virtual" : "physical";
 };
@@ -145,6 +145,8 @@ const getGoogleCalendarUrl = (item) => {
     item.zoom_link ? `Link: ${item.zoom_link}` : "",
     item.meeting_id ? `Meeting ID: ${item.meeting_id}` : "",
     item.chat_link ? `Chat: ${item.chat_link}` : "",
+    item.one_tap_mobile ? `One-Tap Mobile: ${item.one_tap_mobile}` : "",
+    item.call_in_numbers ? `Call-in Numbers: ${item.call_in_numbers}` : "",
     item.meeting_passcode ? `Passcode: ${item.meeting_passcode}` : "",
     item.contact_email ? `Contact email: ${item.contact_email}` : "",
     item.contact_phone ? `Contact phone: ${item.contact_phone}` : "",
@@ -705,6 +707,16 @@ export default function Updates() {
                         {hasVirtualLocation(item) && item.virtual_platform && <div className="flex items-start gap-2"><ExternalLink className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Platform:</strong> {item.virtual_platform}</span></div>}
                         {hasVirtualLocation(item) && item.meeting_id && <div className="flex items-start gap-2"><ExternalLink className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Meeting ID:</strong> {item.meeting_id}</span></div>}
                         {hasVirtualLocation(item) && item.meeting_passcode && <div className="flex items-start gap-2"><ExternalLink className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Passcode:</strong> {item.meeting_passcode}</span></div>}
+                        {hasVirtualLocation(item) && item.one_tap_mobile && <div className="flex items-start gap-2"><Phone className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">One-Tap Mobile:</strong> {item.one_tap_mobile}</span></div>}
+                        {hasVirtualLocation(item) && item.call_in_numbers && (
+                          <div className="flex items-start gap-2">
+                            <Phone className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                            <span>
+                              <strong className="font-semibold">Call-in Numbers:</strong>
+                              <span className="mt-0.5 block whitespace-pre-line">{item.call_in_numbers}</span>
+                            </span>
+                          </div>
+                        )}
                         {item.contact_email && (
                           <div className="flex items-start gap-2">
                             <Mail className="mt-0.5 h-4 w-4 flex-shrink-0" />
@@ -969,6 +981,16 @@ export default function Updates() {
                           {hasVirtualLocation(item) && item.virtual_platform && <div className="flex items-start gap-2"><ExternalLink className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Platform:</strong> {item.virtual_platform}</span></div>}
                           {hasVirtualLocation(item) && item.meeting_id && <div className="flex items-start gap-2"><ExternalLink className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Meeting ID:</strong> {item.meeting_id}</span></div>}
                           {hasVirtualLocation(item) && item.meeting_passcode && <div className="flex items-start gap-2"><ExternalLink className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">Passcode:</strong> {item.meeting_passcode}</span></div>}
+                          {hasVirtualLocation(item) && item.one_tap_mobile && <div className="flex items-start gap-2"><Phone className="mt-0.5 h-4 w-4 flex-shrink-0" /><span><strong className="font-semibold">One-Tap Mobile:</strong> {item.one_tap_mobile}</span></div>}
+                          {hasVirtualLocation(item) && item.call_in_numbers && (
+                            <div className="flex items-start gap-2">
+                              <Phone className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                              <span>
+                                <strong className="font-semibold">Call-in Numbers:</strong>
+                                <span className="mt-0.5 block whitespace-pre-line">{item.call_in_numbers}</span>
+                              </span>
+                            </div>
+                          )}
                           {item.contact_email && (
                             <div className="flex items-start gap-2">
                               <Mail className="mt-0.5 h-4 w-4 flex-shrink-0" />
