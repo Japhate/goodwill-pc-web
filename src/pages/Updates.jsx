@@ -725,7 +725,7 @@ export default function Updates() {
                         {(item.zoom_link || item.directions_url || item.file_upload) && (
                           <div className="flex flex-wrap gap-2 pt-2 sm:col-span-2">
                             {hasVirtualLocation(item) && item.zoom_link && (
-                              <a href={item.zoom_link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">
+                              <a href={item.zoom_link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-1.5 rounded-md bg-blue-600 px-2.5 py-1 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700">
                                 <ExternalLink className="h-3.5 w-3.5" />
                                 {getVirtualActionLabel(item.virtual_platform, item.zoom_link)}
                               </a>
@@ -984,7 +984,7 @@ export default function Updates() {
                         {(item.zoom_link || item.directions_url || item.file_upload) && (
                           <div className="mt-4 flex flex-wrap gap-2">
                             {hasVirtualLocation(item) && item.zoom_link && (
-                              <a href={item.zoom_link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-md bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700">
+                              <a href={item.zoom_link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-1.5 rounded-md bg-blue-600 px-2.5 py-1 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700">
                                 <ExternalLink className="h-3.5 w-3.5" />
                                 Open Link
                               </a>

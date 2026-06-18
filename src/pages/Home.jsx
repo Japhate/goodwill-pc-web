@@ -632,7 +632,7 @@ export default function Home() {
                         href={event.zoom_link}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="bg-white text-red-600 hover:bg-red-50 px-3 py-1 rounded-md font-semibold transition-colors flex items-center gap-1.5 shadow-md text-xs"
+                        className="inline-flex items-center justify-center gap-1.5 rounded-md bg-white px-2.5 py-1 text-xs font-semibold text-red-600 shadow-sm transition-colors hover:bg-red-50"
                       >
                         <Video className="w-3 h-3" />
                         Join Zoom

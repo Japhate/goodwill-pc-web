@@ -482,7 +482,7 @@ export default function Connect() {
                               </Button>
                             )}
                             {service.zoomLink && (
-                              <Button asChild size="sm" className="bg-blue-600 hover:bg-blue-700 text-white">
+                              <Button asChild size="sm" className="h-auto rounded-md bg-blue-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-blue-700">
                                 <a href={service.zoomLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1">
                                   <Video className="w-4 h-4" />
                                   <span>Join Zoom</span>
