@@ -266,6 +266,7 @@ function getRecurringStep(frequency = "") {
   const normalized = String(frequency).toLowerCase();
   if (!normalized) return null;
   if (normalized.includes("daily") || normalized.includes("every day") || normalized.includes("evening")) return "daily";
+  if (normalized.includes("weekday")) return "weekday";
   if (normalized.includes("weekly") || normalized.includes("every week")) return "weekly";
   if (normalized.includes("monthly") || normalized.includes("every month")) return "monthly";
   if (normalized.includes("yearly") || normalized.includes("annually") || normalized.includes("annual")) return "yearly";
@@ -274,7 +275,15 @@ function getRecurringStep(frequency = "") {
 
 function advanceRecurringDate(date, step) {
   const next = new Date(date);
-  if (step === "daily") next.setDate(next.getDate() + 1);
+  if (step === "daily") {
+    next.setDate(next.getDate() + 1);
+  }
+  if (step === "weekday") {
+    next.setDate(next.getDate() + 1);
+    while (next.getDay() === 0 || next.getDay() === 6) {
+      next.setDate(next.getDate() + 1);
+    }
+  }
   if (step === "weekly") next.setDate(next.getDate() + 7);
   if (step === "monthly") next.setMonth(next.getMonth() + 1);
   if (step === "yearly") next.setFullYear(next.getFullYear() + 1);
