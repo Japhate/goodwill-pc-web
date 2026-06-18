@@ -223,6 +223,24 @@ function getLinkedAnnouncementForSlide(slide, announcements = []) {
   }) || null;
 }
 
+function getExplicitScheduledEventForSlide(slide, announcements = []) {
+  if (!slide) return null;
+
+  if (slide.announcement_id) {
+    const linked = announcements.find((item) => String(item.id) === String(slide.announcement_id));
+    if (linked) return linked;
+  }
+
+  return slide.date || slide.time || slide.end_time || slide.frequency ? slide : null;
+}
+
+function hasCompleteLiveSchedule(event) {
+  if (!event?.date || !event?.time || !event?.end_time) return false;
+
+  const normalizedStatus = String(event.status || event.slide_status || "").toLowerCase();
+  return !["hidden", "inactive", "draft"].includes(normalizedStatus);
+}
+
 function getVirtualJoinLabel(platform) {
   const cleanPlatform = String(platform || "").trim();
   if (!cleanPlatform) return "Join Online";
@@ -449,11 +467,13 @@ export default function HeroSlideshow({ onReady }) {
     return slides
       .filter((slide) => slide?.is_active !== false)
       .map((slide) => {
-        const event = getLinkedAnnouncementForSlide(slide, announcements) || slide;
+        const event = getExplicitScheduledEventForSlide(slide, announcements);
         return {
           slide,
           event,
-          timing: getVirtualEventTiming(event, now),
+          timing: hasCompleteLiveSchedule(event)
+            ? getVirtualEventTiming(event, now)
+            : { countdown: "", isLive: false, start: null, end: null },
         };
       })
       .filter(({ timing }) => timing.isLive);
@@ -618,7 +638,9 @@ export default function HeroSlideshow({ onReady }) {
     ? linkedVirtualUrl
     : "";
   const linkedVirtualEvent = linkedAnnouncement || currentSlide;
-  const linkedVirtualTiming = getVirtualEventTiming(linkedVirtualEvent, now);
+  const linkedVirtualTiming = hasCompleteLiveSchedule(linkedVirtualEvent)
+    ? getVirtualEventTiming(linkedVirtualEvent, now)
+    : { countdown: "", isLive: false, start: null, end: null };
   const virtualEventIsLive = linkedVirtualTiming.isLive;
   const virtualCountdownEvent = linkedVirtualEvent?.date ? linkedVirtualEvent : currentSlide;
   const showVirtualCountdownOverlay = SHOW_BIBLE_STUDY_COUNTDOWN_OVERLAY
