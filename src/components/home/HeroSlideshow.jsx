@@ -142,7 +142,7 @@ const BIBLE_STUDY_START_MIN = 0;
 const BIBLE_STUDY_END_HOUR = 19;   // 7:00 PM
 const BIBLE_STUDY_END_MIN = 0;
 const SHOW_HERO_EXTERNAL_ACTION_BUTTON = true;
-const SHOW_BIBLE_STUDY_COUNTDOWN_OVERLAY = false;
+const SHOW_BIBLE_STUDY_COUNTDOWN_OVERLAY = true;
 const PERMANENT_WELCOME_HERO_ID = "hero-1";
 const PERMANENT_WELCOME_HERO_IMAGE = "/images/hero/goodwill-presbyterian-church-hero.png";
 const ABOUT_PAGE_URL = "/About";
@@ -594,12 +594,6 @@ export default function HeroSlideshow({ onReady }) {
   const linkedVirtualTiming = getVirtualEventTiming(linkedVirtualEvent, now);
   const bibleStudySchedule = getNextBibleStudy(now);
   const isBibleStudyLive = isZoomBibleStudySlide(currentSlide) && now >= bibleStudySchedule.start && now < bibleStudySchedule.end;
-  const bibleStudyCountdownLabel = isBibleStudyLive ? "" : getCountdownLabel(
-    isZoomBibleStudySlide(currentSlide) ? bibleStudySchedule.start : null,
-    now,
-    isZoomBibleStudySlide(currentSlide) ? bibleStudySchedule.end : null
-  );
-  const virtualCountdownLabel = linkedVirtualTiming.countdown || bibleStudyCountdownLabel;
   const virtualEventIsLive = linkedVirtualTiming.isLive || isBibleStudyLive;
   const explicitSlideUrl = currentSlide?.link_url || "";
   const isExplicitExternalUrl = /^https?:\/\//i.test(explicitSlideUrl);
@@ -615,21 +609,21 @@ export default function HeroSlideshow({ onReady }) {
           url: virtualSlideUrl,
           label: getVirtualJoinLabel(linkedVirtualPlatform),
           type: "virtual",
-          countdown: virtualCountdownLabel,
+          countdown: "",
           isLive: virtualEventIsLive,
         },
         isExplicitExternalUrl && {
           url: explicitSlideUrl,
           label: currentSlide.link_label || (isZoomBibleStudySlide(currentSlide) ? "Join Zoom" : "More"),
           type: isZoomBibleStudySlide(currentSlide) ? "virtual" : "external",
-          countdown: isZoomBibleStudySlide(currentSlide) ? virtualCountdownLabel : "",
+          countdown: "",
           isLive: isZoomBibleStudySlide(currentSlide) ? virtualEventIsLive : false,
         },
         !isExplicitExternalUrl && !directionsSlideUrl && !virtualSlideUrl && isZoomBibleStudySlide(currentSlide) && {
           url: BIBLE_STUDY_ZOOM,
           label: "Join Zoom",
           type: "virtual",
-          countdown: virtualCountdownLabel,
+          countdown: "",
           isLive: virtualEventIsLive,
         },
       ].filter(Boolean)
