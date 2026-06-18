@@ -467,6 +467,18 @@ export default function HeroSlideForm({ slide, announcement, announcementMode = 
             />
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1">Frequency</label>
+              <div className="mb-2 flex flex-wrap items-center gap-2">
+                {['Daily', 'Weekly', 'Monthly', 'Every weekday', 'Every evening'].map((frequencyOption) => (
+                  <button
+                    key={frequencyOption}
+                    type="button"
+                    onClick={() => handleRelatedAnnouncementChange('frequency', frequencyOption)}
+                    className="rounded-full border border-slate-300 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
+                  >
+                    {frequencyOption}
+                  </button>
+                ))}
+              </div>
               <Input placeholder="e.g. Daily, Weekly, Every evening" value={relatedAnnouncementDraft.frequency} onChange={(e) => handleRelatedAnnouncementChange("frequency", e.target.value)} />
             </div>
             <div>
