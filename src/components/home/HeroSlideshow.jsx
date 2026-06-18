@@ -609,6 +609,7 @@ export default function HeroSlideshow({ onReady }) {
   const virtualCountdownEvent = linkedVirtualEvent?.date ? linkedVirtualEvent : currentSlide;
   const showVirtualCountdownOverlay = SHOW_BIBLE_STUDY_COUNTDOWN_OVERLAY
     && !showWelcomeHeroIntro
+    && !virtualEventIsLive
     && (virtualSlideUrl || isZoomBibleStudySlide(currentSlide) || linkedVirtualUrl)
     && (virtualCountdownEvent?.date || isZoomBibleStudySlide(currentSlide));
   const explicitSlideUrl = currentSlide?.link_url || "";
