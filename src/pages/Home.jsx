@@ -34,29 +34,6 @@ function normalizeNewsletterName(name) {
   return String(name || "").trim().replace(/\s+/g, " ");
 }
 
-function parseLocalEventDateTime(dateValue, timeValue) {
-  if (!dateValue || !timeValue) return null;
-
-  const [year, month, day] = String(dateValue).split("-").map(Number);
-  const [hour, minute] = String(timeValue).split(":").map(Number);
-
-  if (!year || !month || !day || !Number.isFinite(hour) || !Number.isFinite(minute)) {
-    return null;
-  }
-
-  const date = new Date(year, month - 1, day, hour, minute, 0, 0);
-  return Number.isNaN(date.getTime()) ? null : date;
-}
-
-function isAnnouncementLiveNow(announcement, now) {
-  const start = parseLocalEventDateTime(announcement.date, announcement.time);
-  const end = parseLocalEventDateTime(announcement.end_date || announcement.date, announcement.end_time);
-
-  if (!start || !end || end <= start) return false;
-
-  return now >= start && now < end;
-}
-
 async function getApiErrorMessage(response, fallback) {
   const body = await response.json().catch(() => null);
   return [body?.error, body?.detail].filter(Boolean).join(" ") || fallback;
@@ -79,7 +56,6 @@ export default function Home() {
   const isTransitioning = useRef(false);
   const observerRef = useRef(null);
   const [liveSermonUrl, setLiveSermonUrl] = useState("https://www.youtube.com/embed/bERzxb_Sbvo");
-  const [liveEvents, setLiveEvents] = useState([]);
   const [sitePopups, setSitePopups] = useState([]);
 
   // New state variables for live stream logic
@@ -245,32 +221,6 @@ export default function Home() {
       element.classList.add('animate-in');
     });
   }, [isHomepageReady]);
-
-  // Check for scheduled announcement events that are live right now.
-  useEffect(() => {
-    const checkLiveEvents = () => {
-      const now = new Date();
-      if (getActiveSpecialServiceNotice(now)) {
-        setLiveEvents([]);
-        return;
-      }
-
-      const live = announcements.filter(announcement => {
-        return isAnnouncementLiveNow(announcement, now);
-      });
-
-      const uniqueLive = live.filter((event, index, self) =>
-        index === self.findIndex(item => item.id === event.id)
-      );
-
-      setLiveEvents(uniqueLive);
-    };
-
-    checkLiveEvents();
-    const interval = setInterval(checkLiveEvents, 30000);
-
-    return () => clearInterval(interval);
-  }, [announcements]);
 
   // Rotate verses every 10 seconds
   useEffect(() => {
@@ -623,47 +573,6 @@ export default function Home() {
   return (
     <div className="min-h-screen relative overflow-hidden" style={{ background: 'linear-gradient(160deg, #FBF7F0 0%, #F5E8CC 30%, #EDD9A3 55%, #F2E6D6 75%, #FBF7F0 100%)' }}>
       <SitePopupModal popup={activeSitePopup} />
-      {/* Live Events Banner - Fixed at very top */}
-      {liveEvents.length > 0 && (
-        <div className="relative sm:fixed sm:top-20 left-0 right-0 z-50 bg-gradient-to-r from-red-600 to-red-700 text-white py-1 shadow-lg">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex flex-col md:flex-row items-center justify-center gap-1 md:gap-4 text-[11px] sm:text-sm">
-              <div className="flex flex-wrap items-center gap-1 md:gap-2">
-                <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-                <span className="font-bold uppercase tracking-wider">HAPPENING NOW</span>
-              </div>
-              <div className="flex flex-col md:flex-row items-center gap-1 md:gap-4">
-                {liveEvents.map((event) => (
-                  <div key={event.id} className="flex flex-col sm:flex-row items-center gap-2 text-sm">
-                    <div className="text-center md:text-left">
-                      <span className="font-semibold">{event.title}</span>
-                      {event.location && (
-                        <span className="text-red-100 ml-1 text-xs">@ {event.location}</span>
-                      )}
-                      <span className="text-red-100 ml-1 text-xs">
-                        ({event.time} - {event.end_time})
-                      </span>
-                    </div>
-                    {event.zoom_link && (
-                      <a
-                        href={event.zoom_link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center justify-center gap-1.5 rounded-md bg-white px-2.5 py-1 text-xs font-semibold text-red-600 shadow-sm transition-colors hover:bg-red-50"
-                      >
-                        <Video className="w-3 h-3" />
-                        Join Zoom
-                        <span className="h-2.5 w-2.5 rounded-full bg-red-600 animate-pulse" />
-                      </a>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       <style>
         {`
           /* Glassmorphism Styles */
