@@ -12,7 +12,6 @@ import { EmailTemplates } from '@/entities/EmailTemplates';
 import { AdminActivityLogs } from '@/entities/AdminActivityLogs';
 import { User } from '@/entities/User';
 import AnnouncementList from '@/components/admin/AnnouncementList';
-import AnnouncementForm from '@/components/admin/AnnouncementForm';
 import WorshipEventList from '@/components/admin/WorshipEventList';
 import WorshipEventForm from '@/components/admin/WorshipEventForm';
 import SermonList from '@/components/admin/SermonList';
@@ -35,7 +34,7 @@ import { firebaseAuth, firebaseEnabled } from '@/lib/firebase';
 import { localApi } from '@/api/localApiClient';
 import { collection, doc, getDocs, updateDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase';
-import { DEFAULT_HOMEPAGE_BANNERS, LIVE_BIBLE_STUDY_BANNER, LIVE_BIBLE_STUDY_BANNER_MESSAGE } from '@/lib/homepageBanners';
+import { DEFAULT_HOMEPAGE_BANNERS, LIVE_BIBLE_STUDY_BANNER_MESSAGE } from '@/lib/homepageBanners';
 import { DEFAULT_EMAIL_TEMPLATES, NEWSLETTER_TEMPLATE_IDS } from '@/lib/newsletterTemplates';
 import { createSpecialServicePopup } from '@/lib/specialServiceNotice';
 import { Camera, Loader2, ShieldAlert, CalendarHeart, PlaySquare, FileText, MessageSquare, LayoutTemplate, LogOut, BellRing, Mail, ShieldCheck, UserRound, Code2, Search, Grid2X2, List, Plus, Info, ChevronDown, EyeOff, RotateCcw, Trash2 } from 'lucide-react';
@@ -186,6 +185,11 @@ function isAdminEventLiveNow(event, now = new Date()) {
   }
 
   return now >= nextStart && now < nextEnd;
+}
+
+function isTimedBibleStudyBanner(banner) {
+  return banner?.is_bible_study_live_banner === true
+    || banner?.message === LIVE_BIBLE_STUDY_BANNER_MESSAGE;
 }
 
 function getAdminScheduleLabel(event = {}) {
@@ -837,27 +841,12 @@ export default function AdminPage() {
   const loadBanners = async () => {
     const data = await HomeBannerMessages.list('-created_date', 100);
     if (data.length > 0) {
-      const preparedBanners = [...data];
-      const liveBibleStudyIndex = preparedBanners.findIndex((banner) =>
-        banner.is_bible_study_live_banner === true || banner.message === LIVE_BIBLE_STUDY_BANNER_MESSAGE
-      );
-
-      if (liveBibleStudyIndex >= 0) {
-        const existingBanner = preparedBanners[liveBibleStudyIndex];
-        if (existingBanner.is_bible_study_live_banner !== true) {
-          const updatedBanner = {
-            ...existingBanner,
-            is_bible_study_live_banner: true,
-          };
-          await HomeBannerMessages.update(existingBanner.id, updatedBanner);
-          preparedBanners[liveBibleStudyIndex] = updatedBanner;
-        }
-      } else {
-        const createdBanner = await HomeBannerMessages.create(LIVE_BIBLE_STUDY_BANNER);
-        preparedBanners.unshift(createdBanner);
+      const timedBibleStudyBanners = data.filter(isTimedBibleStudyBanner);
+      if (timedBibleStudyBanners.length > 0) {
+        await Promise.allSettled(timedBibleStudyBanners.map((banner) => HomeBannerMessages.delete(banner.id)));
       }
 
-      setBanners(preparedBanners);
+      setBanners(data.filter((banner) => !isTimedBibleStudyBanner(banner)));
       return;
     }
 
