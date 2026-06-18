@@ -638,6 +638,7 @@ export default function Home() {
                       >
                         <Video className="w-3 h-3" />
                         Join Zoom
+                        <span className="h-2.5 w-2.5 rounded-full bg-red-600 animate-pulse" />
                       </a>
                     )}
                   </div>
