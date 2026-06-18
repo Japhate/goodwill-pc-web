@@ -113,6 +113,92 @@ function normalizeMatchText(value) {
     .trim();
 }
 
+function formatAdminDate(value) {
+  if (!value) return '';
+  const [year, month, day] = String(value).split('-').map(Number);
+  if (!year || !month || !day) return String(value);
+  return new Date(year, month - 1, day).toLocaleDateString([], {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
+function formatAdminTime(value) {
+  if (!value) return '';
+  const [hour = 0, minute = 0] = String(value).split(':').map(Number);
+  const date = new Date(2000, 0, 1, hour || 0, minute || 0, 0);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
+
+function getAdminRecurringStep(frequency = '') {
+  const normalized = String(frequency).toLowerCase();
+  if (!normalized) return null;
+  if (normalized.includes('daily') || normalized.includes('every day') || normalized.includes('evening')) return 'daily';
+  if (normalized.includes('weekday')) return 'weekday';
+  if (normalized.includes('weekly') || normalized.includes('every week')) return 'weekly';
+  if (normalized.includes('monthly') || normalized.includes('every month')) return 'monthly';
+  if (normalized.includes('yearly') || normalized.includes('annually') || normalized.includes('annual')) return 'yearly';
+  return null;
+}
+
+function advanceAdminRecurringDate(date, step) {
+  const next = new Date(date);
+  if (step === 'daily') next.setDate(next.getDate() + 1);
+  if (step === 'weekday') {
+    next.setDate(next.getDate() + 1);
+    while (next.getDay() === 0 || next.getDay() === 6) next.setDate(next.getDate() + 1);
+  }
+  if (step === 'weekly') next.setDate(next.getDate() + 7);
+  if (step === 'monthly') next.setMonth(next.getMonth() + 1);
+  if (step === 'yearly') next.setFullYear(next.getFullYear() + 1);
+  return next;
+}
+
+function getAdminEventDateTime(dateValue, timeValue) {
+  if (!dateValue || !timeValue) return null;
+  const [year, month, day] = String(dateValue).split('-').map(Number);
+  const [hour = 0, minute = 0] = String(timeValue).split(':').map(Number);
+  if (!year || !month || !day || !Number.isFinite(hour) || !Number.isFinite(minute)) return null;
+  const date = new Date(year, month - 1, day, hour || 0, minute || 0, 0);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function isAdminEventLiveNow(event, now = new Date()) {
+  const start = getAdminEventDateTime(event?.date, event?.time);
+  const step = getAdminRecurringStep(event?.frequency);
+  const endDateForInstance = step ? event?.date : (event?.end_date || event?.date);
+  let end = getAdminEventDateTime(endDateForInstance, event?.end_time);
+  if (!start || !end) return false;
+
+  let nextStart = start;
+  let nextEnd = end;
+  if (step) {
+    const recurrenceEnd = getAdminEventDateTime(event?.end_date || event?.date, event?.end_time);
+    let guard = 0;
+    while (nextEnd <= now && guard < 370) {
+      nextStart = advanceAdminRecurringDate(nextStart, step);
+      nextEnd = advanceAdminRecurringDate(nextEnd, step);
+      guard += 1;
+    }
+    if (recurrenceEnd && nextStart > recurrenceEnd) return false;
+  }
+
+  return now >= nextStart && now < nextEnd;
+}
+
+function getAdminScheduleLabel(event = {}) {
+  const startDate = formatAdminDate(event.date);
+  const endDate = event.end_date && event.end_date !== event.date ? formatAdminDate(event.end_date) : '';
+  const startTime = formatAdminTime(event.time);
+  const endTime = formatAdminTime(event.end_time);
+  const frequency = String(event.frequency || '').trim();
+  const dateLabel = [startDate, endDate].filter(Boolean).join(' - ');
+  const timeLabel = [startTime, endTime].filter(Boolean).join(' - ');
+  return [dateLabel, timeLabel, frequency].filter(Boolean).join(' | ') || 'No schedule';
+}
+
 function prepareSitePopupData(data) {
   const { id: _id, is_unsaved_fallback: _isUnsavedFallback, ...popupData } = data || {};
   return popupData;
@@ -2192,6 +2278,44 @@ export default function AdminPage() {
     if (!announcement?.id) return null;
     return heroSlides.find((slide) => String(slide.announcement_id) === String(announcement.id)) || null;
   };
+  const automaticHomepageBanners = heroSlides
+    .map((slide) => {
+      const announcement = getLinkedAnnouncementForSlide(slide);
+      const source = announcement || slide;
+      if (!source?.date || !source?.time || !source?.end_time) return null;
+
+      const normalizedStatus = String(source.status || '').toLowerCase();
+      const sourceTitle = source.title || slide.alt_text || 'Scheduled hero slide';
+      const isZoomSlide = slide.is_zoom_bible_study === true
+        || String(slide.alt_text || '').toLowerCase().includes('zoom')
+        || String(source.virtual_platform || '').toLowerCase().includes('zoom')
+        || String(source.zoom_link || '').includes('zoom.us');
+      const isEnabled = slide.is_active !== false && !['hidden', 'inactive', 'draft'].includes(normalizedStatus);
+
+      return {
+        id: `auto-${slide.id}-${announcement?.id || 'slide'}`,
+        slide,
+        announcement,
+        source,
+        sourceTitle,
+        sourceLabel: announcement ? 'Hero slide linked announcement' : 'Hero slide schedule',
+        message: isZoomSlide ? LIVE_BIBLE_STUDY_BANNER_MESSAGE : `\u{1F534} ${sourceTitle} is happening now.`,
+        scheduleLabel: getAdminScheduleLabel(source),
+        isEnabled,
+        isLiveNow: isEnabled && isAdminEventLiveNow(source),
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => (Number(a.slide.order) || 0) - (Number(b.slide.order) || 0));
+  const handleEditAutomaticBanner = (banner) => {
+    if (banner?.slide) {
+      handleEdit(banner.slide, 'heroSlide');
+      return;
+    }
+    if (banner?.announcement) {
+      handleEdit(banner.announcement, 'announcement');
+    }
+  };
   const HeroAnnouncementSectionHeader = ({
     title,
     description,
@@ -2369,10 +2493,12 @@ export default function AdminPage() {
       case 'banners':
         return <BannerList
           banners={banners}
+          automaticBanners={automaticHomepageBanners}
           onEdit={(item) => handleEdit(item, 'banner')}
           onDelete={(id) => handleDelete(id, 'banner')}
           onAddNew={() => handleAddNew('banner')}
           onDuplicate={(item) => handleDuplicate(item, 'banner')}
+          onEditAutomaticBanner={handleEditAutomaticBanner}
         />;
       case 'heroSlides':
         return (

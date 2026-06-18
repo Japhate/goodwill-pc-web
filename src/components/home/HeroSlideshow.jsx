@@ -202,27 +202,6 @@ function normalizeMatchText(value) {
     .trim();
 }
 
-function getLinkedAnnouncementForSlide(slide, announcements = []) {
-  if (!slide) return null;
-
-  if (slide.announcement_id) {
-    const linked = announcements.find((item) => String(item.id) === String(slide.announcement_id));
-    if (linked) return linked;
-  }
-
-  const slideTitle = normalizeMatchText(slide.alt_text);
-  if (!slideTitle) return null;
-
-  return announcements.find((item) => {
-    const announcementTitle = normalizeMatchText(item?.title);
-    return announcementTitle && (
-      announcementTitle === slideTitle
-      || announcementTitle.includes(slideTitle)
-      || slideTitle.includes(announcementTitle)
-    );
-  }) || null;
-}
-
 function getExplicitScheduledEventForSlide(slide, announcements = []) {
   if (!slide) return null;
 
