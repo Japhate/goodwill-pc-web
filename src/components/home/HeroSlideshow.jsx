@@ -359,7 +359,6 @@ function ZoomCountdownOverlay({ event, fallbackSchedule = null }) {
 
   const msUntilStart = Math.max(0, start - now);
   const totalSeconds = Math.floor(msUntilStart / 1000);
-  const overlayTitle = event?.alt_text || event?.title || "Next Virtual Event";
   return (
     <div className="absolute bottom-1.5 right-1.5 z-20 flex justify-end sm:bottom-2 sm:right-3">
       <div className="flex max-w-[8.75rem] flex-col items-center gap-0.5 rounded-md border border-white/20 bg-black/70 px-1.5 py-1 shadow-xl backdrop-blur-sm sm:max-w-none sm:rounded-lg sm:px-2 sm:py-1.5">
@@ -369,9 +368,8 @@ function ZoomCountdownOverlay({ event, fallbackSchedule = null }) {
           <>
             <div className="flex max-w-full items-center gap-0.5 truncate text-[8px] font-semibold leading-tight text-amber-300 sm:gap-1 sm:text-[10px]">
               <Clock className="h-2 w-2 flex-shrink-0 sm:h-2.5 sm:w-2.5" />
-              <span className="truncate">{overlayTitle}</span>
+              <span className="truncate">Next: {format(start, "MMMM d")}</span>
             </div>
-            <div className="text-[8px] font-semibold leading-tight text-white sm:text-[10px]">{format(start, "MMMM dd")}</div>
             <div className="flex items-center gap-1 tabular-nums sm:gap-1.5">
               {[
                 { val: Math.floor(totalSeconds / 86400), label: "d" },
