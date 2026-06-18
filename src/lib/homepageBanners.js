@@ -21,4 +21,6 @@ export const DEFAULT_HOMEPAGE_BANNERS = [
   },
 ];
 
-export const DEFAULT_HOMEPAGE_BANNER_MESSAGES = DEFAULT_HOMEPAGE_BANNERS.map((banner) => banner.message);
+export const DEFAULT_HOMEPAGE_BANNER_MESSAGES = DEFAULT_HOMEPAGE_BANNERS
+  .filter((banner) => !banner.is_bible_study_live_banner)
+  .map((banner) => banner.message);

@@ -177,6 +177,11 @@ function isZoomBibleStudySlide(slide) {
     || slide.image_url?.toLowerCase().includes("zoom");
 }
 
+function isTimedBibleStudyBanner(banner) {
+  return banner?.is_bible_study_live_banner === true
+    || banner?.message === LIVE_BIBLE_STUDY_BANNER_MESSAGE;
+}
+
 function isPrioritySlideActive(slide, now) {
   if (!slide?.is_priority_announcement) return false;
 
@@ -450,7 +455,7 @@ export default function HeroSlideshow({ onReady }) {
   const bannerMessages = useMemo(() => {
     if (activeSpecialServiceNotice) return [activeSpecialServiceNotice.message];
     if (isLiveBibleStudyTime) {
-      const liveBibleStudyBanner = managedBanners?.find((banner) => banner.is_bible_study_live_banner);
+      const liveBibleStudyBanner = managedBanners?.find(isTimedBibleStudyBanner);
       if (!liveBibleStudyBanner || liveBibleStudyBanner.status === "active" || liveBibleStudyBanner.status === "live") {
         return [liveBibleStudyBanner?.message || LIVE_BIBLE_STUDY_BANNER_MESSAGE].filter(Boolean);
       }
@@ -459,7 +464,7 @@ export default function HeroSlideshow({ onReady }) {
 
     if (Array.isArray(managedBanners)) {
       const messages = managedBanners
-        .filter((banner) => !banner.is_bible_study_live_banner && (banner.status === "live" || banner.status === "active"))
+        .filter((banner) => !isTimedBibleStudyBanner(banner) && (banner.status === "live" || banner.status === "active"))
         .map((banner) => banner.message)
         .filter(Boolean);
 
@@ -469,7 +474,9 @@ export default function HeroSlideshow({ onReady }) {
     return DEFAULT_HOMEPAGE_BANNER_MESSAGES;
   }, [activeSpecialServiceNotice, isLiveBibleStudyTime, isLiveServiceBannerTime, managedBanners]);
 
-  const hasLiveManagedBanner = managedBanners?.some((banner) => banner.status === "live") || false;
+  const hasLiveManagedBanner = managedBanners?.some((banner) => (
+    banner.status === "live" && !isTimedBibleStudyBanner(banner)
+  )) || false;
   const isLiveTicker = Boolean(activeSpecialServiceNotice) || isLiveBanner || hasLiveManagedBanner;
   const currentBannerMessage = bannerMessages[currentBannerIndex] || bannerMessages[0];
 
