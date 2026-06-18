@@ -262,6 +262,54 @@ function getCountdownLabel(targetDate, now, targetEndDate = null) {
   return `${minutes}m ${seconds}s`;
 }
 
+function getRecurringStep(frequency = "") {
+  const normalized = String(frequency).toLowerCase();
+  if (!normalized) return null;
+  if (normalized.includes("daily") || normalized.includes("every day") || normalized.includes("evening")) return "daily";
+  if (normalized.includes("weekly") || normalized.includes("every week")) return "weekly";
+  if (normalized.includes("monthly") || normalized.includes("every month")) return "monthly";
+  if (normalized.includes("yearly") || normalized.includes("annually") || normalized.includes("annual")) return "yearly";
+  return null;
+}
+
+function advanceRecurringDate(date, step) {
+  const next = new Date(date);
+  if (step === "daily") next.setDate(next.getDate() + 1);
+  if (step === "weekly") next.setDate(next.getDate() + 7);
+  if (step === "monthly") next.setMonth(next.getMonth() + 1);
+  if (step === "yearly") next.setFullYear(next.getFullYear() + 1);
+  return next;
+}
+
+function getVirtualEventTiming(event, now) {
+  const start = getEventStartDateTime(event);
+  const end = getEventEndDateTime(event, start);
+  if (!start || !end) return { countdown: "", isLive: false };
+
+  const step = getRecurringStep(event?.frequency);
+  let nextStart = start;
+  let nextEnd = end;
+
+  if (step) {
+    let guard = 0;
+    while (nextEnd <= now && guard < 370) {
+      nextStart = advanceRecurringDate(nextStart, step);
+      nextEnd = advanceRecurringDate(nextEnd, step);
+      guard += 1;
+    }
+  }
+
+  if (now >= nextStart && now < nextEnd) {
+    return { countdown: "", isLive: true };
+  }
+
+  if (now < nextStart) {
+    return { countdown: getCountdownLabel(nextStart, now, nextEnd), isLive: false };
+  }
+
+  return { countdown: "", isLive: false };
+}
+
 function warmHeroImage(url) {
   if (!url || typeof window === "undefined") return;
 
@@ -543,16 +591,16 @@ export default function HeroSlideshow({ onReady }) {
     ? linkedVirtualUrl
     : "";
   const linkedVirtualEvent = linkedAnnouncement || currentSlide;
-  const linkedVirtualStartDate = getEventStartDateTime(linkedVirtualEvent);
-  const linkedVirtualEndDate = getEventEndDateTime(linkedVirtualEvent, linkedVirtualStartDate);
+  const linkedVirtualTiming = getVirtualEventTiming(linkedVirtualEvent, now);
   const bibleStudySchedule = getNextBibleStudy(now);
-  const virtualCountdownLabel = linkedVirtualStartDate
-    ? getCountdownLabel(linkedVirtualStartDate, now, linkedVirtualEndDate)
-    : getCountdownLabel(
-        isZoomBibleStudySlide(currentSlide) ? bibleStudySchedule.start : null,
-        now,
-        isZoomBibleStudySlide(currentSlide) ? bibleStudySchedule.end : null
-      );
+  const isBibleStudyLive = isZoomBibleStudySlide(currentSlide) && now >= bibleStudySchedule.start && now < bibleStudySchedule.end;
+  const bibleStudyCountdownLabel = isBibleStudyLive ? "" : getCountdownLabel(
+    isZoomBibleStudySlide(currentSlide) ? bibleStudySchedule.start : null,
+    now,
+    isZoomBibleStudySlide(currentSlide) ? bibleStudySchedule.end : null
+  );
+  const virtualCountdownLabel = linkedVirtualTiming.countdown || bibleStudyCountdownLabel;
+  const virtualEventIsLive = linkedVirtualTiming.isLive || isBibleStudyLive;
   const explicitSlideUrl = currentSlide?.link_url || "";
   const isExplicitExternalUrl = /^https?:\/\//i.test(explicitSlideUrl);
   const internalSlideUrl = !welcomeHeroUrl && explicitSlideUrl.startsWith("/") ? explicitSlideUrl : "";
@@ -568,18 +616,21 @@ export default function HeroSlideshow({ onReady }) {
           label: getVirtualJoinLabel(linkedVirtualPlatform),
           type: "virtual",
           countdown: virtualCountdownLabel,
+          isLive: virtualEventIsLive,
         },
         isExplicitExternalUrl && {
           url: explicitSlideUrl,
           label: currentSlide.link_label || (isZoomBibleStudySlide(currentSlide) ? "Join Zoom" : "More"),
           type: isZoomBibleStudySlide(currentSlide) ? "virtual" : "external",
           countdown: isZoomBibleStudySlide(currentSlide) ? virtualCountdownLabel : "",
+          isLive: isZoomBibleStudySlide(currentSlide) ? virtualEventIsLive : false,
         },
         !isExplicitExternalUrl && !directionsSlideUrl && !virtualSlideUrl && isZoomBibleStudySlide(currentSlide) && {
           url: BIBLE_STUDY_ZOOM,
           label: "Join Zoom",
           type: "virtual",
           countdown: virtualCountdownLabel,
+          isLive: virtualEventIsLive,
         },
       ].filter(Boolean)
     : [];
@@ -930,7 +981,7 @@ export default function HeroSlideshow({ onReady }) {
                     </a>
                   )}
                   {externalActionButtons.map((button) => (
-                    button.type === "virtual" && button.countdown ? (
+                    button.type === "virtual" && (button.countdown || button.isLive) ? (
                       <div key={`${button.type}-${button.url}`} className="flex shrink-0 items-center gap-1.5">
                         <a
                           href={button.url}
@@ -939,14 +990,19 @@ export default function HeroSlideshow({ onReady }) {
                           className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-blue-200/50 bg-blue-600/95 px-2 py-1 text-[11px] font-semibold text-white shadow-[0_8px_24px_rgba(0,0,0,0.18)] transition-all hover:-translate-y-0.5 hover:rounded-xl hover:bg-blue-700 hover:shadow-xl sm:px-3 sm:py-1.5 sm:text-sm md:rounded-xl md:px-4 md:py-2 md:text-base"
                           onClick={(e) => e.stopPropagation()}
                         >
+                          {button.isLive && (
+                            <span className="h-2.5 w-2.5 rounded-full bg-red-500 shadow-[0_0_0_4px_rgba(239,68,68,0.24)] animate-pulse" aria-hidden="true" />
+                          )}
                           <Video className="w-4 h-4" />
                           <span>{button.label}</span>
                         </a>
-                        <div className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-white/80 bg-gradient-to-r from-white via-blue-50 to-white px-2 py-1 text-[10px] font-extrabold leading-none text-blue-950 shadow-[0_10px_26px_rgba(0,0,0,0.32),0_0_18px_rgba(59,130,246,0.32)] ring-1 ring-blue-300/70 backdrop-blur-sm sm:rounded-xl sm:px-2.5 sm:py-1.5 sm:text-xs md:px-3 md:py-2">
-                          <Clock className="h-3 w-3 text-blue-600 md:h-3.5 md:w-3.5" />
-                          <span className="text-blue-700">Starts in</span>
-                          <span className="tabular-nums text-blue-950">{button.countdown}</span>
-                        </div>
+                        {button.countdown && (
+                          <div className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-white/80 bg-gradient-to-r from-white via-blue-50 to-white px-2 py-1 text-[10px] font-extrabold leading-none text-blue-950 shadow-[0_10px_26px_rgba(0,0,0,0.32),0_0_18px_rgba(59,130,246,0.32)] ring-1 ring-blue-300/70 backdrop-blur-sm sm:rounded-xl sm:px-2.5 sm:py-1.5 sm:text-xs md:px-3 md:py-2">
+                            <Clock className="h-3 w-3 text-blue-600 md:h-3.5 md:w-3.5" />
+                            <span className="text-blue-700">Starts in</span>
+                            <span className="tabular-nums text-blue-950">{button.countdown}</span>
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <a
@@ -1004,7 +1060,7 @@ export default function HeroSlideshow({ onReady }) {
             </a>
           )}
           {externalActionButtons.map((button) => (
-            button.type === "virtual" && button.countdown ? (
+            button.type === "virtual" && (button.countdown || button.isLive) ? (
               <div key={`${button.type}-${button.url}-mobile`} className="flex items-center gap-1.5">
                 <a
                   href={button.url}
@@ -1012,14 +1068,19 @@ export default function HeroSlideshow({ onReady }) {
                   rel="noopener noreferrer"
                   className="inline-flex items-center justify-center gap-1 rounded-full border border-blue-200/70 bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white shadow-[0_8px_24px_rgba(0,0,0,0.18)] backdrop-blur-[2px] transition-all hover:bg-blue-700"
                 >
+                  {button.isLive && (
+                    <span className="h-2.5 w-2.5 rounded-full bg-red-500 shadow-[0_0_0_4px_rgba(239,68,68,0.24)] animate-pulse" aria-hidden="true" />
+                  )}
                   <Video className="h-4 w-4" />
                   <span>{button.label}</span>
                 </a>
-                <div className="inline-flex items-center gap-1 rounded-xl border border-white/80 bg-gradient-to-r from-white via-blue-50 to-white px-2 py-1 text-[10px] font-extrabold leading-none text-blue-950 shadow-[0_8px_20px_rgba(0,0,0,0.22)] ring-1 ring-blue-300/70">
-                  <Clock className="h-3 w-3 text-blue-600" />
-                  <span>Starts in</span>
-                  <span className="tabular-nums">{button.countdown}</span>
-                </div>
+                {button.countdown && (
+                  <div className="inline-flex items-center gap-1 rounded-xl border border-white/80 bg-gradient-to-r from-white via-blue-50 to-white px-2 py-1 text-[10px] font-extrabold leading-none text-blue-950 shadow-[0_8px_20px_rgba(0,0,0,0.22)] ring-1 ring-blue-300/70">
+                    <Clock className="h-3 w-3 text-blue-600" />
+                    <span>Starts in</span>
+                    <span className="tabular-nums">{button.countdown}</span>
+                  </div>
+                )}
               </div>
             ) : (
               <a
