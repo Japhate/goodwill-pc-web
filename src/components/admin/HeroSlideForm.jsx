@@ -13,6 +13,7 @@ const HERO_IMAGE_TARGET_BYTES = 420 * 1024;
 const DEFAULT_RELATED_ANNOUNCEMENT = {
   title: "",
   content: "",
+  live_banner_message: "",
   date: "",
   end_date: "",
   time: "",
@@ -36,6 +37,26 @@ const DEFAULT_RELATED_ANNOUNCEMENT = {
   status: "Active",
 };
 const RELATED_ANNOUNCEMENT_DEFAULT_ONLY_FIELDS = new Set(["category", "status", "location_type"]);
+const AUTOMATIC_BANNER_FIELDS = [
+  "live_banner_message",
+  "date",
+  "end_date",
+  "time",
+  "end_time",
+  "frequency",
+  "location_type",
+  "location",
+  "virtual_platform",
+  "zoom_link",
+  "chat_link",
+  "one_tap_mobile",
+  "call_in_numbers",
+  "meeting_id",
+  "meeting_passcode",
+  "contact_email",
+  "contact_phone",
+  "directions_url",
+];
 
 function hasRelatedAnnouncementDraftStarted(draft) {
   return Object.entries(draft).some(([field, value]) => {
@@ -128,6 +149,23 @@ function getInitialAnnouncementDraft(announcement) {
   };
 }
 
+function getInitialRelatedDraft(slide, announcement) {
+  if (announcement) return getInitialAnnouncementDraft(announcement);
+  if (!slide) return DEFAULT_RELATED_ANNOUNCEMENT;
+  const slideScheduleDraft = AUTOMATIC_BANNER_FIELDS.reduce((draft, field) => ({
+    ...draft,
+    [field]: slide[field] || "",
+  }), {});
+  return getInitialAnnouncementDraft({
+    ...slideScheduleDraft,
+    title: slide.alt_text || "",
+    content: "",
+    category: "church_wide",
+    status: "Active",
+    location_type: slide.location_type || "physical",
+  });
+}
+
 export default function HeroSlideForm({ slide, announcement, announcementMode = false, defaultOrder = 0, onSubmit, onCancel, onImageUpload, onUnsavedDraftChange }) {
   const isAnnouncementWorkflow = announcementMode || Boolean(announcement && !slide);
   const isLinkedPairEdit = Boolean(slide?.id && announcement?.id);
@@ -156,7 +194,7 @@ export default function HeroSlideForm({ slide, announcement, announcementMode = 
   const [uploadedImages, setUploadedImages] = useState([]);
   const [uploadError, setUploadError] = useState("");
   const [validationErrors, setValidationErrors] = useState({});
-  const [relatedAnnouncementDraft, setRelatedAnnouncementDraft] = useState(getInitialAnnouncementDraft(announcement));
+  const [relatedAnnouncementDraft, setRelatedAnnouncementDraft] = useState(getInitialRelatedDraft(slide, announcement));
   const [relatedFileUploading, setRelatedFileUploading] = useState(false);
   const initialFormSnapshot = useMemo(() => JSON.stringify({
     formData: {
@@ -173,8 +211,8 @@ export default function HeroSlideForm({ slide, announcement, announcementMode = 
       order: Number(formData.order) || 0,
       is_active: formData.is_active !== false,
     },
-    relatedAnnouncementDraft,
-    uploadedImages,
+      relatedAnnouncementDraft,
+      uploadedImages,
   }), []);
 
   const handleChange = (field, value) => {
@@ -244,8 +282,14 @@ export default function HeroSlideForm({ slide, announcement, announcementMode = 
     const relatedAnnouncementPayload = hasRelatedAnnouncement
       ? { ...relatedAnnouncementDraft, title: announcementTitle, content: fullAnnouncement, create: true, status: asDraft ? "Hidden" : relatedAnnouncementDraft.status || "Active" }
       : null;
+    const slideAutomaticBannerData = hasRelatedAnnouncement ? {} : AUTOMATIC_BANNER_FIELDS.reduce((fields, field) => {
+      const value = relatedAnnouncementDraft[field];
+      if (value !== undefined) fields[field] = value;
+      return fields;
+    }, {});
     const slideData = {
       ...(hasRelatedAnnouncement ? { ...formData, announcement_id: "" } : formData),
+      ...slideAutomaticBannerData,
       is_active: asDraft ? false : formData.is_active,
     };
     const announcementData = {
@@ -437,6 +481,17 @@ export default function HeroSlideForm({ slide, announcement, announcementMode = 
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="sm:col-span-2 rounded-md border border-amber-200 bg-amber-50 p-3">
+              <label className="block text-xs font-semibold text-gray-700 mb-1">Automatic Banner Message</label>
+              <Input
+                value={relatedAnnouncementDraft.live_banner_message || ""}
+                onChange={(e) => handleRelatedAnnouncementChange("live_banner_message", e.target.value)}
+                placeholder="e.g. Our Zoom Bible Study is happening now. Click the Zoom button to join us."
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Used by the homepage automatic live banner when this slide or announcement is currently live.
+              </p>
+            </div>
             <ConfirmedDateTimePicker
               id="related_start_date"
               label="Start Date"

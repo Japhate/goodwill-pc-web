@@ -1687,6 +1687,7 @@ export default function AdminPage() {
                 const createdAnnouncement = await AnnouncementsEvents.create({
                     title: String(draft.title || '').trim(),
                     content: String(draft.content || '').trim(),
+                    live_banner_message: draft.live_banner_message || '',
                     date: draft.date || '',
                     end_date: draft.end_date || '',
                     time: draft.time || '',
@@ -1696,6 +1697,9 @@ export default function AdminPage() {
                     location: draft.location || '',
                     virtual_platform: draft.virtual_platform || '',
                     zoom_link: draft.zoom_link || '',
+                    chat_link: draft.chat_link || '',
+                    one_tap_mobile: draft.one_tap_mobile || '',
+                    call_in_numbers: draft.call_in_numbers || '',
                     meeting_id: draft.meeting_id || '',
                     meeting_passcode: draft.meeting_passcode || '',
                     contact_email: draft.contact_email || '',
@@ -2312,21 +2316,26 @@ export default function AdminPage() {
       handleEdit(banner.announcement, 'announcement');
     }
   };
-  const handleUpdateAutomaticBannerMessage = async (banner, message) => {
-    const nextMessage = String(message || '').trim();
+  const handleUpdateAutomaticBannerMessage = async (banner, updates) => {
+    const updateData = typeof updates === 'string' ? { live_banner_message: updates } : { ...(updates || {}) };
+    const nextMessage = String(updateData.live_banner_message || '').trim();
     if (!banner || !nextMessage) return;
+    const preparedUpdates = {
+      ...updateData,
+      live_banner_message: nextMessage,
+    };
 
     if (banner.announcement?.id) {
       const { id: _id, ...announcementData } = banner.announcement;
       await AnnouncementsEvents.update(banner.announcement.id, {
         ...announcementData,
-        live_banner_message: nextMessage,
+        ...preparedUpdates,
       });
     } else if (banner.slide?.id) {
       const { id: _id, ...slideData } = banner.slide;
       await HeroSlide.update(banner.slide.id, {
         ...slideData,
-        live_banner_message: nextMessage,
+        ...preparedUpdates,
       });
     } else {
       return;
@@ -2338,7 +2347,7 @@ export default function AdminPage() {
       itemType: 'automatic live banner message',
       itemId: banner.announcement?.id || banner.slide?.id || '',
       itemLabel: banner.sourceTitle || nextMessage,
-      details: { message: nextMessage },
+      details: preparedUpdates,
     });
     await Promise.all([loadHeroSlides(), loadAnnouncements()]);
   };

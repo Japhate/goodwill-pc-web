@@ -16,26 +16,54 @@ export default function BannerList({
   onUpdateAutomaticBannerMessage,
 }) {
   const [editingAutomaticBannerId, setEditingAutomaticBannerId] = useState("");
-  const [automaticMessageDraft, setAutomaticMessageDraft] = useState("");
+  const [automaticBannerDraft, setAutomaticBannerDraft] = useState({});
   const [savingAutomaticBannerId, setSavingAutomaticBannerId] = useState("");
 
   const beginAutomaticMessageEdit = (banner) => {
+    const source = banner.source || {};
     setEditingAutomaticBannerId(banner.id);
-    setAutomaticMessageDraft(banner.message || "");
+    setAutomaticBannerDraft({
+      live_banner_message: banner.message || source.live_banner_message || "",
+      date: source.date || "",
+      end_date: source.end_date || "",
+      time: source.time || "",
+      end_time: source.end_time || "",
+      frequency: source.frequency || "",
+      status: source.status || "Active",
+      location_type: source.location_type || "physical",
+      location: source.location || "",
+      virtual_platform: source.virtual_platform || "",
+      zoom_link: source.zoom_link || "",
+      chat_link: source.chat_link || "",
+      one_tap_mobile: source.one_tap_mobile || "",
+      call_in_numbers: source.call_in_numbers || "",
+      meeting_id: source.meeting_id || "",
+      meeting_passcode: source.meeting_passcode || "",
+      contact_email: source.contact_email || "",
+      contact_phone: source.contact_phone || "",
+      directions_url: source.directions_url || "",
+    });
   };
 
   const cancelAutomaticMessageEdit = () => {
     setEditingAutomaticBannerId("");
-    setAutomaticMessageDraft("");
+    setAutomaticBannerDraft({});
+  };
+
+  const updateAutomaticBannerDraft = (field, value) => {
+    setAutomaticBannerDraft((draft) => ({ ...draft, [field]: value }));
   };
 
   const saveAutomaticMessage = async (banner) => {
-    const nextMessage = automaticMessageDraft.trim();
+    const nextMessage = String(automaticBannerDraft.live_banner_message || "").trim();
     if (!nextMessage) return;
 
     setSavingAutomaticBannerId(banner.id);
     try {
-      await onUpdateAutomaticBannerMessage?.(banner, nextMessage);
+      await onUpdateAutomaticBannerMessage?.(banner, {
+        ...automaticBannerDraft,
+        live_banner_message: nextMessage,
+      });
       cancelAutomaticMessageEdit();
     } finally {
       setSavingAutomaticBannerId("");
@@ -127,7 +155,7 @@ export default function BannerList({
             <div>
               <h3 className="text-sm font-bold text-amber-950">Automatic Live Banners</h3>
               <p className="mt-1 text-sm leading-6 text-amber-900">
-                These are generated from hero slide form schedules. Edit the message here, or edit the source slide and announcement to change date, time, frequency, Zoom link, or visibility.
+                These are generated from hero slide form schedules. Edit the full banner details here, or edit the same fields from the slide and announcement form.
               </p>
             </div>
           </div>
@@ -169,11 +197,121 @@ export default function BannerList({
                         </td>
                         <td className="p-2 max-w-md">
                           {isEditingMessage ? (
-                            <Input
-                              value={automaticMessageDraft}
-                              onChange={(event) => setAutomaticMessageDraft(event.target.value)}
-                              className="min-w-[18rem]"
-                            />
+                            <div className="grid min-w-[34rem] grid-cols-1 gap-3 rounded-md border border-amber-200 bg-amber-50 p-3 sm:grid-cols-2">
+                              <label className="block text-xs font-semibold text-gray-700 sm:col-span-2">
+                                Message
+                                <Input
+                                  value={automaticBannerDraft.live_banner_message || ""}
+                                  onChange={(event) => updateAutomaticBannerDraft("live_banner_message", event.target.value)}
+                                  className="mt-1 bg-white"
+                                />
+                              </label>
+                              <label className="block text-xs font-semibold text-gray-700">
+                                Start Date
+                                <Input type="date" value={automaticBannerDraft.date || ""} onChange={(event) => updateAutomaticBannerDraft("date", event.target.value)} className="mt-1 bg-white" />
+                              </label>
+                              <label className="block text-xs font-semibold text-gray-700">
+                                End Date
+                                <Input type="date" value={automaticBannerDraft.end_date || ""} onChange={(event) => updateAutomaticBannerDraft("end_date", event.target.value)} className="mt-1 bg-white" />
+                              </label>
+                              <label className="block text-xs font-semibold text-gray-700">
+                                Start Time
+                                <Input type="time" value={automaticBannerDraft.time || ""} onChange={(event) => updateAutomaticBannerDraft("time", event.target.value)} className="mt-1 bg-white" />
+                              </label>
+                              <label className="block text-xs font-semibold text-gray-700">
+                                End Time
+                                <Input type="time" value={automaticBannerDraft.end_time || ""} onChange={(event) => updateAutomaticBannerDraft("end_time", event.target.value)} className="mt-1 bg-white" />
+                              </label>
+                              <label className="block text-xs font-semibold text-gray-700">
+                                Frequency
+                                <select
+                                  value={automaticBannerDraft.frequency || ""}
+                                  onChange={(event) => updateAutomaticBannerDraft("frequency", event.target.value)}
+                                  className="mt-1 flex h-10 w-full rounded-md border border-input bg-white px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                >
+                                  <option value="">No repeat</option>
+                                  <option value="Daily">Daily</option>
+                                  <option value="Weekly">Weekly</option>
+                                  <option value="Monthly">Monthly</option>
+                                  <option value="Every weekday">Every weekday</option>
+                                  <option value="Every evening">Every evening</option>
+                                </select>
+                              </label>
+                              <label className="block text-xs font-semibold text-gray-700">
+                                Status
+                                <select
+                                  value={automaticBannerDraft.status || "Active"}
+                                  onChange={(event) => updateAutomaticBannerDraft("status", event.target.value)}
+                                  className="mt-1 flex h-10 w-full rounded-md border border-input bg-white px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                >
+                                  <option value="Active">Active</option>
+                                  <option value="Hidden">Hidden</option>
+                                  <option value="Inactive">Inactive</option>
+                                  <option value="Draft">Draft</option>
+                                </select>
+                              </label>
+                              <label className="block text-xs font-semibold text-gray-700">
+                                Location Type
+                                <select
+                                  value={automaticBannerDraft.location_type || "physical"}
+                                  onChange={(event) => updateAutomaticBannerDraft("location_type", event.target.value)}
+                                  className="mt-1 flex h-10 w-full rounded-md border border-input bg-white px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                >
+                                  <option value="physical">Physical</option>
+                                  <option value="virtual">Virtual</option>
+                                  <option value="both">Physical & Virtual</option>
+                                </select>
+                              </label>
+                              <label className="block text-xs font-semibold text-gray-700">
+                                Platform
+                                <Input value={automaticBannerDraft.virtual_platform || ""} onChange={(event) => updateAutomaticBannerDraft("virtual_platform", event.target.value)} className="mt-1 bg-white" placeholder="Zoom, Teams, YouTube" />
+                              </label>
+                              <label className="block text-xs font-semibold text-gray-700">
+                                Join Link
+                                <Input type="url" value={automaticBannerDraft.zoom_link || ""} onChange={(event) => updateAutomaticBannerDraft("zoom_link", event.target.value)} className="mt-1 bg-white" />
+                              </label>
+                              <label className="block text-xs font-semibold text-gray-700">
+                                Chat Link
+                                <Input type="url" value={automaticBannerDraft.chat_link || ""} onChange={(event) => updateAutomaticBannerDraft("chat_link", event.target.value)} className="mt-1 bg-white" />
+                              </label>
+                              <label className="block text-xs font-semibold text-gray-700">
+                                One-Tap Mobile
+                                <Input value={automaticBannerDraft.one_tap_mobile || ""} onChange={(event) => updateAutomaticBannerDraft("one_tap_mobile", event.target.value)} className="mt-1 bg-white" />
+                              </label>
+                              <label className="block text-xs font-semibold text-gray-700 sm:col-span-2">
+                                Call-in Numbers
+                                <textarea
+                                  value={automaticBannerDraft.call_in_numbers || ""}
+                                  onChange={(event) => updateAutomaticBannerDraft("call_in_numbers", event.target.value)}
+                                  rows={3}
+                                  className="mt-1 flex w-full rounded-md border border-input bg-white px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                />
+                              </label>
+                              <label className="block text-xs font-semibold text-gray-700">
+                                Meeting ID
+                                <Input value={automaticBannerDraft.meeting_id || ""} onChange={(event) => updateAutomaticBannerDraft("meeting_id", event.target.value)} className="mt-1 bg-white" />
+                              </label>
+                              <label className="block text-xs font-semibold text-gray-700">
+                                Passcode
+                                <Input value={automaticBannerDraft.meeting_passcode || ""} onChange={(event) => updateAutomaticBannerDraft("meeting_passcode", event.target.value)} className="mt-1 bg-white" />
+                              </label>
+                              <label className="block text-xs font-semibold text-gray-700">
+                                Place Name
+                                <Input value={automaticBannerDraft.location || ""} onChange={(event) => updateAutomaticBannerDraft("location", event.target.value)} className="mt-1 bg-white" />
+                              </label>
+                              <label className="block text-xs font-semibold text-gray-700">
+                                Directions Link
+                                <Input type="url" value={automaticBannerDraft.directions_url || ""} onChange={(event) => updateAutomaticBannerDraft("directions_url", event.target.value)} className="mt-1 bg-white" />
+                              </label>
+                              <label className="block text-xs font-semibold text-gray-700">
+                                Contact Email
+                                <Input type="email" value={automaticBannerDraft.contact_email || ""} onChange={(event) => updateAutomaticBannerDraft("contact_email", event.target.value)} className="mt-1 bg-white" />
+                              </label>
+                              <label className="block text-xs font-semibold text-gray-700">
+                                Contact Phone
+                                <Input type="tel" value={automaticBannerDraft.contact_phone || ""} onChange={(event) => updateAutomaticBannerDraft("contact_phone", event.target.value)} className="mt-1 bg-white" />
+                              </label>
+                            </div>
                           ) : (
                             <p className="truncate">{banner.message}</p>
                           )}
@@ -192,7 +330,7 @@ export default function BannerList({
                                 variant="outline"
                                 size="sm"
                                 className="text-green-700"
-                                disabled={isSaving || !automaticMessageDraft.trim()}
+                                disabled={isSaving || !String(automaticBannerDraft.live_banner_message || "").trim()}
                               >
                                 <Check className="w-4 h-4" />
                               </Button>
@@ -215,7 +353,7 @@ export default function BannerList({
                                 className="text-blue-600"
                               >
                                 <Pencil className="w-4 h-4" />
-                                Message
+                                Edit Banner
                               </Button>
                               <Button
                                 onClick={() => onEditAutomaticBanner?.(banner)}
