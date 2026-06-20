@@ -1684,35 +1684,46 @@ export default function AdminPage() {
 
             if (draftSource?.related_announcement_draft) {
                 const draft = draftSource.related_announcement_draft;
-                const createdAnnouncement = await AnnouncementsEvents.create({
-                    title: String(draft.title || '').trim(),
-                    content: String(draft.content || '').trim(),
-                    live_banner_message: draft.live_banner_message || '',
-                    date: draft.date || '',
-                    end_date: draft.end_date || '',
-                    time: draft.time || '',
-                    end_time: draft.end_time || '',
-                    frequency: draft.frequency || '',
-                    location_type: draft.location_type || 'physical',
-                    location: draft.location || '',
-                    virtual_platform: draft.virtual_platform || '',
-                    zoom_link: draft.zoom_link || '',
-                    chat_link: draft.chat_link || '',
-                    one_tap_mobile: draft.one_tap_mobile || '',
-                    call_in_numbers: draft.call_in_numbers || '',
-                    meeting_id: draft.meeting_id || '',
-                    meeting_passcode: draft.meeting_passcode || '',
-                    contact_email: draft.contact_email || '',
-                    contact_phone: draft.contact_phone || '',
-                    directions_url: draft.directions_url || '',
-                    file_upload: draft.file_upload || '',
-                    file_label: draft.file_label || '',
-                    category: draft.category || 'church_wide',
-                    status: draft.status || 'Active',
-                    image_upload: draftSource.image_url || '',
-                    created_date: new Date().toISOString(),
-                });
-                createdAnnouncementId = createdAnnouncement?.id || '';
+                const createdAnnouncementIds = await Promise.all(
+                    slides.map(async (slide) => {
+                        if (slide.announcement_id) return slide.announcement_id;
+                        const createdAnnouncement = await AnnouncementsEvents.create({
+                            title: String(draft.title || '').trim(),
+                            content: String(draft.content || '').trim(),
+                            live_banner_message: draft.live_banner_message || '',
+                            date: draft.date || '',
+                            end_date: draft.end_date || '',
+                            time: draft.time || '',
+                            end_time: draft.end_time || '',
+                            frequency: draft.frequency || '',
+                            location_type: draft.location_type || 'physical',
+                            location: draft.location || '',
+                            virtual_platform: draft.virtual_platform || '',
+                            zoom_link: draft.zoom_link || '',
+                            chat_link: draft.chat_link || '',
+                            one_tap_mobile: draft.one_tap_mobile || '',
+                            call_in_numbers: draft.call_in_numbers || '',
+                            meeting_id: draft.meeting_id || '',
+                            meeting_passcode: draft.meeting_passcode || '',
+                            contact_email: draft.contact_email || '',
+                            contact_phone: draft.contact_phone || '',
+                            directions_url: draft.directions_url || '',
+                            file_upload: draft.file_upload || '',
+                            file_label: draft.file_label || '',
+                            category: draft.category || 'church_wide',
+                            status: draft.status || 'Active',
+                            image_upload: slide.image_url || '',
+                            created_date: new Date().toISOString(),
+                        });
+                        return createdAnnouncement?.id || '';
+                    })
+                );
+                const preparedSlides = slides.map(({ related_announcement_draft: _draft, ...slide }, index) => ({
+                    ...slide,
+                    announcement_id: createdAnnouncementIds[index] || slide.announcement_id || '',
+                }));
+
+                return Array.isArray(submittedData) ? preparedSlides : preparedSlides[0];
             }
 
             const preparedSlides = slides.map(({ related_announcement_draft: _draft, ...slide }) => ({
