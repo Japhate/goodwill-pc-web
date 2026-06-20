@@ -206,6 +206,7 @@ export default function NewsletterAdmin({
   onMarkBroadcastSent,
   onDeleteBroadcast,
   onConfirm,
+  onSuccess,
 }) {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -428,6 +429,7 @@ export default function NewsletterAdmin({
         resetBroadcastComposer();
       }
       setBroadcastStatus(`Deleted "${subject}".`);
+      onSuccess?.(`“${subject}” was deleted successfully.`);
     } catch (error) {
       setBroadcastStatus(`Broadcast was not deleted: ${error.message}`);
     } finally {
@@ -471,6 +473,7 @@ export default function NewsletterAdmin({
     try {
       await onSaveBroadcastDraft(payload);
       setBroadcastStatus("Draft saved.");
+      onSuccess?.("The newsletter draft was saved successfully.");
     } catch (error) {
       setBroadcastStatus(`Draft was not saved: ${error.message}`);
     } finally {
@@ -492,6 +495,7 @@ export default function NewsletterAdmin({
     try {
       await onScheduleBroadcast(payload);
       setBroadcastStatus("Broadcast scheduled.");
+      onSuccess?.("The newsletter broadcast was scheduled successfully.");
     } catch (error) {
       setBroadcastStatus(`Broadcast was not scheduled: ${error.message}`);
     } finally {
@@ -527,6 +531,9 @@ export default function NewsletterAdmin({
         recipientIds: selectedActiveRecipientIds,
       });
       setBroadcastStatus(`Broadcast sent to ${result.sent} subscriber${result.sent === 1 ? "" : "s"}${result.failed ? `; ${result.failed} failed.` : "."}`);
+      if (!result.failed) {
+        onSuccess?.(`The newsletter broadcast was sent to ${result.sent} subscriber${result.sent === 1 ? "" : "s"}.`);
+      }
       if (!result.failed) {
         resetBroadcastComposer();
       }

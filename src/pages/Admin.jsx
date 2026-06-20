@@ -37,10 +37,11 @@ import { firestore } from '@/lib/firebase';
 import { DEFAULT_HOMEPAGE_BANNERS, LIVE_BIBLE_STUDY_BANNER_MESSAGE } from '@/lib/homepageBanners';
 import { DEFAULT_EMAIL_TEMPLATES, NEWSLETTER_TEMPLATE_IDS } from '@/lib/newsletterTemplates';
 import { createSpecialServicePopup } from '@/lib/specialServiceNotice';
-import { Camera, Loader2, ShieldAlert, CalendarHeart, PlaySquare, FileText, MessageSquare, LayoutTemplate, LogOut, BellRing, Mail, ShieldCheck, UserRound, Code2, Search, Grid2X2, List, Plus, Info, ChevronDown, EyeOff, RotateCcw, Trash2 } from 'lucide-react';
+import { Camera, CheckCircle2, Loader2, ShieldAlert, CalendarHeart, PlaySquare, FileText, MessageSquare, LayoutTemplate, LogOut, BellRing, Mail, ShieldCheck, UserRound, Code2, Search, Grid2X2, List, Plus, Info, ChevronDown, EyeOff, RotateCcw, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
+import { useToast } from '@/components/ui/use-toast';
 
 const ADMIN_INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000;
 const AUTO_LOGOUT_NOTICE_KEY = 'goodwill-admin-auto-logout';
@@ -334,6 +335,7 @@ function getInitialAdminView() {
 }
 
 export default function AdminPage() {
+  const { toast } = useToast();
   const [announcements, setAnnouncements] = useState([]);
   const [worshipEvents, setWorshipEvents] = useState([]);
   const [sermons, setSermons] = useState([]);
@@ -422,6 +424,20 @@ export default function AdminPage() {
     confirmationResolverRef.current = null;
     setConfirmationDialog(null);
     resolve?.(confirmed);
+  };
+
+  const showSuccess = (message) => {
+    const notification = toast({
+      title: (
+        <span className="flex items-center gap-2 text-emerald-900">
+          <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+          Success
+        </span>
+      ),
+      description: message,
+      className: 'border-emerald-200 bg-emerald-50 text-emerald-950 shadow-xl',
+    });
+    window.setTimeout(notification.dismiss, 4000);
   };
 
   const requestAdminTransition = (transition) => {
@@ -1015,6 +1031,7 @@ export default function AdminPage() {
         },
       });
       await loadNewsletterAdmin();
+      showSuccess('The newsletter subscriber was removed successfully.');
       if (welcomeEmailError) {
         window.alert(`Subscriber added, but ${welcomeEmailError}`);
       }
@@ -1386,6 +1403,9 @@ export default function AdminPage() {
         itemId: id,
       });
       await refreshDataForType(type);
+      showSuccess(type === 'heroSlide'
+        ? 'Slide data with its corresponding announcement and banner were deleted successfully.'
+        : `The ${entityInfo.name} was deleted successfully.`);
     } catch (error) {
       console.error(`Unable to delete ${entityInfo.name}:`, error);
       window.alert(`Unable to delete this ${entityInfo.name}. Please try again.`);
@@ -1429,6 +1449,9 @@ export default function AdminPage() {
       itemId: ids.join(', '),
       itemLabel: `${ids.length} selected ${slideLabel}`,
     });
+    showSuccess(ids.length === 1
+      ? 'Slide data with its corresponding announcement and banner were deleted successfully.'
+      : `${ids.length} slides and their corresponding announcements and banners were deleted successfully.`);
     return true;
   };
 
@@ -1518,6 +1541,10 @@ export default function AdminPage() {
       details: { is_active: isActive, linkedAnnouncementIds },
     });
 
+    showSuccess(isActive
+      ? `${ids.length === 1 ? 'The slide' : `${ids.length} slides`} and linked content were restored successfully.`
+      : `${ids.length === 1 ? 'The slide' : `${ids.length} slides`} and linked content were hidden successfully.`);
+
     return true;
   };
 
@@ -1558,6 +1585,9 @@ export default function AdminPage() {
         details: { status },
       });
       await Promise.all([loadAnnouncements(), loadHeroSlides()]);
+      showSuccess(isRestoring
+        ? 'The announcement and its corresponding slide and banner were restored successfully.'
+        : 'The announcement and its corresponding slide and banner were hidden successfully.');
       return true;
     } catch (error) {
       console.error('Unable to update announcement visibility:', error);
@@ -1650,6 +1680,7 @@ export default function AdminPage() {
           details: { source_id: item.id || '' },
         });
         await refreshDataForType(type);
+        showSuccess(`The ${entityInfo.name} was duplicated successfully.`);
     }
   };
   
@@ -2779,6 +2810,7 @@ export default function AdminPage() {
           onMarkBroadcastSent={handleMarkNewsletterBroadcastSent}
           onDeleteBroadcast={handleDeleteNewsletterBroadcast}
           onConfirm={requestConfirmation}
+          onSuccess={showSuccess}
         />;
       case 'developer':
         return canViewDeveloperPanel
@@ -2796,6 +2828,7 @@ export default function AdminPage() {
               canManageAdmins={canManageSiteAdmins}
               currentAdminEmail={currentAdmin?.email || ''}
               onConfirm={requestConfirmation}
+              onSuccess={showSuccess}
             />
           : null;
       default:

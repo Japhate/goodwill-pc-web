@@ -47,6 +47,7 @@ export default function DeveloperPanel({
   canManageAdmins = false,
   currentAdminEmail = "",
   onConfirm,
+  onSuccess,
 }) {
   const [email, setEmail] = useState("");
   const [errors, setErrors] = useState({});
@@ -108,6 +109,7 @@ export default function DeveloperPanel({
     try {
       await onUpdateAdminRole(admin, role);
       setAdminStatus(`${adminEmail} is now ${roleLabel}.`);
+      onSuccess?.(`${adminEmail} is now ${roleLabel}.`);
     } catch (error) {
       setAdminStatus(error.message || "Unable to update the administrator role.");
     } finally {
@@ -129,6 +131,7 @@ export default function DeveloperPanel({
     try {
       await onDeleteAdmin(admin);
       setAdminStatus(`${adminEmail} was removed from the Firestore site administrators list.`);
+      onSuccess?.(`${adminEmail} was removed from the site administrators list.`);
     } catch (error) {
       setAdminStatus(error.message || "Unable to delete the site administrator.");
     } finally {
