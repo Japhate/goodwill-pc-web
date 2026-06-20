@@ -43,6 +43,9 @@ function filterItems(items, filter = {}) {
 }
 
 async function collectionItems(entityName) {
+  if (!firestore) {
+    throw new Error("Firebase is not configured. Managed content cannot fall back to local data.");
+  }
   const snapshot = await getDocs(collection(firestore, entityName));
   return snapshot.docs.map((entry) => ({ ...entry.data(), id: entry.id }));
 }
@@ -142,6 +145,62 @@ async function deleteNewsletterBroadcastFiles(id, item) {
   );
 }
 
+async function deleteAnnouncementFiles(id, item) {
+  const otherAnnouncements = (await collectionItems("AnnouncementsEvents"))
+    .filter((announcement) => announcement.id !== id);
+
+  if (!otherAnnouncements.some((announcement) => announcement.image_upload === item?.image_upload)) {
+    await deleteStoredFile(item?.image_upload, "announcement-images");
+  }
+
+  if (!otherAnnouncements.some((announcement) => announcement.file_upload === item?.file_upload)) {
+    await deleteStoredFile(item?.file_upload, "announcement-files");
+  }
+}
+
+async function deleteHeroSlideWithLinkedAnnouncement(id) {
+  const slideRef = doc(firestore, "HeroSlide", id);
+  const slideSnapshot = await getDoc(slideRef);
+  const slide = slideSnapshot.exists() ? slideSnapshot.data() : null;
+
+  if (slide) await deleteHeroImageFile(slide);
+  await deleteDoc(slideRef);
+
+  const announcementId = slide?.announcement_id;
+  if (!announcementId) return;
+
+  const remainingSlides = await collectionItems("HeroSlide");
+  const announcementStillUsed = remainingSlides.some((item) =>
+    String(item.announcement_id || "") === String(announcementId)
+  );
+  if (announcementStillUsed) return;
+
+  const announcementRef = doc(firestore, "AnnouncementsEvents", String(announcementId));
+  const announcementSnapshot = await getDoc(announcementRef);
+  if (announcementSnapshot.exists()) {
+    await deleteAnnouncementFiles(String(announcementId), announcementSnapshot.data());
+    await deleteDoc(announcementRef);
+  }
+}
+
+async function deleteAnnouncementWithLinkedSlides(id) {
+  const announcementRef = doc(firestore, "AnnouncementsEvents", id);
+  const announcementSnapshot = await getDoc(announcementRef);
+  const linkedSlides = (await collectionItems("HeroSlide")).filter((slide) =>
+    String(slide.announcement_id || "") === String(id)
+  );
+
+  for (const slide of linkedSlides) {
+    await deleteHeroImageFile(slide);
+    await deleteDoc(doc(firestore, "HeroSlide", slide.id));
+  }
+
+  if (announcementSnapshot.exists()) {
+    await deleteAnnouncementFiles(id, announcementSnapshot.data());
+  }
+  await deleteDoc(announcementRef);
+}
+
 function firebaseEntity(entityName) {
   return {
     list: async (sort, limit) => {
@@ -222,12 +281,18 @@ function firebaseEntity(entityName) {
       return { id, ...item };
     },
     delete: async (id) => {
+      if (entityName === "HeroSlide") {
+        await deleteHeroSlideWithLinkedAnnouncement(id);
+        return { success: true };
+      }
+      if (entityName === "AnnouncementsEvents") {
+        await deleteAnnouncementWithLinkedSlides(id);
+        return { success: true };
+      }
       if (entityName === "HeroSlide" || entityName === "LandingImage" || entityName === "Bulletins" || entityName === "NewsletterBroadcasts") {
         const itemSnapshot = await getDoc(doc(firestore, entityName, id));
         if (itemSnapshot.exists()) {
-          if (entityName === "HeroSlide") {
-            await deleteHeroImageFile(itemSnapshot.data());
-          } else if (entityName === "LandingImage") {
+          if (entityName === "LandingImage") {
             await deleteLandingImageFile(itemSnapshot.data());
           } else if (entityName === "Bulletins") {
             await deleteBulletinFiles(id, itemSnapshot.data());

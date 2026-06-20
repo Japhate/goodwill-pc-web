@@ -6,6 +6,8 @@ import { Search, X, Megaphone, PlaySquare, FileText, ChevronRight } from "lucide
 import { Input } from "@/components/ui/input";
 import { createPageUrl } from "@/utils";
 import { AnnouncementsEvents } from "@/entities/AnnouncementsEvents";
+import { HeroSlide } from "@/entities/HeroSlide";
+import { getPublicAnnouncements } from "@/lib/publicAnnouncements";
 import { Sermons } from "@/entities/Sermons";
 import { format } from "date-fns";
 import PageLoadingScreen from "@/components/PageLoadingScreen";
@@ -20,12 +22,14 @@ const SearchModal = ({ isOpen, onClose }) => {
             if (isOpen && allItems.length === 0) {
                 setLoading(true);
                 try {
-                    const [announcements, sermons] = await Promise.all([
+                    const [announcements, heroSlides, sermons] = await Promise.all([
                         AnnouncementsEvents.list("-date", 200),
+                        HeroSlide.list("order", 200),
                         Sermons.list("-date", 100),
                     ]);
                     
-                    const mappedAnnouncements = announcements.map(item => ({ ...item, type: 'Announcement' }));
+                    const mappedAnnouncements = getPublicAnnouncements(announcements, heroSlides)
+                        .map(item => ({ ...item, type: 'Announcement' }));
                     const mappedSermons = sermons.map(item => ({ ...item, type: 'Sermon' }));
                     
                     setAllItems([...mappedAnnouncements, ...mappedSermons]);

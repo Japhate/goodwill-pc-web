@@ -10,6 +10,8 @@ import { Input } from "@/components/ui/input";
 import { NewsletterSubscriptions } from "@/entities/NewsletterSubscriptions";
 import { createSpecialServicePopup, getActiveSpecialServiceNotice } from "@/lib/specialServiceNotice";
 import { SitePopups } from "@/entities/SitePopups";
+import { HeroSlide } from "@/entities/HeroSlide";
+import { getPublicAnnouncements } from "@/lib/publicAnnouncements";
 import SitePopupModal, { getActivePopup } from "@/components/home/SitePopupModal";
 import HeritageSealLoader from "@/components/HeritageSealLoader";
 
@@ -259,16 +261,14 @@ export default function Home() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [allAnnouncements, allSermons, allSitePopups] = await Promise.all([
+        const [allAnnouncements, allHeroSlides, allSermons, allSitePopups] = await Promise.all([
             AnnouncementsEvents.list('-created_date', 100),
+            HeroSlide.list('order', 200),
             Sermons.list('-date', 10),
             SitePopups.list('priority', 50).catch(() => [])
         ]);
 
-        // Filter for Active and Timeless announcements
-        const activeAnnouncements = allAnnouncements.filter(a => 
-          a.status === 'Active' || a.status === 'Timeless' || !a.status
-        );
+        const activeAnnouncements = getPublicAnnouncements(allAnnouncements, allHeroSlides);
         
         const today = startOfDay(new Date());
 

@@ -1,3 +1,3 @@
-import { localApi } from "@/api/localApiClient";
+import { firebaseApi } from "@/api/firebaseApiClient";
 
-export const HeroSlide = localApi.entities.HeroSlide;
+export const HeroSlide = firebaseApi.entities.HeroSlide;

@@ -1,7 +1,11 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRight, ArrowUpRight, ChevronLeft, ChevronRight, ExternalLink, Video, Clock, Navigation } from "lucide-react";
-import { localApi } from "@/api/localApiClient";
+import { HeroSlide } from "@/entities/HeroSlide";
+import { AnnouncementsEvents } from "@/entities/AnnouncementsEvents";
+import { LandingImage } from "@/entities/LandingImage";
+import { HomeBannerMessages } from "@/entities/HomeBannerMessages";
+import { getPublicAnnouncements, getPublicHeroSlides } from "@/lib/publicAnnouncements";
 import { format } from "date-fns";
 import { DEFAULT_HOMEPAGE_BANNER_MESSAGES, LIVE_BIBLE_STUDY_BANNER_MESSAGE } from "@/lib/homepageBanners";
 import { createSpecialServiceHeroSlide, getActiveSpecialServiceNotice } from "@/lib/specialServiceNotice";
@@ -515,11 +519,11 @@ export default function HeroSlideshow({ onReady }) {
     const loadSlides = async () => {
       try {
         const [data, announcementData, landingImageData] = await Promise.all([
-          localApi.entities.HeroSlide.list('order', 50),
-          localApi.entities.AnnouncementsEvents.list('-created_date', 200).catch(() => []),
-          localApi.entities.LandingImage.list('-updated_date', 10).catch(() => []),
+          HeroSlide.list('order', 50),
+          AnnouncementsEvents.list('-created_date', 200),
+          LandingImage.list('-updated_date', 10).catch(() => []),
         ]);
-        setAnnouncements(Array.isArray(announcementData) ? announcementData : []);
+        setAnnouncements(getPublicAnnouncements(announcementData, data));
         const activeLandingImage = Array.isArray(landingImageData)
           ? landingImageData.find((item) => item?.is_active !== false && item?.image_url)
           : null;
@@ -531,7 +535,8 @@ export default function HeroSlideshow({ onReady }) {
           link_url: activeLandingImage?.link_url || ABOUT_PAGE_URL,
           link_label: activeLandingImage?.link_label || "Learn More",
         });
-        const active = data.filter((s) => s.is_active !== false && !isPermanentWelcomeHeroSlide(s));
+        const active = getPublicHeroSlides(data, announcementData)
+          .filter((slide) => !isPermanentWelcomeHeroSlide(slide));
         setSlides(active);
       } catch {
         setAnnouncements([]);
@@ -545,7 +550,7 @@ export default function HeroSlideshow({ onReady }) {
   useEffect(() => {
     const loadBanners = async () => {
       try {
-        const data = await localApi.entities.HomeBannerMessages.list('-created_date', 100);
+        const data = await HomeBannerMessages.list('-created_date', 100);
         const live = data.filter((banner) => banner.status === "live");
         const standard = data.filter((banner) => banner.status === "active");
         const inactive = data.filter((banner) => banner.status !== "live" && banner.status !== "active");

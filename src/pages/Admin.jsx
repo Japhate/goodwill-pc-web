@@ -1372,8 +1372,15 @@ export default function AdminPage() {
       return false;
     }
 
-    const results = await Promise.allSettled(ids.map((id) => HeroSlide.delete(id)));
-    await loadHeroSlides();
+    const results = [];
+    for (const id of ids) {
+      try {
+        results.push({ status: 'fulfilled', value: await HeroSlide.delete(id) });
+      } catch (reason) {
+        results.push({ status: 'rejected', reason });
+      }
+    }
+    await Promise.all([loadHeroSlides(), loadAnnouncements()]);
 
     const failedDeletes = results.filter((result) => result.status === 'rejected');
     if (failedDeletes.length > 0) {
@@ -1418,8 +1425,7 @@ export default function AdminPage() {
       return HeroSlide.update(id, { ...slideData, is_active: isActive, order: restoredOrder });
     }));
     const selectedSlides = ids.map((id) => slidesById.get(String(id))).filter(Boolean);
-    const announcementIdsToHide = !isActive
-      ? Array.from(new Set(selectedSlides.map((slide) => {
+    const linkedAnnouncementIds = Array.from(new Set(selectedSlides.map((slide) => {
           if (slide.announcement_id) return String(slide.announcement_id);
 
           const slideTitle = normalizeMatchText(slide.alt_text);
@@ -1434,17 +1440,19 @@ export default function AdminPage() {
             );
           });
           return matchedAnnouncement?.id ? String(matchedAnnouncement.id) : "";
-        }).filter(Boolean)))
-      : [];
-    const announcementResults = await Promise.allSettled(announcementIdsToHide.map((announcementId) => {
+        }).filter(Boolean)));
+    const announcementResults = await Promise.allSettled(linkedAnnouncementIds.map((announcementId) => {
       const announcement = announcements.find((item) => String(item.id) === String(announcementId));
       if (!announcement) throw new Error(`Announcement ${announcementId} was not found.`);
       const { id: _id, ...announcementData } = announcement;
-      return AnnouncementsEvents.update(announcementId, { ...announcementData, status: 'Hidden' });
+      return AnnouncementsEvents.update(announcementId, {
+        ...announcementData,
+        status: isActive ? 'Active' : 'Hidden',
+      });
     }));
 
     await loadHeroSlides();
-    if (announcementIdsToHide.length > 0) {
+    if (linkedAnnouncementIds.length > 0) {
       await loadAnnouncements();
     }
 
@@ -1469,7 +1477,7 @@ export default function AdminPage() {
       itemType: slideLabel,
       itemId: ids.join(', '),
       itemLabel: `${ids.length} selected ${slideLabel}`,
-      details: { is_active: isActive, hiddenAnnouncementIds: announcementIdsToHide },
+      details: { is_active: isActive, linkedAnnouncementIds },
     });
 
     return true;
@@ -1490,7 +1498,14 @@ export default function AdminPage() {
 
     try {
       const { id: _id, ...announcementData } = announcement;
+      const linkedSlides = heroSlides.filter((slide) =>
+        String(slide.announcement_id || '') === String(id)
+      );
       await AnnouncementsEvents.update(id, { ...announcementData, status });
+      await Promise.all(linkedSlides.map((slide) => {
+        const { id: slideId, ...slideData } = slide;
+        return HeroSlide.update(slideId, { ...slideData, is_active: isRestoring });
+      }));
       await logAdminActivity({
         action: isRestoring ? 'restored' : 'hidden',
         section: 'Hero Slides & Announcements',
@@ -1499,7 +1514,7 @@ export default function AdminPage() {
         itemLabel: announcement.title || '',
         details: { status },
       });
-      await loadAnnouncements();
+      await Promise.all([loadAnnouncements(), loadHeroSlides()]);
       return true;
     } catch (error) {
       console.error('Unable to update announcement visibility:', error);

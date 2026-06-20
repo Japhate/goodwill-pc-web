@@ -11,6 +11,7 @@ import { groupBy } from 'lodash';
 import { Badge } from "@/components/ui/badge";
 import { getActiveSpecialServiceNotice } from "@/lib/specialServiceNotice";
 import PageLoadingScreen from "@/components/PageLoadingScreen";
+import { getPublicAnnouncements } from "@/lib/publicAnnouncements";
 
 // Helper to parse date string as local time to avoid timezone shifts
 // and handle potential invalid date values gracefully.
@@ -63,8 +64,6 @@ const getLocationType = (item) => {
 
 const hasPhysicalLocation = (item) => ["physical", "both"].includes(getLocationType(item));
 const hasVirtualLocation = (item) => ["virtual", "both"].includes(getLocationType(item));
-
-const isHiddenStatus = (status) => String(status || "").trim().toLowerCase() === "hidden";
 
 const normalizeMatchText = (value) => String(value || "")
   .toLowerCase()
@@ -232,43 +231,7 @@ export default function Updates() {
         WorshipEvent.list('event_date', 100),
         HeroSlide.list('order', 200).catch(() => [])
       ]);
-      const activeLinkedAnnouncementIds = new Set(
-        heroSlideRes
-          .filter((slide) => slide.is_active !== false && slide.announcement_id)
-          .map((slide) => String(slide.announcement_id))
-      );
-      const hiddenLinkedAnnouncementIds = new Set(
-        heroSlideRes
-          .filter((slide) => slide.is_active === false && slide.announcement_id)
-          .map((slide) => String(slide.announcement_id))
-      );
-      const activeSlideTitles = new Set(
-        heroSlideRes
-          .filter((slide) => slide.is_active !== false && !slide.announcement_id)
-          .map((slide) => normalizeMatchText(slide.alt_text))
-          .filter(Boolean)
-      );
-      const hiddenSlideTitles = new Set(
-        heroSlideRes
-          .filter((slide) => slide.is_active === false && !slide.announcement_id)
-          .map((slide) => normalizeMatchText(slide.alt_text))
-          .filter(Boolean)
-      );
-      const visibleAnnouncements = announcementRes.filter((announcement) => {
-        if (isHiddenStatus(announcement.status)) return false;
-
-        const announcementId = String(announcement.id || "");
-        if (hiddenLinkedAnnouncementIds.has(announcementId) && !activeLinkedAnnouncementIds.has(announcementId)) {
-          return false;
-        }
-
-        const announcementTitle = normalizeMatchText(announcement.title);
-        if (announcementTitle && hiddenSlideTitles.has(announcementTitle) && !activeSlideTitles.has(announcementTitle)) {
-          return false;
-        }
-
-        return true;
-      });
+      const visibleAnnouncements = getPublicAnnouncements(announcementRes, heroSlideRes);
       const activeHeroSlideOrderEntries = heroSlideRes
         .filter((slide) => slide.is_active !== false)
         .sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0))
