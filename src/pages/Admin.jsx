@@ -34,7 +34,6 @@ import { firebaseAuth, firebaseEnabled } from '@/lib/firebase';
 import { localApi } from '@/api/localApiClient';
 import { collection, doc, getDocs, updateDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase';
-import { DEFAULT_HOMEPAGE_BANNERS, LIVE_BIBLE_STUDY_BANNER_MESSAGE } from '@/lib/homepageBanners';
 import { DEFAULT_EMAIL_TEMPLATES, NEWSLETTER_TEMPLATE_IDS } from '@/lib/newsletterTemplates';
 import { createSpecialServicePopup } from '@/lib/specialServiceNotice';
 import { Camera, CheckCircle2, XCircle, Loader2, ShieldAlert, CalendarHeart, PlaySquare, FileText, MessageSquare, LayoutTemplate, LogOut, BellRing, Mail, ShieldCheck, UserRound, Code2, Search, Grid2X2, List, Plus, Info, ChevronDown, EyeOff, RotateCcw, Trash2 } from 'lucide-react';
@@ -189,15 +188,11 @@ function isAdminEventLiveNow(event, now = new Date()) {
 }
 
 function isTimedBibleStudyBanner(banner) {
-  return banner?.is_bible_study_live_banner === true
-    || banner?.message === LIVE_BIBLE_STUDY_BANNER_MESSAGE;
+  return banner?.is_bible_study_live_banner === true;
 }
 
-function getAutomaticBannerMessage(slide = {}, source = {}, sourceTitle = '', isZoomSlide = false) {
-  const customMessage = String(source.live_banner_message || slide.live_banner_message || '').trim();
-  if (customMessage) return customMessage;
-  if (isZoomSlide) return LIVE_BIBLE_STUDY_BANNER_MESSAGE;
-  return `\u{1F534} ${sourceTitle} is happening now.`;
+function getAutomaticBannerMessage(slide = {}, source = {}) {
+  return String(source.live_banner_message || slide.live_banner_message || '').trim();
 }
 
 function getAdminScheduleLabel(event = {}) {
@@ -894,36 +889,26 @@ export default function AdminPage() {
   };
 
   const loadBanners = async () => {
-    const data = await HomeBannerMessages.list('-created_date', 100);
-    if (data.length > 0) {
-      const timedBibleStudyBanners = data.filter(isTimedBibleStudyBanner);
-      if (timedBibleStudyBanners.length > 0) {
-        await Promise.allSettled(timedBibleStudyBanners.map((banner) => HomeBannerMessages.delete(banner.id)));
+    let data = await HomeBannerMessages.list('-created_date', 100);
+
+    if (data.length === 0) {
+      const legacyBanners = await LegacyBanner.list('-created_date', 100);
+      if (legacyBanners.length > 0) {
+        data = await Promise.all(
+          legacyBanners.map(({ id: _id, ...banner }, index) => HomeBannerMessages.create({
+            ...banner,
+            order: banner.order ?? index + 1,
+          }))
+        );
       }
-
-      setBanners(data.filter((banner) => !isTimedBibleStudyBanner(banner)));
-      return;
     }
 
-    const legacyBanners = await LegacyBanner.list('-created_date', 100);
-    if (legacyBanners.length > 0) {
-      const migratedBanners = await Promise.all(
-        legacyBanners.map(({ id: _id, ...banner }, index) => HomeBannerMessages.create({
-          ...banner,
-          order: banner.order ?? index + 1,
-        }))
-      );
-      setBanners(migratedBanners);
-      return;
+    const timedBibleStudyBanners = data.filter(isTimedBibleStudyBanner);
+    if (timedBibleStudyBanners.length > 0) {
+      await Promise.allSettled(timedBibleStudyBanners.map((banner) => HomeBannerMessages.delete(banner.id)));
     }
 
-    const seededBanners = await Promise.all(
-      DEFAULT_HOMEPAGE_BANNERS.map((banner, index) => HomeBannerMessages.create({
-        ...banner,
-        order: index + 1,
-      }))
-    );
-    setBanners(seededBanners);
+    setBanners(data.filter((banner) => !isTimedBibleStudyBanner(banner)));
   };
 
   const loadHeroSlides = async () => {
@@ -2416,10 +2401,6 @@ export default function AdminPage() {
 
       const normalizedStatus = String(source.status || '').toLowerCase();
       const sourceTitle = source.title || slide.alt_text || 'Scheduled hero slide';
-      const isZoomSlide = slide.is_zoom_bible_study === true
-        || String(slide.alt_text || '').toLowerCase().includes('zoom')
-        || String(source.virtual_platform || '').toLowerCase().includes('zoom')
-        || String(source.zoom_link || '').includes('zoom.us');
       const isEnabled = slide.is_active !== false && !['hidden', 'inactive', 'draft'].includes(normalizedStatus);
 
       return {
@@ -2429,7 +2410,7 @@ export default function AdminPage() {
         source,
         sourceTitle,
         sourceLabel: announcement ? 'Hero slide linked announcement' : 'Hero slide schedule',
-        message: getAutomaticBannerMessage(slide, source, sourceTitle, isZoomSlide),
+        message: getAutomaticBannerMessage(slide, source, sourceTitle),
         scheduleLabel: getAdminScheduleLabel(source),
         isEnabled,
         isLiveNow: isEnabled && isAdminEventLiveNow(source),

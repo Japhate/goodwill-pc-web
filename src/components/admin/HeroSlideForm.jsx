@@ -674,7 +674,7 @@ export default function HeroSlideForm({ slide, announcement, announcementMode = 
                   <Input
                     value={relatedAnnouncementDraft.live_banner_message || ""}
                     onChange={(e) => handleRelatedAnnouncementChange("live_banner_message", e.target.value)}
-                    placeholder="e.g. Our Zoom Bible Study is happening now. Click to join us."
+                    placeholder="Enter the live homepage banner message."
                   />
                 </div>
             </div>

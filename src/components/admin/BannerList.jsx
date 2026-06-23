@@ -101,6 +101,9 @@ export default function BannerList({
                     <td className="p-2">{index + 1}</td>
                     <td className="p-2 max-w-md">
                       <p className="truncate">{banner.message}</p>
+                      {banner.is_special_service_banner && (
+                        <p className="mt-1 text-xs font-semibold text-amber-700">Special service homepage banner</p>
+                      )}
                       {banner.is_bible_study_live_banner && (
                         <p className="mt-1 text-xs font-semibold text-amber-700">Timed Zoom Bible Study banner</p>
                       )}
@@ -344,7 +347,9 @@ export default function BannerList({
                           <div className="mt-4 grid gap-3 border-t pt-3 md:grid-cols-[minmax(0,1fr)_minmax(14rem,auto)]">
                             <div>
                               <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Live message</p>
-                              <p className="mt-1 text-sm text-gray-800">{banner.message}</p>
+                              <p className={`mt-1 text-sm ${banner.message ? "text-gray-800" : "italic text-gray-500"}`}>
+                                {banner.message || "No live banner message set"}
+                              </p>
                             </div>
                             <div>
                               <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Schedule</p>

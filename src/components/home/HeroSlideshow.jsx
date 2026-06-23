@@ -7,7 +7,6 @@ import { LandingImage } from "@/entities/LandingImage";
 import { HomeBannerMessages } from "@/entities/HomeBannerMessages";
 import { getPublicAnnouncements, getPublicHeroSlides } from "@/lib/publicAnnouncements";
 import { format } from "date-fns";
-import { DEFAULT_HOMEPAGE_BANNER_MESSAGES, LIVE_BIBLE_STUDY_BANNER_MESSAGE } from "@/lib/homepageBanners";
 import { createSpecialServiceHeroSlide, getActiveSpecialServiceNotice } from "@/lib/specialServiceNotice";
 
 // Fallback slides if no slides are in the database
@@ -181,20 +180,11 @@ function isZoomBibleStudySlide(slide) {
 }
 
 function isTimedBibleStudyBanner(banner) {
-  return banner?.is_bible_study_live_banner === true
-    || banner?.message === LIVE_BIBLE_STUDY_BANNER_MESSAGE;
+  return banner?.is_bible_study_live_banner === true;
 }
 
 function getLiveScheduledBannerMessage(slide = {}, event = {}) {
-  const customMessage = String(event.live_banner_message || slide.live_banner_message || "").trim();
-  if (customMessage) return customMessage;
-
-  if (isZoomBibleStudySlide(slide) || isTimedBibleStudyBanner(event)) {
-    return LIVE_BIBLE_STUDY_BANNER_MESSAGE;
-  }
-
-  const title = String(event?.title || slide?.alt_text || "").trim();
-  return title ? `\u{1F534} ${title} is happening now.` : "";
+  return String(event.live_banner_message || slide.live_banner_message || "").trim();
 }
 
 function isPrioritySlideActive(slide, now) {
@@ -492,8 +482,33 @@ export default function HeroSlideshow({ onReady }) {
   }, [announcements, now, slides]);
   const isLiveBanner = liveScheduledSlides.length > 0;
 
+  function isActiveManagedBanner(banner, now) {
+    if (!banner) return false;
+    const normalizedStatus = String(banner.status || '').toLowerCase();
+    if (['inactive', 'hidden', 'draft'].includes(normalizedStatus)) return false;
+    if (banner.is_special_service_banner) {
+      if (banner.priority_start && banner.priority_end) {
+        const start = new Date(banner.priority_start);
+        const end = new Date(banner.priority_end);
+        if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return false;
+        return now >= start && now < end;
+      }
+    }
+    return normalizedStatus === 'live' || normalizedStatus === 'active';
+  }
+
   const bannerMessages = useMemo(() => {
-    if (activeSpecialServiceNotice) return [activeSpecialServiceNotice.message];
+    if (activeSpecialServiceNotice) {
+      const specialServiceMessages = Array.isArray(managedBanners)
+        ? managedBanners
+            .filter((banner) => banner?.is_special_service_banner === true)
+            .filter((banner) => isActiveManagedBanner(banner, now))
+            .map((banner) => banner.message)
+            .filter(Boolean)
+        : [];
+      if (specialServiceMessages.length > 0) return specialServiceMessages;
+    }
+
     if (liveScheduledSlides.length > 0) {
       return liveScheduledSlides
         .map(({ slide, event }) => getLiveScheduledBannerMessage(slide, event))
@@ -502,17 +517,21 @@ export default function HeroSlideshow({ onReady }) {
 
     if (Array.isArray(managedBanners)) {
       const messages = managedBanners
-        .filter((banner) => !isTimedBibleStudyBanner(banner) && (banner.status === "live" || banner.status === "active"))
+        .filter((banner) => !isTimedBibleStudyBanner(banner) && isActiveManagedBanner(banner, now))
         .map((banner) => banner.message)
         .filter(Boolean);
 
       if (managedBanners.length > 0 || messages.length > 0) return messages;
     }
 
-    return DEFAULT_HOMEPAGE_BANNER_MESSAGES;
-  }, [activeSpecialServiceNotice, liveScheduledSlides, managedBanners]);
+    return [];
+  }, [activeSpecialServiceNotice, liveScheduledSlides, managedBanners, now]);
 
-  const isLiveTicker = Boolean(activeSpecialServiceNotice) || isLiveBanner;
+  const hasActiveSpecialServiceBanner = Boolean(activeSpecialServiceNotice) && Array.isArray(managedBanners)
+    && managedBanners
+      .filter((banner) => banner?.is_special_service_banner === true)
+      .some((banner) => isActiveManagedBanner(banner, now));
+  const isLiveTicker = hasActiveSpecialServiceBanner || isLiveBanner;
   const currentBannerMessage = bannerMessages[currentBannerIndex] || bannerMessages[0];
 
   useEffect(() => {
@@ -556,7 +575,7 @@ export default function HeroSlideshow({ onReady }) {
         const inactive = data.filter((banner) => banner.status !== "live" && banner.status !== "active");
         setManagedBanners([...live, ...standard, ...inactive]);
       } catch {
-        setManagedBanners(null);
+        setManagedBanners([]);
       }
     };
     loadBanners();
