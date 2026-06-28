@@ -23,16 +23,40 @@ const getYoutubeVideoId = (url) => {
   return (match && match[2].length === 11) ? match[2] : null;
 };
 
+const BULLETIN_FORMATS = {
+  pdf: { extension: 'pdf', label: 'PDF' },
+  doc: { extension: 'doc', label: 'Word' },
+  docx: { extension: 'docx', label: 'Word' },
+};
+
+const getBulletinExtension = (bulletin) => {
+  const fromName = String(bulletin?.file_name || '').match(/\.([a-z0-9]+)$/i)?.[1];
+  if (fromName && BULLETIN_FORMATS[fromName.toLowerCase()]) return fromName.toLowerCase();
+
+  try {
+    const path = decodeURIComponent(new URL(bulletin?.file_url || '', window.location.origin).pathname);
+    const fromUrl = path.match(/\.([a-z0-9]+)$/i)?.[1];
+    if (fromUrl && BULLETIN_FORMATS[fromUrl.toLowerCase()]) return fromUrl.toLowerCase();
+  } catch {
+    // Fall back to PDF for older records without a recognizable file extension.
+  }
+
+  return 'pdf';
+};
+
+const getBulletinFormat = (bulletin) => BULLETIN_FORMATS[getBulletinExtension(bulletin)] || BULLETIN_FORMATS.pdf;
+
 // Helper function to create a clean filename from the bulletin date
 const getFilename = (bulletin) => {
-    if (!bulletin || !bulletin.date) return 'Worship_Bulletin.pdf';
+    const { extension } = getBulletinFormat(bulletin);
+    if (!bulletin || !bulletin.date) return `Worship_Bulletin.${extension}`;
     try {
         const date = parseISO(bulletin.date);
         const formattedDate = format(date, 'MMMM_d_yyyy');
-        return `Worship_Bulletin_${formattedDate}.pdf`;
+        return `Worship_Bulletin_${formattedDate}.${extension}`;
     } catch (error) {
         console.error("Error formatting date for filename:", error);
-        return 'Worship_Bulletin.pdf';
+        return `Worship_Bulletin.${extension}`;
     }
 };
 
@@ -564,6 +588,7 @@ export default function Resources() {
     return sortSermons(filtered, sermonsSortField, sermonsSortDirection);
   }, [sermons, sermonSearch, selectedSpeaker, sermonsSortField, sermonsSortDirection]);
   const currentBulletin = useMemo(() => bulletins.find(b => b.status === 'Current'), [bulletins]);
+  const currentBulletinFormat = useMemo(() => getBulletinFormat(currentBulletin), [currentBulletin]);
   const previousBulletins = useMemo(() => {
     const q = bulletinSearch.trim().toLowerCase();
     const pastBulletins = bulletins.filter(b => b.status === 'Past' || !b.status);
@@ -1098,7 +1123,7 @@ export default function Resources() {
                             <Button asChild className="bg-amber-600 hover:bg-amber-700 w-full sm:w-auto">
                               <a href={currentBulletin.file_url} target="_blank" rel="noopener noreferrer" download={getFilename(currentBulletin)}>
                                 <Download className="w-5 h-5 mr-2" />
-                                Download PDF
+                                Download {currentBulletinFormat.label}
                               </a>
                             </Button>
                           </CardContent>
@@ -1195,7 +1220,7 @@ export default function Resources() {
                             </div>
                             <div className="p-4 mt-auto">
                               <Button asChild variant="outline" className="w-full text-amber-700 border-amber-600 hover:bg-amber-50">
-                                <a href={bulletin.file_url} target="_blank" rel="noopener noreferrer" download={getFilename(bulletin)}><Download className="w-4 h-4 mr-2" />Download</a>
+                                <a href={bulletin.file_url} target="_blank" rel="noopener noreferrer" download={getFilename(bulletin)}><Download className="w-4 h-4 mr-2" />Download {getBulletinFormat(bulletin).label}</a>
                               </Button>
                             </div>
                           </Card>
@@ -1207,14 +1232,14 @@ export default function Resources() {
                           <Card key={bulletin.id} className="overflow-hidden hover:shadow-md transition-all duration-300">
                             <div className="flex items-center gap-4 p-3">
                               <div className="flex-shrink-0 w-12 h-16 bg-gray-100 rounded overflow-hidden cursor-pointer" onClick={() => setEnlargedBulletin(bulletin)}>
-                                <img src={bulletin.thumbnail_url} alt={bulletin.title} className="w-full h-full object-cover hover:opacity-80 transition-opacity" onError={(e) => { e.target.src = "https://via.placeholder.com/100x130/f3f4f6/374151?text=PDF"; }} />
+                                <img src={bulletin.thumbnail_url} alt={bulletin.title} className="w-full h-full object-cover hover:opacity-80 transition-opacity" onError={(e) => { e.target.src = "https://via.placeholder.com/100x130/f3f4f6/374151?text=Bulletin"; }} />
                               </div>
                               <div className="flex-1 min-w-0">
                                 <p className="font-semibold text-gray-800 truncate">{bulletin.title}</p>
                                 <p className="text-sm text-amber-700">{formatBulletinDate(bulletin.date)}</p>
                               </div>
                               <Button asChild variant="outline" size="sm" className="flex-shrink-0 text-amber-700 border-amber-600 hover:bg-amber-50">
-                                <a href={bulletin.file_url} target="_blank" rel="noopener noreferrer" download={getFilename(bulletin)}><Download className="w-4 h-4 mr-1" />Download</a>
+                                <a href={bulletin.file_url} target="_blank" rel="noopener noreferrer" download={getFilename(bulletin)}><Download className="w-4 h-4 mr-1" />Download {getBulletinFormat(bulletin).label}</a>
                               </Button>
                             </div>
                           </Card>

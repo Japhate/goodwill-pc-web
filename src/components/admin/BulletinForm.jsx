@@ -11,6 +11,8 @@ export default function BulletinForm({ bulletin, onSubmit, onCancel }) {
     date: '',
     status: 'Past',
     file_url: '',
+    file_name: '',
+    file_type: '',
     thumbnail_url: ''
   });
   const [isUploadingFile, setIsUploadingFile] = useState(false);
@@ -49,6 +51,14 @@ export default function BulletinForm({ bulletin, onSubmit, onCancel }) {
     try {
       const { file_url } = await UploadFile({ file, destination });
       handleChange(field, file_url);
+      if (field === 'file_url') {
+        setFormData(prev => ({
+          ...prev,
+          file_url,
+          file_name: file.name,
+          file_type: file.type,
+        }));
+      }
     } catch (error) {
       console.error("File upload failed:", error);
     } finally {
@@ -62,7 +72,7 @@ export default function BulletinForm({ bulletin, onSubmit, onCancel }) {
     if (!String(formData.title || '').trim()) nextErrors.title = 'Enter the bulletin title.';
     if (!formData.date) nextErrors.date = 'Choose the bulletin date.';
     if (!formData.status) nextErrors.status = 'Choose the bulletin status.';
-    if (!formData.file_url) nextErrors.file_url = 'Upload the bulletin PDF file.';
+    if (!formData.file_url) nextErrors.file_url = 'Upload the bulletin file.';
     if (!formData.thumbnail_url) nextErrors.thumbnail_url = 'Upload the thumbnail image.';
     setValidationErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
@@ -117,12 +127,12 @@ export default function BulletinForm({ bulletin, onSubmit, onCancel }) {
       </div>
 
       <div>
-        <label htmlFor="file_upload" className="block text-sm font-medium text-gray-700 mb-1">Bulletin PDF File<span className="ml-1 text-red-600">*</span></label>
+        <label htmlFor="file_upload" className="block text-sm font-medium text-gray-700 mb-1">Bulletin File<span className="ml-1 text-red-600">*</span></label>
         <div className="flex items-center gap-4">
             <Input
               id="file_upload"
               type="file"
-              accept=".pdf"
+              accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
               onChange={(e) => handleFileChange(e, 'file_url', 'bulletinPdf', setIsUploadingFile)}
               className={`max-w-xs ${validationErrors.file_url ? "border-red-500 focus-visible:ring-red-500" : ""}`}
             />
