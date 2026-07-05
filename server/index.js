@@ -23,11 +23,47 @@ const ROOT_DIR = path.resolve(__dirname, '..');
 const DIST_DIR = path.join(ROOT_DIR, 'dist');
 const CANONICAL_HOST = 'www.goodwillpresch1867.com';
 const SITE_DEVELOPER_EMAIL = 'nebajaphate@gmail.com';
+const PUBLIC_EMAIL_RATE_LIMITS = {
+  ip: { windowMs: 15 * 60 * 1000, max: 10 },
+  email: { windowMs: 60 * 60 * 1000, max: 3 },
+};
 const ADMIN_ROLES = {
   SITE_ADMIN: 'site_admin',
   SITE_DEVELOPER: 'site_developer',
 };
 const LEGACY_HOSTS = new Set([]);
+const PRODUCTION_CORS_ORIGINS = new Set([
+  `https://${CANONICAL_HOST}`,
+  'https://goodwillpresch1867.com',
+  ...String(process.env.CORS_ALLOWED_ORIGINS || '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean),
+]);
+const publicEmailRateLimitStore = new Map();
+
+app.set('trust proxy', 1);
+
+function isLocalDevelopmentOrigin(origin) {
+  if (process.env.LOCAL_VITE_DEV !== 'true') return false;
+
+  try {
+    const { hostname, protocol } = new URL(origin);
+    return ['http:', 'https:'].includes(protocol)
+      && (
+        hostname === 'localhost'
+        || hostname === '127.0.0.1'
+        || hostname === '::1'
+      );
+  } catch {
+    return false;
+  }
+}
+
+function isAllowedCorsOrigin(origin) {
+  if (!origin) return true;
+  return PRODUCTION_CORS_ORIGINS.has(origin) || isLocalDevelopmentOrigin(origin);
+}
 
 app.use((req, res, next) => {
   const host = req.hostname?.toLowerCase();
@@ -39,7 +75,12 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(cors());
+app.use(cors({
+  origin: (origin, callback) => callback(null, isAllowedCorsOrigin(origin)),
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  optionsSuccessStatus: 204,
+}));
 app.use(express.json({ limit: '15mb' }));
 
 const DATA_DIR = path.join(ROOT_DIR, 'server', 'data');
@@ -66,6 +107,117 @@ function normalizeEmail(email) {
 
 function normalizePersonName(name) {
   return String(name || '').trim().replace(/\s+/g, ' ');
+}
+
+function isValidEmail(email) {
+  return String(email || '').length <= 320
+    && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function getClientIp(req) {
+  const forwardedFor = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
+  return forwardedFor || req.ip || req.socket?.remoteAddress || 'unknown';
+}
+
+function takeRateLimitSlot(key, { windowMs, max }) {
+  const now = Date.now();
+  const current = publicEmailRateLimitStore.get(key);
+
+  if (!current || current.resetAt <= now) {
+    publicEmailRateLimitStore.set(key, { count: 1, resetAt: now + windowMs });
+    return { allowed: true };
+  }
+
+  if (current.count >= max) {
+    return {
+      allowed: false,
+      retryAfterSeconds: Math.max(1, Math.ceil((current.resetAt - now) / 1000)),
+    };
+  }
+
+  current.count += 1;
+  publicEmailRateLimitStore.set(key, current);
+  return { allowed: true };
+}
+
+function prunePublicEmailRateLimits() {
+  const now = Date.now();
+  for (const [key, value] of publicEmailRateLimitStore.entries()) {
+    if (value.resetAt <= now) publicEmailRateLimitStore.delete(key);
+  }
+}
+
+function checkPublicEmailRateLimit(req, email, purpose) {
+  prunePublicEmailRateLimits();
+  const ip = getClientIp(req);
+  const checks = [
+    takeRateLimitSlot(`public-email:${purpose}:ip:${ip}`, PUBLIC_EMAIL_RATE_LIMITS.ip),
+    takeRateLimitSlot(`public-email:${purpose}:email:${email}`, PUBLIC_EMAIL_RATE_LIMITS.email),
+  ];
+  return checks.find((result) => !result.allowed) || { allowed: true };
+}
+
+function getPublicSiteOrigin(req) {
+  if (process.env.LOCAL_VITE_DEV === 'true') {
+    const host = String(req.body?.host || req.headers.host || '').trim().toLowerCase();
+    const protocol = String(req.body?.protocol || req.protocol || 'http').replace(':', '').toLowerCase();
+    const isLocalHost = /^localhost(?::\d+)?$/.test(host)
+      || /^127\.0\.0\.1(?::\d+)?$/.test(host)
+      || /^\[::1\](?::\d+)?$/.test(host);
+
+    if (isLocalHost && ['http', 'https'].includes(protocol)) {
+      return `${protocol}://${host}`;
+    }
+  }
+
+  return `https://${CANONICAL_HOST}`;
+}
+
+function validatePublicEmailRecipient(body, { requireUnsubscribeToken = false } = {}) {
+  const email = normalizeEmail(body?.email);
+  const firstName = normalizePersonName(body?.firstName || body?.first_name);
+  const lastName = normalizePersonName(body?.lastName || body?.last_name);
+  const expectedEmailKey = encodeURIComponent(email);
+  const emailKey = String(body?.emailKey || body?.email_key || expectedEmailKey).trim();
+  const unsubscribeToken = String(body?.unsubscribeToken || body?.unsubscribe_token || '').trim();
+
+  if (!isValidEmail(email)) {
+    const error = new Error('A valid email address is required.');
+    error.status = 400;
+    throw error;
+  }
+
+  if (!firstName || firstName.length > 80 || !lastName || lastName.length > 80) {
+    const error = new Error('First and last name are required and must be 80 characters or fewer.');
+    error.status = 400;
+    throw error;
+  }
+
+  if (emailKey !== expectedEmailKey) {
+    const error = new Error('Email key does not match the email address.');
+    error.status = 400;
+    throw error;
+  }
+
+  if (requireUnsubscribeToken) {
+    const validToken = unsubscribeToken.length >= 24
+      && unsubscribeToken.length <= 128
+      && /^[A-Za-z0-9._~-]+$/.test(unsubscribeToken);
+
+    if (!validToken) {
+      const error = new Error('A valid unsubscribe token is required.');
+      error.status = 400;
+      throw error;
+    }
+  }
+
+  return {
+    email,
+    firstName,
+    lastName,
+    emailKey,
+    unsubscribeToken,
+  };
 }
 
 function normalizeAdminRole(role, email = '') {
@@ -602,6 +754,16 @@ function applySortAndLimit(items, sort, limit) {
   return limit ? result.slice(0, Number(limit)) : result;
 }
 
+function requireLocalEntityWriteAccess(req, res, next) {
+  if (process.env.LOCAL_VITE_DEV === 'true' || process.env.ALLOW_LOCAL_ENTITY_WRITES === 'true') {
+    return next();
+  }
+
+  return res.status(403).json({
+    error: 'Local entity writes are disabled on this server.',
+  });
+}
+
 app.post('/api/entities/:entity/filter', (req, res) => {
   const { entity } = req.params;
   const { filter, sort, limit } = req.body;
@@ -617,7 +779,7 @@ app.get('/api/entities/:entity', (req, res) => {
   res.json(applySortAndLimit(items, sort, limit));
 });
 
-app.post('/api/entities/:entity', (req, res) => {
+app.post('/api/entities/:entity', requireLocalEntityWriteAccess, (req, res) => {
   const { entity } = req.params;
   const data = req.body;
   const items = readEntity(entity);
@@ -681,7 +843,7 @@ app.post('/api/entities/:entity', (req, res) => {
   res.status(201).json(item);
 });
 
-app.delete('/api/entities/:entity/:id', (req, res) => {
+app.delete('/api/entities/:entity/:id', requireLocalEntityWriteAccess, (req, res) => {
   const { entity, id } = req.params;
   let items = readEntity(entity);
   const exists = items.some(i => String(i.id) === String(id));
@@ -691,7 +853,7 @@ app.delete('/api/entities/:entity/:id', (req, res) => {
   res.json({ success: true });
 });
 
-app.put('/api/entities/:entity/:id', (req, res) => {
+app.put('/api/entities/:entity/:id', requireLocalEntityWriteAccess, (req, res) => {
   const { entity, id } = req.params;
   const items = readEntity(entity);
   const index = items.findIndex(i => String(i.id) === String(id));
@@ -742,35 +904,38 @@ app.post('/api/unsubscribe', handleUnsubscribeRequest);
 app.post('/api/functions/unsubscribeNewsletter', handleUnsubscribeRequest);
 
 app.post('/api/send-welcome-email', async (req, res) => {
-  const { email, emailKey, firstName, lastName, unsubscribeToken, host, protocol } = req.body;
-  if (!email) return res.status(400).json({ error: 'Email is required' });
-  const fromEmail = process.env.RESEND_FROM_EMAIL || 'Goodwill Presbyterian Church <onboarding@resend.dev>';
-
-  const normalizedEmail = normalizeEmail(email);
-  const siteHost = host || CANONICAL_HOST;
-  const siteProtocol = protocol || 'https';
-  const unsubscribeParams = new URLSearchParams({
-    email: normalizedEmail,
-    key: emailKey || encodeURIComponent(normalizedEmail),
-  });
-
-  if (unsubscribeToken) {
-    unsubscribeParams.set('token', unsubscribeToken);
+  let recipient;
+  try {
+    recipient = validatePublicEmailRecipient(req.body, { requireUnsubscribeToken: true });
+  } catch (error) {
+    return res.status(error.status || 400).json({ error: error.message });
   }
 
-  const unsubscribeUrl = `${siteProtocol}://${siteHost}/Unsubscribe?${unsubscribeParams.toString()}`;
+  const rateLimit = checkPublicEmailRateLimit(req, recipient.email, 'welcome');
+  if (!rateLimit.allowed) {
+    res.set('Retry-After', String(rateLimit.retryAfterSeconds));
+    return res.status(429).json({ error: 'Too many email requests. Please try again later.' });
+  }
+
+  const fromEmail = process.env.RESEND_FROM_EMAIL || 'Goodwill Presbyterian Church <onboarding@resend.dev>';
+  const unsubscribeParams = new URLSearchParams({
+    email: recipient.email,
+    key: recipient.emailKey,
+    token: recipient.unsubscribeToken,
+  });
+  const unsubscribeUrl = `${getPublicSiteOrigin(req)}/Unsubscribe?${unsubscribeParams.toString()}`;
 
   try {
     const emailContent = await buildNewsletterEmail({
       templateId: NEWSLETTER_TEMPLATE_IDS.welcome,
-      email: normalizedEmail,
-      firstName: String(firstName || '').trim().replace(/\s+/g, ' '),
-      lastName: String(lastName || '').trim().replace(/\s+/g, ' '),
+      email: recipient.email,
+      firstName: recipient.firstName,
+      lastName: recipient.lastName,
       unsubscribeUrl,
     });
     const response = await sendResendEmail({
       from: fromEmail,
-      to: normalizedEmail,
+      to: recipient.email,
       subject: emailContent.subject,
       html: emailContent.html,
       text: emailContent.text,
@@ -791,21 +956,31 @@ app.post('/api/send-welcome-email', async (req, res) => {
 });
 
 app.post('/api/send-duplicate-subscription-email', async (req, res) => {
-  const { email, firstName, lastName } = req.body;
-  if (!email) return res.status(400).json({ error: 'Email is required' });
+  let recipient;
+  try {
+    recipient = validatePublicEmailRecipient(req.body);
+  } catch (error) {
+    return res.status(error.status || 400).json({ error: error.message });
+  }
+
+  const rateLimit = checkPublicEmailRateLimit(req, recipient.email, 'duplicate');
+  if (!rateLimit.allowed) {
+    res.set('Retry-After', String(rateLimit.retryAfterSeconds));
+    return res.status(429).json({ error: 'Too many email requests. Please try again later.' });
+  }
+
   const fromEmail = process.env.RESEND_FROM_EMAIL || 'Goodwill Presbyterian Church <onboarding@resend.dev>';
-  const normalizedEmail = normalizeEmail(email);
 
   try {
     const emailContent = await buildNewsletterEmail({
       templateId: NEWSLETTER_TEMPLATE_IDS.duplicate,
-      email: normalizedEmail,
-      firstName: String(firstName || '').trim().replace(/\s+/g, ' '),
-      lastName: String(lastName || '').trim().replace(/\s+/g, ' '),
+      email: recipient.email,
+      firstName: recipient.firstName,
+      lastName: recipient.lastName,
     });
     const response = await sendResendEmail({
       from: fromEmail,
-      to: normalizedEmail,
+      to: recipient.email,
       subject: emailContent.subject,
       html: emailContent.html,
       text: emailContent.text,

@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import { useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
@@ -8,14 +7,13 @@ const DefaultFallback = () => (
   <PageLoadingScreen fixed label="Loading protected page" />
 );
 
-export default function ProtectedRoute({ fallback = <DefaultFallback />, unauthenticatedElement }) {
-  const { isAuthenticated, isLoadingAuth, authChecked, authError, checkUserAuth } = useAuth();
+const DefaultUnauthenticated = () => null;
 
-  useEffect(() => {
-    if (!authChecked && !isLoadingAuth) {
-      checkUserAuth();
-    }
-  }, [authChecked, isLoadingAuth, checkUserAuth]);
+export default function ProtectedRoute({
+  fallback = <DefaultFallback />,
+  unauthenticatedElement = <DefaultUnauthenticated />,
+}) {
+  const { isAuthenticated, isLoadingAuth, authChecked, authError } = useAuth();
 
   if (isLoadingAuth || !authChecked) {
     return fallback;
