@@ -49,6 +49,18 @@ The existing local image files, JSON records, and previously uploaded Firebase f
 
 The included rules allow anyone to view published site content, while only UIDs listed in `admins` can edit it or upload images and PDFs. Prayer requests and newsletter signups accept public submissions but are not publicly readable.
 
+The Express server applies security response headers on all routes, including Content-Security-Policy, HSTS outside local development, Referrer-Policy, X-Content-Type-Options, X-Frame-Options, cross-origin isolation headers, and Permissions-Policy. This follows the [OWASP HTTP Headers Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/HTTP_Headers_Cheat_Sheet.html) guidance for reducing risks such as XSS, clickjacking, MIME sniffing, and information leakage.
+
+The current CSP still allows inline styles for compatibility with the React, Tailwind, and shadcn/Radix UI stack. A future hardening pass should test whether inline styles can be replaced with nonce- or hash-based style allowances without breaking generated UI styles.
+
+### Reliability Monitoring
+
+The server exposes `GET /healthz` for Render health checks and external uptime tools such as Better Stack or UptimeRobot. Configure monitors to check `https://www.goodwillpresch1867.com/healthz`, alert the site owner/developer, and use tighter alert windows around Sunday worship and special events.
+
+The frontend reports sanitized browser errors to `POST /api/client-errors`, and Core Web Vitals reports go to `POST /api/web-vitals`. Both endpoints rate-limit submissions and log technical troubleshooting data without asking for prayer text, form field values, giving details, or passwords. Set `VITE_ENABLE_CLIENT_ERROR_REPORTING=false` or `VITE_ENABLE_WEB_VITALS=false` to disable either browser-side reporter in a specific environment.
+
+Future CI hardening should add Lighthouse and accessibility checks against a preview server after the current lint, typecheck, and build workflow is stable.
+
 ### Production Deployment
 
 Use the existing Render service connected to this GitHub repository. Configure:
@@ -73,10 +85,20 @@ RESEND_API_KEY
 RESEND_FROM_EMAIL
 YOUTUBE_API_KEY
 YOUTUBE_CHANNEL_ID
+VITE_GA_MEASUREMENT_ID
+VITE_ENABLE_ANALYTICS
+VITE_ENABLE_WEB_VITALS
+VITE_ENABLE_CLIENT_ERROR_REPORTING
 ```
 
 `RESEND_FROM_EMAIL` should be a verified sender in Resend, for example `Goodwill Presbyterian Church <news@goodwillpresch1867.com>`.
 `YOUTUBE_API_KEY` and `YOUTUBE_CHANNEL_ID` power the homepage live banner. If they are not configured, the site keeps the normal banner behavior and skips the YouTube live check.
+
+`VITE_GA_MEASUREMENT_ID` enables Google Analytics 4 pageview tracking. Analytics does not send form field values, prayer request text, email addresses, or giving details. Logged-in administrator sessions are skipped so routine admin work is not counted. You can also opt a browser out by running `localStorage.setItem('goodwill:analytics-opt-out', 'true')` in that browser's console, and opt back in with `localStorage.setItem('goodwill:analytics-opt-out', 'false')`.
+
+The site reports real-user Core Web Vitals to `/api/web-vitals`. The server validates and rate-limits those reports, then writes privacy-conscious `web-vital` log entries with the metric name, value, rating, page path, viewport, connection class, and attribution hints. Set `VITE_ENABLE_WEB_VITALS=false` if you need to disable browser-side reporting for a specific environment.
+
+The site also includes a public `/Privacy` page describing how prayer requests, newsletter subscriptions, admin authentication, analytics, reliability reports, and service providers are handled.
 
 After those values are configured, use **Manual Deploy > Deploy latest commit** in Render and test `/Admin` on `https://www.goodwillpresch1867.com/Admin`. Keep the IONOS DNS records for `goodwillpresch1867.com` and `www.goodwillpresch1867.com` pointing to Render.
 

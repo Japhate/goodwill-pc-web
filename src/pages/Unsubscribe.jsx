@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CheckCircle, AlertCircle } from 'lucide-react';
 import { NewsletterSubscriptions } from '@/entities/NewsletterSubscriptions';
 import PageLoadingScreen from '@/components/PageLoadingScreen';
+import { CHURCH_CONTACT } from '@/lib/churchIdentity';
 
 export default function Unsubscribe() {
   const [status, setStatus] = useState('loading');
@@ -80,7 +81,7 @@ export default function Unsubscribe() {
               <p className="text-gray-700 text-center font-medium">{message}</p>
               <p className="text-sm text-gray-500 text-center">
                 If you have any questions, feel free to{' '}
-                <a href="mailto:goodwillpresch1867@gmail.com" className="text-amber-600 hover:underline">
+                <a href={CHURCH_CONTACT.emailHref} className="text-amber-600 hover:underline">
                   contact us
                 </a>
                 .
@@ -94,8 +95,8 @@ export default function Unsubscribe() {
               <p className="text-gray-700 text-center font-medium">{message}</p>
               <p className="text-sm text-gray-500 text-center">
                 Contact{' '}
-                <a href="mailto:goodwillpresch1867@gmail.com" className="text-amber-600 hover:underline">
-                  goodwillpresch1867@gmail.com
+                <a href={CHURCH_CONTACT.emailHref} className="text-amber-600 hover:underline">
+                  {CHURCH_CONTACT.email}
                 </a>{' '}
                 for assistance.
               </p>

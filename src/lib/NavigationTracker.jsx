@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import { localApi } from '@/api/localApiClient';
 import { pagesConfig } from '@/pages.config';
+import { reportPageView } from '@/lib/googleAnalytics';
 
 export default function NavigationTracker() {
     const location = useLocation();
@@ -17,6 +18,11 @@ export default function NavigationTracker() {
             url: window.location.href
         }, '*');
     }, [location]);
+
+    useEffect(() => {
+        const pagePath = `${location.pathname}${location.search}`;
+        reportPageView(pagePath, { isAuthenticated });
+    }, [location, isAuthenticated]);
 
     // Log user activity when navigating to a page
     useEffect(() => {

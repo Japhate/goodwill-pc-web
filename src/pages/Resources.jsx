@@ -11,6 +11,7 @@ import { format, parseISO } from "date-fns";
 import { AnimatePresence, motion } from "framer-motion";
 import { getActiveSpecialServiceNotice, getSpecialServiceDateTime } from "@/lib/specialServiceNotice";
 import PageLoadingScreen from "@/components/PageLoadingScreen";
+import { CHURCH_LOCATION, PRIMARY_WORSHIP_SERVICE } from "@/lib/churchIdentity";
 
 const SERMON_BACKGROUND_VIDEO_URL = "/videos/latest-sermon-spiritual-skies.mp4";
 
@@ -258,11 +259,11 @@ export default function Resources() {
   const inPersonOnlyNotice = activeSpecialServiceNotice?.liveStreamAvailable === false ? activeSpecialServiceNotice : null;
   const displayServiceNotice = inPersonOnlyNotice || countdownServiceNotice || (isLive ? activeSpecialServiceNotice : null);
   const serviceTitle = inPersonOnlyNotice ? "No Live Stream Today" : (displayServiceNotice?.serviceTitle || "Sunday Worship");
-  const serviceTimeLabel = displayServiceNotice?.serviceTimeLabel || "10:30 AM";
-  const serviceLocationLabel = displayServiceNotice?.locationLabel || "295 N Brick Church Rd, Mayesville, SC";
+  const serviceTimeLabel = displayServiceNotice?.serviceTimeLabel || PRIMARY_WORSHIP_SERVICE.time;
+  const serviceLocationLabel = displayServiceNotice?.locationLabel || CHURCH_LOCATION.compactAddress;
   const serviceScheduleLabel = inPersonOnlyNotice ? `United service today | ${serviceTimeLabel}` : (displayServiceNotice ? `Today | ${serviceTimeLabel}` : `Every Sunday | ${serviceTimeLabel}`);
   const serviceNoticeMessage = inPersonOnlyNotice?.liveStreamMessage || displayServiceNotice?.message || "";
-  const serviceDirectionsUrl = displayServiceNotice?.directionsUrl || "";
+  const serviceDirectionsUrl = displayServiceNotice?.directionsUrl || CHURCH_LOCATION.directionsUrl;
 
   // Refs to manage scroll behavior and avoid conflicts
   const clickNavigating = useRef(false);

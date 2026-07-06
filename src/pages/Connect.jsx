@@ -5,6 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { MapPin, Phone, Mail, Clock, Car, Users, Heart, Copy, Check, Map, MailQuestion, Handshake, Video } from "lucide-react";
 import { getActiveSpecialServiceNotice } from "@/lib/specialServiceNotice";
+import {
+  CHURCH_CONTACT,
+  CHURCH_LOCATION,
+  PRIMARY_WORSHIP_SERVICE,
+  WEEKLY_GATHERINGS,
+} from "@/lib/churchIdentity";
 
 function getScrollBehavior() {
   return window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ? "auto" : "smooth";
@@ -86,31 +92,31 @@ export default function Connect() {
     {
       icon: Phone,
       title: "Phone",
-      details: ["(803) 495-3599"],
+      details: [CHURCH_CONTACT.phoneDisplay],
       actionText: "Call Now",
-      href: "tel:8034953599",
-      copyText: "(803) 495-3599",
+      href: CHURCH_CONTACT.phoneHref,
+      copyText: CHURCH_CONTACT.phoneDisplay,
       copyId: "phone",
       copyType: "phone"
     },
     {
       icon: Mail,
       title: "Email",
-      details: ["goodwillpresch1867@gmail.com"],
+      details: [CHURCH_CONTACT.email],
       actionText: "Send Email",
-      href: "mailto:goodwillpresch1867@gmail.com",
-      copyText: "goodwillpresch1867@gmail.com",
+      href: CHURCH_CONTACT.emailHref,
+      copyText: CHURCH_CONTACT.email,
       copyId: "email",
       copyType: "email"
     },
     {
       icon: MapPin,
       title: "Address",
-      details: ["295 North Brick Church Road", "Mayesville, SC 29104"],
+      details: CHURCH_LOCATION.addressLines,
       actionText: "Get Directions",
-      href: "https://www.google.com/maps/search/?api=1&query=295+North+Brick+Church+Road,Mayesville,SC+29104",
+      href: CHURCH_LOCATION.directionsUrl,
       target: "_blank",
-      copyText: "295 North Brick Church Road, Mayesville, SC 29104",
+      copyText: CHURCH_LOCATION.displayAddress,
       copyId: "address",
       copyType: "address"
     }
@@ -127,8 +133,13 @@ export default function Connect() {
           note: "No service at Goodwill's main sanctuary. No livestream today.",
           urgent: true,
         }
-      : { day: "Sunday", time: "10:30 AM", event: "Worship Service" },
-    { day: "Wednesday", time: "6:30 PM", event: "Bible Study", zoomLink: "https://us02web.zoom.us/j/82827270338?pwd=9JhQLcH0WjX6Xvy7LqvNtZUE3UBr9C.1" }
+      : { day: PRIMARY_WORSHIP_SERVICE.day, time: PRIMARY_WORSHIP_SERVICE.time, event: PRIMARY_WORSHIP_SERVICE.name },
+    {
+      day: WEEKLY_GATHERINGS[1].day,
+      time: WEEKLY_GATHERINGS[1].time,
+      event: WEEKLY_GATHERINGS[1].name,
+      zoomLink: WEEKLY_GATHERINGS[1].zoomLink,
+    }
   ];
   
   useEffect(() => {
@@ -303,7 +314,7 @@ export default function Connect() {
             {inPersonOnlyNotice && (
               <div className="mx-auto mb-8 max-w-4xl rounded-lg border border-red-200 bg-red-50 p-5 text-center shadow-sm">
                 <p className="text-sm font-bold uppercase tracking-widest text-red-700">Important Worship Update</p>
-                <h3 className="mt-1 text-2xl font-bold text-gray-900">United Service Today at 10:30 AM</h3>
+                <h3 className="mt-1 text-2xl font-bold text-gray-900">United Service Today at {PRIMARY_WORSHIP_SERVICE.time}</h3>
                 <p className="mx-auto mt-2 max-w-2xl rounded-md bg-red-600 px-4 py-3 text-sm font-bold text-white">
                   Today's service is at Second Presbyterian Church in Sumter. No service at Goodwill's main sanctuary. No livestream today.
                 </p>
@@ -584,7 +595,7 @@ export default function Connect() {
                   </p>
                   <div className="flex flex-col sm:flex-row gap-4 justify-center">
                     <Button asChild className="bg-amber-600 hover:bg-amber-700">
-                      <a href="mailto:goodwillpresch1867@gmail.com">Contact Church Office</a>
+                      <a href={CHURCH_CONTACT.emailHref}>Contact Church Office</a>
                     </Button>
                     <Button asChild variant="outline" className="border-amber-600 text-amber-600 hover:bg-amber-50">
                       <Link to={createPageUrl("Prayer")}>Submit Prayer Request</Link>
@@ -615,7 +626,7 @@ export default function Connect() {
                     <p className="text-sm font-bold uppercase tracking-widest text-red-700">Today's Worship Location</p>
                     <h3 className="mt-1 text-xl font-bold text-gray-900">{inPersonOnlyNotice.locationLabel}</h3>
                     <p className="mt-2 rounded-md bg-red-600 px-3 py-2 text-sm font-bold text-white">
-                      Goodwill's main sanctuary will not host today's 10:30 AM service.
+                      Goodwill's main sanctuary will not host today's {PRIMARY_WORSHIP_SERVICE.time} service.
                     </p>
                   </div>
                   <Button asChild className="bg-amber-600 text-white hover:bg-amber-700">
@@ -642,8 +653,8 @@ export default function Connect() {
                       <div className="bg-amber-50 p-4 rounded-lg">
                         <h4 className="font-semibold text-amber-900 mb-2">Our Address</h4>
                         <p className="text-amber-800">
-                          295 N Brick Church Rd<br />
-                          Mayesville, SC 29104
+                          {CHURCH_LOCATION.addressLines[0]}<br />
+                          {CHURCH_LOCATION.addressLines[1]}
                         </p>
                       </div>
                       <div className="space-y-2">
@@ -673,7 +684,7 @@ export default function Connect() {
                   <CardContent>
                     <div className="h-80 bg-gray-200 rounded-lg overflow-hidden">
                       <iframe
-                        src="https://maps.google.com/maps?q=295%20N%20Brick%20Church%20Rd%2C%20Mayesville%2C%20SC%2029104&t=&z=15&ie=UTF8&iwloc=&output=embed"
+                        src={CHURCH_LOCATION.embedUrl}
                         className="w-full h-full border-0"
                         loading="lazy"
                         aria-label="Detailed map of church location"

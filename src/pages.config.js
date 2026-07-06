@@ -52,6 +52,7 @@ import Admin from './pages/Admin';
 import Connect from './pages/Connect';
 import Give from './pages/Give';
 import Prayer from './pages/Prayer';
+import Privacy from './pages/Privacy';
 import Resources from './pages/Resources';
 import Updates from './pages/Updates';
 import Home from './pages/Home';
@@ -64,6 +65,7 @@ export const PAGES = {
     "Connect": Connect,
     "Give": Give,
     "Prayer": Prayer,
+    "Privacy": Privacy,
     "Resources": Resources,
     "Updates": Updates,
     "Home": Home,

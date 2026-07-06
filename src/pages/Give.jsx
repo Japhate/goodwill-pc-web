@@ -21,6 +21,7 @@ import {
   MapPin,
   Quote
 } from "lucide-react";
+import { CHURCH_CONTACT, CHURCH_LOCATION } from "@/lib/churchIdentity";
 
 export default function Give() {
   const [selectedAmount, setSelectedAmount] = useState("");
@@ -367,17 +368,17 @@ export default function Give() {
                 <div className="space-y-3">
                   <div className="flex items-center gap-3">
                     <Phone className="w-5 h-5 text-gray-500" />
-                    <span>(803) 495-3599</span>
+                    <span>{CHURCH_CONTACT.phoneDisplay}</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <Mail className="w-5 h-5 text-gray-500" />
-                    <span>giving@goodwillpresbyterian.org</span>
+                    <span>{CHURCH_CONTACT.email}</span>
                   </div>
                   <div className="flex items-start gap-3">
                     <MapPin className="w-5 h-5 text-gray-500 mt-0.5" />
                     <div>
-                      <p>295 North Brick Church Road</p>
-                      <p>Mayesville, SC 29104</p>
+                      <p>{CHURCH_LOCATION.addressLines[0]}</p>
+                      <p>{CHURCH_LOCATION.addressLines[1]}</p>
                     </div>
                   </div>
                 </div>

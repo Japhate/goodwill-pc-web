@@ -27,6 +27,14 @@ const PUBLIC_EMAIL_RATE_LIMITS = {
   ip: { windowMs: 15 * 60 * 1000, max: 10 },
   email: { windowMs: 60 * 60 * 1000, max: 3 },
 };
+const WEB_VITALS_RATE_LIMIT = {
+  windowMs: 60 * 60 * 1000,
+  max: 240,
+};
+const CLIENT_ERROR_RATE_LIMIT = {
+  windowMs: 60 * 60 * 1000,
+  max: 60,
+};
 const YOUTUBE_LIVE_CACHE_TTL_MS = Math.max(
   30 * 1000,
   Number(process.env.YOUTUBE_LIVE_CACHE_TTL_MS || 2 * 60 * 1000),
@@ -45,6 +53,8 @@ const PRODUCTION_CORS_ORIGINS = new Set([
     .filter(Boolean),
 ]);
 const publicEmailRateLimitStore = new Map();
+const webVitalsRateLimitStore = new Map();
+const clientErrorRateLimitStore = new Map();
 let youtubeLiveStatusCache = null;
 
 app.set('trust proxy', 1);
@@ -76,13 +86,15 @@ function buildContentSecurityPolicy() {
     "base-uri 'self'",
     "object-src 'none'",
     "frame-ancestors 'self'",
-    "script-src 'self'",
+    "script-src 'self' https://www.googletagmanager.com",
+    // TODO: Replace unsafe-inline with nonce/hash-based style allowances after
+    // verifying React, Tailwind, and shadcn/Radix style injection behavior.
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob: https:",
     "font-src 'self' data:",
     "media-src 'self' data: blob: https:",
     "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://maps.google.com https://www.google.com",
-    "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.firebase.com https://firebasestorage.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com",
+    "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.firebase.com https://firebasestorage.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com https://www.google-analytics.com https://region1.google-analytics.com https://analytics.google.com",
     "form-action 'self'",
     "upgrade-insecure-requests",
   ];
@@ -143,6 +155,16 @@ app.use(cors({
   optionsSuccessStatus: 204,
 }));
 app.use(express.json({ limit: '15mb' }));
+
+app.get('/healthz', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.json({
+    status: 'ok',
+    service: 'goodwill-pc-web',
+    checkedAt: new Date().toISOString(),
+    uptimeSeconds: Math.round(process.uptime()),
+  });
+});
 
 const DATA_DIR = path.join(ROOT_DIR, 'server', 'data');
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -206,6 +228,132 @@ function prunePublicEmailRateLimits() {
   for (const [key, value] of publicEmailRateLimitStore.entries()) {
     if (value.resetAt <= now) publicEmailRateLimitStore.delete(key);
   }
+}
+
+function checkWebVitalsRateLimit(req) {
+  const now = Date.now();
+  const ip = getClientIp(req);
+  const current = webVitalsRateLimitStore.get(ip);
+
+  if (!current || current.resetAt <= now) {
+    webVitalsRateLimitStore.set(ip, { count: 1, resetAt: now + WEB_VITALS_RATE_LIMIT.windowMs });
+    return true;
+  }
+
+  if (current.count >= WEB_VITALS_RATE_LIMIT.max) return false;
+
+  current.count += 1;
+  webVitalsRateLimitStore.set(ip, current);
+
+  if (webVitalsRateLimitStore.size > 5000) {
+    for (const [key, value] of webVitalsRateLimitStore.entries()) {
+      if (value.resetAt <= now) webVitalsRateLimitStore.delete(key);
+    }
+  }
+
+  return true;
+}
+
+function sanitizeWebVitalsText(value, maxLength = 160) {
+  return String(value || '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, maxLength);
+}
+
+function sanitizeWebVitalsNumber(value, precision = 2) {
+  const number = Number(value);
+  return Number.isFinite(number) ? Number(number.toFixed(precision)) : null;
+}
+
+function normalizeWebVitalsMetric(body = {}) {
+  const name = sanitizeWebVitalsText(body.name, 8);
+  if (!['CLS', 'INP', 'LCP'].includes(name)) return null;
+
+  const value = Number(body.value);
+  const delta = Number(body.delta);
+  if (!Number.isFinite(value) || value < 0) return null;
+
+  const viewport = body.viewport || {};
+  const connection = body.connection || {};
+  const attribution = body.attribution || {};
+
+  return {
+    name,
+    value: Number(value.toFixed(4)),
+    delta: Number.isFinite(delta) ? Number(delta.toFixed(4)) : 0,
+    rating: ['good', 'needs-improvement', 'poor'].includes(body.rating) ? body.rating : 'unknown',
+    id: sanitizeWebVitalsText(body.id, 80),
+    path: sanitizeWebVitalsText(body.path || '/', 140),
+    navigationType: sanitizeWebVitalsText(body.navigationType, 40),
+    viewport: {
+      width: sanitizeWebVitalsNumber(viewport.width, 0),
+      height: sanitizeWebVitalsNumber(viewport.height, 0),
+      devicePixelRatio: sanitizeWebVitalsNumber(viewport.devicePixelRatio, 2),
+    },
+    connection: connection ? {
+      effectiveType: sanitizeWebVitalsText(connection.effectiveType, 20) || null,
+      saveData: Boolean(connection.saveData),
+    } : null,
+    attribution: {
+      element: sanitizeWebVitalsText(attribution.element, 220) || null,
+      eventTarget: sanitizeWebVitalsText(attribution.eventTarget, 220) || null,
+      interactionType: sanitizeWebVitalsText(attribution.interactionType, 40) || null,
+      loadState: sanitizeWebVitalsText(attribution.loadState, 40) || null,
+      largestShiftTarget: sanitizeWebVitalsText(attribution.largestShiftTarget, 220) || null,
+      timeToFirstByte: sanitizeWebVitalsNumber(attribution.timeToFirstByte),
+      resourceLoadDelay: sanitizeWebVitalsNumber(attribution.resourceLoadDelay),
+      resourceLoadDuration: sanitizeWebVitalsNumber(attribution.resourceLoadDuration),
+      elementRenderDelay: sanitizeWebVitalsNumber(attribution.elementRenderDelay),
+      inputDelay: sanitizeWebVitalsNumber(attribution.inputDelay),
+      processingDuration: sanitizeWebVitalsNumber(attribution.processingDuration),
+      presentationDelay: sanitizeWebVitalsNumber(attribution.presentationDelay),
+    },
+    reportedAt: new Date().toISOString(),
+  };
+}
+
+function checkClientErrorRateLimit(req) {
+  const now = Date.now();
+  const ip = getClientIp(req);
+  const current = clientErrorRateLimitStore.get(ip);
+
+  if (!current || current.resetAt <= now) {
+    clientErrorRateLimitStore.set(ip, { count: 1, resetAt: now + CLIENT_ERROR_RATE_LIMIT.windowMs });
+    return true;
+  }
+
+  if (current.count >= CLIENT_ERROR_RATE_LIMIT.max) return false;
+
+  current.count += 1;
+  clientErrorRateLimitStore.set(ip, current);
+
+  if (clientErrorRateLimitStore.size > 5000) {
+    for (const [key, value] of clientErrorRateLimitStore.entries()) {
+      if (value.resetAt <= now) clientErrorRateLimitStore.delete(key);
+    }
+  }
+
+  return true;
+}
+
+function normalizeClientErrorReport(body = {}) {
+  const message = sanitizeWebVitalsText(body.message, 500);
+  if (!message) return null;
+
+  return {
+    type: sanitizeWebVitalsText(body.type, 80) || 'client-error',
+    source: sanitizeWebVitalsText(body.source, 80) || 'browser',
+    message,
+    stack: sanitizeWebVitalsText(body.stack, 1600) || null,
+    componentStack: sanitizeWebVitalsText(body.componentStack, 1200) || null,
+    path: sanitizeWebVitalsText(body.path || '/', 180),
+    userAgent: sanitizeWebVitalsText(body.userAgent, 240) || null,
+    filename: sanitizeWebVitalsText(body.filename, 240) || null,
+    lineNumber: sanitizeWebVitalsNumber(body.lineNumber, 0),
+    columnNumber: sanitizeWebVitalsNumber(body.columnNumber, 0),
+    reportedAt: new Date().toISOString(),
+  };
 }
 
 function checkPublicEmailRateLimit(req, email, purpose) {
@@ -1019,6 +1167,36 @@ app.get('/api/youtube/live-status', async (req, res) => {
   });
   res.set('Cache-Control', 'no-store');
   res.json(status);
+});
+
+app.post('/api/web-vitals', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+
+  if (!checkWebVitalsRateLimit(req)) {
+    return res.status(204).end();
+  }
+
+  const metric = normalizeWebVitalsMetric(req.body);
+  if (metric) {
+    console.info('web-vital', JSON.stringify(metric));
+  }
+
+  return res.status(204).end();
+});
+
+app.post('/api/client-errors', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+
+  if (!checkClientErrorRateLimit(req)) {
+    return res.status(204).end();
+  }
+
+  const report = normalizeClientErrorReport(req.body);
+  if (report) {
+    console.error('client-error', JSON.stringify(report));
+  }
+
+  return res.status(204).end();
 });
 
 async function handleUnsubscribeRequest(req, res) {

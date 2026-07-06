@@ -12,6 +12,13 @@ import { Button } from "@/components/ui/button";
 import { localApi } from '@/api/localApiClient';
 import { firebaseEnabled } from '@/lib/firebase';
 import { getActiveSpecialServiceNotice } from '@/lib/specialServiceNotice';
+import {
+  CHURCH_CONTACT,
+  CHURCH_IDENTITY,
+  CHURCH_LOCATION,
+  CHURCH_SOCIAL_LINKS,
+  PRIMARY_WORSHIP_SERVICE,
+} from '@/lib/churchIdentity';
 
 function prefersReducedMotion() {
   return typeof window !== "undefined"
@@ -33,10 +40,10 @@ export default function Layout({ children, currentPageName }) {
   const resourcesDropdown = inPersonOnlyNotice
     ? { name: 'No Livestream Today', href: createPageUrl('Resources') + '#live-stream', icon: Megaphone }
     : { name: 'Live Stream', href: createPageUrl('Resources') + '#live-stream', icon: Video };
-  const worshipDirectionsUrl = inPersonOnlyNotice?.directionsUrl || "https://www.google.com/maps/search/?api=1&query=295+N+Brick+Church+Rd,+Mayesville,+SC+29104";
+  const worshipDirectionsUrl = inPersonOnlyNotice?.directionsUrl || CHURCH_LOCATION.directionsUrl;
   const worshipAddressLines = inPersonOnlyNotice
     ? ["Second Presbyterian Church", "Sumter, SC"]
-    : ["295 N Brick Church Rd", "Mayesville, SC 29104"];
+    : CHURCH_LOCATION.addressLines;
 
   // Scroll to top when page changes
   useEffect(() => {
@@ -272,7 +279,7 @@ export default function Layout({ children, currentPageName }) {
             <div className="w-14 h-14 rounded-full bg-white p-1 shadow-lg flex items-center justify-center">
               <img
                 src="/images/site/church-logo.png"
-                alt="Goodwill Presbyterian Church Logo"
+                alt={`${CHURCH_IDENTITY.shortName} Logo`}
                 className="h-full w-full object-contain rounded-full"
               />
             </div>
@@ -347,10 +354,10 @@ export default function Layout({ children, currentPageName }) {
 
               {/* Social Media and Search Row */}
               <div className="flex items-center space-x-1">
-                <a href="https://www.facebook.com/share/177iq2ZzgN/" target="_blank" rel="noopener noreferrer" className="p-2 rounded-full text-white social-facebook transition-all duration-300 hover:scale-110" aria-label="Visit Goodwill Presbyterian Church on Facebook">
+                <a href={CHURCH_SOCIAL_LINKS.facebook} target="_blank" rel="noopener noreferrer" className="p-2 rounded-full text-white social-facebook transition-all duration-300 hover:scale-110" aria-label="Visit Goodwill Presbyterian Church on Facebook">
                   <Facebook className="w-4 h-4" />
                 </a>
-                <a href="https://www.youtube.com/@goodwillpresbyterianchurch1867" target="_blank" rel="noopener noreferrer" className="p-2 rounded-full text-white social-youtube transition-all duration-300 hover:scale-110" aria-label="Visit Goodwill Presbyterian Church on YouTube">
+                <a href={CHURCH_SOCIAL_LINKS.youtube} target="_blank" rel="noopener noreferrer" className="p-2 rounded-full text-white social-youtube transition-all duration-300 hover:scale-110" aria-label="Visit Goodwill Presbyterian Church on YouTube">
                   <Youtube className="w-4 h-4" />
                 </a>
 
@@ -445,10 +452,10 @@ export default function Layout({ children, currentPageName }) {
 
               {/* Social Media Links for Mobile */}
               <div className="flex items-center justify-center space-x-4 pt-2">
-                <a href="https://www.facebook.com/share/177iq2ZzgN/" target="_blank" rel="noopener noreferrer" className="p-3 rounded-full text-white bg-blue-600 transition-transform hover:scale-110" aria-label="Visit Goodwill Presbyterian Church on Facebook">
+                <a href={CHURCH_SOCIAL_LINKS.facebook} target="_blank" rel="noopener noreferrer" className="p-3 rounded-full text-white bg-blue-600 transition-transform hover:scale-110" aria-label="Visit Goodwill Presbyterian Church on Facebook">
                   <Facebook className="w-5 h-5" />
                 </a>
-                <a href="https://www.youtube.com/@goodwillpresbyterianchurch1867" target="_blank" rel="noopener noreferrer" className="p-3 rounded-full text-white bg-red-600 transition-transform hover:scale-110" aria-label="Visit Goodwill Presbyterian Church on YouTube">
+                <a href={CHURCH_SOCIAL_LINKS.youtube} target="_blank" rel="noopener noreferrer" className="p-3 rounded-full text-white bg-red-600 transition-transform hover:scale-110" aria-label="Visit Goodwill Presbyterian Church on YouTube">
                   <Youtube className="w-5 h-5" />
                 </a>
                 <button
@@ -479,16 +486,16 @@ export default function Layout({ children, currentPageName }) {
                 <div className="w-14 h-14 bg-white rounded-full p-1 flex items-center justify-center shadow-lg">
                   <img
                     src="/images/site/church-logo.png"
-                    alt="Goodwill Presbyterian Church Logo"
+                    alt={`${CHURCH_IDENTITY.shortName} Logo`}
                     className="w-full h-full object-contain rounded-full"
                   />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-amber-100" style={{ textShadow: '1px 1px 3px rgba(0,0,0,0.7)' }}>Goodwill Presbyterian Church, USA</h3>
+                  <h3 className="text-lg font-bold text-amber-100" style={{ textShadow: '1px 1px 3px rgba(0,0,0,0.7)' }}>{CHURCH_IDENTITY.name}</h3>
                 </div>
               </div>
               <p className="text-sm text-yellow-100/90" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.5)' }}>
-                A sanctuary of love, hope and peace for all. Join us as we worship, learn and serve together.
+                {CHURCH_IDENTITY.slogan} Join us as we worship, learn and serve together.
               </p>
             </div>
 
@@ -502,6 +509,7 @@ export default function Layout({ children, currentPageName }) {
                   <li><Link to={createPageUrl("Updates")} className="hover:text-amber-300 transition-colors">Updates</Link></li>
                   <li><Link to={createPageUrl("Resources")} className="hover:text-amber-300 transition-colors">Resources</Link></li>
                   <li><Link to={createPageUrl("Give")} className="hover:text-amber-300 transition-colors">Give</Link></li>
+                  <li><Link to={createPageUrl("Privacy")} className="hover:text-amber-300 transition-colors">Privacy Policy</Link></li>
                 </ul>
               </div>
               
@@ -526,7 +534,7 @@ export default function Layout({ children, currentPageName }) {
                   <h4 className="font-bold text-sm text-amber-100 mb-3" style={{ textShadow: '1px 1px 3px rgba(0,0,0,0.7)' }}>Worship With Us</h4>
                   <div className="text-sm text-yellow-100/90 space-y-1" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.5)' }}>
                       <p className="font-semibold">
-                        {inPersonOnlyNotice ? "United Service Today: 10:30 AM" : "Sunday Service: 10:30 AM"}
+                        {inPersonOnlyNotice ? `United Service Today: ${PRIMARY_WORSHIP_SERVICE.time}` : `${PRIMARY_WORSHIP_SERVICE.day} Service: ${PRIMARY_WORSHIP_SERVICE.time}`}
                       </p>
                       {inPersonOnlyNotice && (
                         <p className="rounded bg-red-600 px-2 py-1 text-xs font-bold text-white">
@@ -551,20 +559,20 @@ export default function Layout({ children, currentPageName }) {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col items-center gap-4 md:grid md:grid-cols-3">
             {/* Contact Info */}
             <div className="flex flex-col sm:flex-row items-center gap-3 md:justify-self-start md:gap-4 text-sm text-yellow-100/90">
-              <a href="tel:8034953599" className="flex items-center gap-2 hover:text-amber-300 transition-colors">
-                <Phone className="w-4 h-4" /> (803) 495-3599
+              <a href={CHURCH_CONTACT.phoneHref} className="flex items-center gap-2 hover:text-amber-300 transition-colors">
+                <Phone className="w-4 h-4" /> {CHURCH_CONTACT.phoneDisplay}
               </a>
-              <a href="mailto:goodwillpresch1867@gmail.com" className="flex items-center gap-2 hover:text-amber-300 transition-colors">
-                <Mail className="w-4 h-4" /> goodwillpresch1867@gmail.com
+              <a href={CHURCH_CONTACT.emailHref} className="flex items-center gap-2 hover:text-amber-300 transition-colors">
+                <Mail className="w-4 h-4" /> {CHURCH_CONTACT.email}
               </a>
             </div>
 
             {/* Social Media */}
             <div className="flex items-center justify-center space-x-3 md:justify-self-center">
-              <a href="https://www.facebook.com/share/177iq2ZzgN/" target="_blank" rel="noopener noreferrer" className="p-2 rounded-full text-white social-facebook transition-all duration-300 hover:scale-110" aria-label="Visit Goodwill Presbyterian Church on Facebook">
+              <a href={CHURCH_SOCIAL_LINKS.facebook} target="_blank" rel="noopener noreferrer" className="p-2 rounded-full text-white social-facebook transition-all duration-300 hover:scale-110" aria-label="Visit Goodwill Presbyterian Church on Facebook">
                 <Facebook className="w-4 h-4" />
               </a>
-              <a href="https://www.youtube.com/@goodwillpresbyterianchurch1867" target="_blank" rel="noopener noreferrer" className="p-2 rounded-full text-white social-youtube transition-all duration-300 hover:scale-110" aria-label="Visit Goodwill Presbyterian Church on YouTube">
+              <a href={CHURCH_SOCIAL_LINKS.youtube} target="_blank" rel="noopener noreferrer" className="p-2 rounded-full text-white social-youtube transition-all duration-300 hover:scale-110" aria-label="Visit Goodwill Presbyterian Church on YouTube">
                 <Youtube className="w-4 h-4" />
               </a>
             </div>
@@ -578,7 +586,7 @@ export default function Layout({ children, currentPageName }) {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
             <div className="flex items-center justify-center gap-2 text-center">
               <p className="text-xs text-gray-400">
-                &copy; {new Date().getFullYear()} Goodwill Presbyterian Church. All rights reserved.
+                &copy; {new Date().getFullYear()} {CHURCH_IDENTITY.shortName}. All rights reserved.
               </p>
               {(firebaseEnabled || currentUser?.role === 'admin') && (
                 <Link

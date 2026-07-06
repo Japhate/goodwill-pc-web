@@ -14,6 +14,7 @@ import { HeroSlide } from "@/entities/HeroSlide";
 import { getPublicAnnouncements } from "@/lib/publicAnnouncements";
 import SitePopupModal, { getActivePopup } from "@/components/home/SitePopupModal";
 import HeritageSealLoader from "@/components/HeritageSealLoader";
+import { CHURCH_LOCATION, PRIMARY_WORSHIP_SERVICE } from "@/lib/churchIdentity";
 
 const SERMON_BACKGROUND_VIDEO_URL = "/videos/latest-sermon-spiritual-skies.mp4";
 
@@ -71,9 +72,9 @@ export default function Home() {
   const [isLoaderFallbackDone, setIsLoaderFallbackDone] = useState(false);
   const activeSpecialServiceNotice = getActiveSpecialServiceNotice();
   const inPersonOnlyNotice = activeSpecialServiceNotice?.liveStreamAvailable === false ? activeSpecialServiceNotice : null;
-  const serviceLabel = activeSpecialServiceNotice?.serviceLabel || "Sunday Morning Service @ 10:30 AM";
-  const serviceLocationLabel = activeSpecialServiceNotice?.locationLabel || "295 N Brick Church Road, Mayesville, SC 29104";
-  const serviceDirectionsUrl = activeSpecialServiceNotice?.directionsUrl || "https://www.google.com/maps/search/?api=1&query=295+N+Brick+Church+Rd,+Mayesville,+SC+29104";
+  const serviceLabel = activeSpecialServiceNotice?.serviceLabel || `${PRIMARY_WORSHIP_SERVICE.day} Morning Service @ ${PRIMARY_WORSHIP_SERVICE.time}`;
+  const serviceLocationLabel = activeSpecialServiceNotice?.locationLabel || CHURCH_LOCATION.displayAddress;
+  const serviceDirectionsUrl = activeSpecialServiceNotice?.directionsUrl || CHURCH_LOCATION.directionsUrl;
   const activeSitePopup = useMemo(() => getActivePopup(sitePopups), [sitePopups]);
   const isHomepageReady = (isHomeDataReady && isHeroReady && isLoaderMinimumDone) || isLoaderFallbackDone;
 
