@@ -1553,7 +1553,7 @@ app.post('/api/send-newsletter-broadcast', async (req, res) => {
 });
 
 const port = Number(process.env.PORT || 3100);
-const host = process.env.HOST || 'localhost';
+const host = process.env.HOST || '0.0.0.0';
 const useLocalViteServer = process.env.LOCAL_VITE_DEV === 'true';
 
 if (useLocalViteServer) {
