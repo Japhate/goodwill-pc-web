@@ -1,4 +1,4 @@
-# Goodwill Presbyterian Church Website
+# goodwill-pc-web
 
 React and Vite frontend with Firebase-backed content management, deployed on Render at `www.goodwillpresch1867.com`. IONOS manages the domain DNS records that point to Render.
 

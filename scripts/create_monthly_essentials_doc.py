@@ -183,7 +183,7 @@ def document_xml():
     return f"""<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:document xmlns:w="{NS}" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
   <w:body>
-    {para("Goodwill Presbyterian Church Website", align="center", bold=True, size=40, color="4B342A", after=40)}
+    {para("goodwill-pc-web", align="center", bold=True, size=40, color="4B342A", after=40)}
     {para("Essential Monthly Costs to Keep the Website Running", align="center", size=24, color="925E17", after=120)}
     <w:tbl>
       <w:tblPr>
@@ -273,7 +273,7 @@ def core_xml():
     timestamp = datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
     return f"""<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:dcmitype="http://purl.org/dc/dcmitype/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-  <dc:title>Goodwill Presbyterian Church Website Monthly Essentials</dc:title>
+  <dc:title>goodwill-pc-web Monthly Essentials</dc:title>
   <dc:creator>Codex</dc:creator>
   <cp:lastModifiedBy>Codex</cp:lastModifiedBy>
   <dcterms:created xsi:type="dcterms:W3CDTF">{timestamp}</dcterms:created>

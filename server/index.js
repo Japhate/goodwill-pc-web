@@ -660,7 +660,7 @@ function buildAdminBroadcastNotificationEmail({ admin, subject, sent, failed, re
       '',
       'Please sign in to the admin panel if you need to review the broadcast history.',
       '',
-      'Goodwill Presbyterian Church Website',
+      'goodwill-pc-web',
     ].join('\n'),
     html: `
       <div style="margin:0;padding:0;background:#f8f3ea;font-family:Arial,Helvetica,sans-serif;color:#2f241c;">
