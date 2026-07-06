@@ -9,9 +9,9 @@
  * 
  * Example file structure:
  * 
- *   import HomePage from './pages/HomePage';
- *   import Dashboard from './pages/Dashboard';
- *   import Settings from './pages/Settings';
+ *   const HomePage = lazy(() => import('./pages/HomePage'));
+ *   const Dashboard = lazy(() => import('./pages/Dashboard'));
+ *   const Settings = lazy(() => import('./pages/Settings'));
  *   
  *   export const PAGES = {
  *       "HomePage": HomePage,
@@ -26,8 +26,8 @@
  * 
  * Example with Layout (wraps all pages):
  *
- *   import Home from './pages/Home';
- *   import Settings from './pages/Settings';
+ *   const Home = lazy(() => import('./pages/Home'));
+ *   const Settings = lazy(() => import('./pages/Settings'));
  *   import __Layout from './Layout.jsx';
  *
  *   export const PAGES = {
@@ -47,17 +47,18 @@
  *
  * The mainPage value must match a key in the PAGES object exactly.
  */
-import About from './pages/About';
-import Admin from './pages/Admin';
-import Connect from './pages/Connect';
-import Give from './pages/Give';
-import Prayer from './pages/Prayer';
-import Privacy from './pages/Privacy';
-import Resources from './pages/Resources';
-import Updates from './pages/Updates';
-import Home from './pages/Home';
+import { lazy } from 'react';
 import __Layout from './Layout.jsx';
 
+const About = lazy(() => import('./pages/About'));
+const Admin = lazy(() => import('./pages/Admin'));
+const Connect = lazy(() => import('./pages/Connect'));
+const Give = lazy(() => import('./pages/Give'));
+const Prayer = lazy(() => import('./pages/Prayer'));
+const Privacy = lazy(() => import('./pages/Privacy'));
+const Resources = lazy(() => import('./pages/Resources'));
+const Updates = lazy(() => import('./pages/Updates'));
+const Home = lazy(() => import('./pages/Home'));
 
 export const PAGES = {
     "About": About,

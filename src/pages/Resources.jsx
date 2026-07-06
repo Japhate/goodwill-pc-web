@@ -12,6 +12,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { getActiveSpecialServiceNotice, getSpecialServiceDateTime } from "@/lib/specialServiceNotice";
 import PageLoadingScreen from "@/components/PageLoadingScreen";
 import { CHURCH_LOCATION, PRIMARY_WORSHIP_SERVICE } from "@/lib/churchIdentity";
+import LazyBackgroundVideo from "@/components/LazyBackgroundVideo";
 
 const SERMON_BACKGROUND_VIDEO_URL = "/videos/latest-sermon-spiritual-skies.mp4";
 
@@ -830,17 +831,10 @@ export default function Resources() {
 
         {/* Latest Sermon Section */}
         <section id="latest-sermon" className="relative isolate overflow-hidden py-4 scroll-mt-[160px] md:scroll-mt-[144px]">
-          <video
+          <LazyBackgroundVideo
+            src={SERMON_BACKGROUND_VIDEO_URL}
             className="absolute inset-0 z-0 h-full w-full object-cover opacity-90"
-            autoPlay
-            muted
-            loop
-            playsInline
-            preload="metadata"
-            aria-hidden="true"
-          >
-            <source src={SERMON_BACKGROUND_VIDEO_URL} type="video/mp4" />
-          </video>
+          />
           <div className="absolute inset-0 z-0 bg-gradient-to-br from-[#102821]/85 via-[#3f2a1f]/72 to-[#f1d58c]/42" aria-hidden="true"></div>
           <div className="absolute inset-0 z-0 bg-white/18 backdrop-blur-[1px]" aria-hidden="true"></div>
           <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

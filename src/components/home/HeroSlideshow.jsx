@@ -253,9 +253,10 @@ function getVirtualEventTiming(event, now) {
 function warmHeroImage(url) {
   if (!url || typeof window === "undefined") return;
 
+  const responsiveImage = getResponsiveImageProps(url, "100vw");
   const image = new Image();
   image.decoding = "async";
-  image.src = url;
+  image.src = responsiveImage.preloadHref || url;
   image.decode?.().catch(() => {});
 }
 
