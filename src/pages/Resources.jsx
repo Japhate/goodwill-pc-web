@@ -739,7 +739,7 @@ export default function Resources() {
                                 {serviceNoticeMessage}
                               </p>
                               {serviceDirectionsUrl && (
-                                <Button asChild className="mt-3 bg-amber-600 hover:bg-amber-700 text-white text-xs">
+                                <Button asChild className="mt-3 bg-amber-700 hover:bg-amber-800 text-white text-xs">
                                   <a href={serviceDirectionsUrl} target="_blank" rel="noopener noreferrer">
                                     <MapPin className="w-3.5 h-3.5 mr-1.5" />
                                     Get Directions
@@ -907,7 +907,7 @@ export default function Resources() {
                     )}
                     <div className="mt-6 space-y-4">
                       {latestSermon.series && (
-                        <Badge variant="outline" className="text-amber-600 border-amber-600">
+                        <Badge variant="outline" className="text-amber-700 border-amber-700">
                           Series: {latestSermon.series}
                         </Badge>
                       )}
@@ -940,7 +940,7 @@ export default function Resources() {
                     value={selectedSpeaker}
                     onValueChange={setSelectedSpeaker}
                   >
-                    <SelectTrigger className="h-8 w-[180px] bg-white text-xs font-semibold text-gray-800">
+                    <SelectTrigger aria-label="Filter sermons by speaker" className="h-8 w-[180px] bg-white text-xs font-semibold text-gray-800">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -961,7 +961,7 @@ export default function Resources() {
                       setSermonsSortDirection(value);
                     }}
                   >
-                    <SelectTrigger className="h-8 w-[128px] bg-white text-xs font-semibold text-gray-800">
+                    <SelectTrigger aria-label="Sort sermons by date" className="h-8 w-[128px] bg-white text-xs font-semibold text-gray-800">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -980,7 +980,7 @@ export default function Resources() {
                       setSermonsSortDirection(value);
                     }}
                   >
-                    <SelectTrigger className="h-8 w-[96px] bg-white text-xs font-semibold text-gray-800">
+                    <SelectTrigger aria-label="Sort sermons alphabetically" className="h-8 w-[96px] bg-white text-xs font-semibold text-gray-800">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -990,8 +990,8 @@ export default function Resources() {
                   </Select>
                 </div>
                 <div className="flex items-center gap-1 bg-gray-200 rounded-lg p-1">
-                  <button onClick={() => setSermonsView("grid")} className={`p-2 rounded-md transition-colors ${sermonsView === "grid" ? "bg-white shadow text-amber-600" : "text-gray-500 hover:text-gray-700"}`} aria-label="Grid view"><LayoutGrid className="w-4 h-4" /></button>
-                  <button onClick={() => setSermonsView("list")} className={`p-2 rounded-md transition-colors ${sermonsView === "list" ? "bg-white shadow text-amber-600" : "text-gray-500 hover:text-gray-700"}`} aria-label="List view"><List className="w-4 h-4" /></button>
+                  <button onClick={() => setSermonsView("grid")} className={`p-2 rounded-md transition-colors ${sermonsView === "grid" ? "bg-white shadow text-amber-700" : "text-gray-500 hover:text-gray-700"}`} aria-label="Grid view"><LayoutGrid className="w-4 h-4" /></button>
+                  <button onClick={() => setSermonsView("list")} className={`p-2 rounded-md transition-colors ${sermonsView === "list" ? "bg-white shadow text-amber-700" : "text-gray-500 hover:text-gray-700"}`} aria-label="List view"><List className="w-4 h-4" /></button>
                 </div>
               </div>
             </div>
@@ -1050,7 +1050,7 @@ export default function Resources() {
                             </button>
                           </>
                         )}
-                        {selectedSermon?.id === sermon.id && <div className="absolute top-0 left-0 bg-amber-500 text-white px-2 py-1 text-xs font-bold">NOW PLAYING</div>}
+                        {selectedSermon?.id === sermon.id && <div className="absolute top-0 left-0 bg-amber-700 text-white px-2 py-1 text-xs font-bold">NOW PLAYING</div>}
                       </div>
                       <CardContent className="p-4">
                         <p className="font-semibold text-gray-800 leading-tight mb-2" title={sermon.title}>{sermon.title}</p>
@@ -1119,7 +1119,7 @@ export default function Resources() {
                               {sermon.date && <><span className="font-semibold">Date:</span> {format(parseISO(sermon.date), "MMMM d, yyyy")}</>}
                             </p>
                           </div>
-                          {selectedSermon?.id === sermon.id && <Badge className="bg-amber-500 text-white flex-shrink-0">Now Playing</Badge>}
+                          {selectedSermon?.id === sermon.id && <Badge className="bg-amber-700 text-white flex-shrink-0">Now Playing</Badge>}
                           <a href={sermon.youtube_url} target="_blank" rel="noreferrer" className="inline-flex flex-shrink-0 items-center justify-center rounded-md border border-red-200 px-3 py-2 text-xs font-semibold text-red-700 transition-colors hover:bg-red-50">
                             <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
                             YouTube
@@ -1161,7 +1161,7 @@ export default function Resources() {
                             <p className="text-gray-600 mb-6">
                               Catch up on this week's announcements, order of worship, prayer list, and more.
                             </p>
-                            <Button asChild className="bg-amber-600 hover:bg-amber-700 w-full sm:w-auto">
+                            <Button asChild className="bg-amber-700 hover:bg-amber-800 w-full sm:w-auto">
                               <a href={currentBulletin.file_url} target="_blank" rel="noopener noreferrer" download={getFilename(currentBulletin)}>
                                 <Download className="w-5 h-5 mr-2" />
                                 Download {currentBulletinFormat.label}
@@ -1207,7 +1207,7 @@ export default function Resources() {
                               setBulletinsSortDirection(value);
                             }}
                           >
-                            <SelectTrigger className="h-8 w-[128px] bg-white text-xs font-semibold text-gray-800">
+                            <SelectTrigger aria-label="Sort bulletins by date" className="h-8 w-[128px] bg-white text-xs font-semibold text-gray-800">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -1226,7 +1226,7 @@ export default function Resources() {
                               setBulletinsSortDirection(value);
                             }}
                           >
-                            <SelectTrigger className="h-8 w-[96px] bg-white text-xs font-semibold text-gray-800">
+                            <SelectTrigger aria-label="Sort bulletins alphabetically" className="h-8 w-[96px] bg-white text-xs font-semibold text-gray-800">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -1236,8 +1236,8 @@ export default function Resources() {
                           </Select>
                         </div>
                         <div className="flex items-center gap-1 bg-gray-200 rounded-lg p-1">
-                          <button onClick={() => setBulletinsView("grid")} className={`p-2 rounded-md transition-colors ${bulletinsView === "grid" ? "bg-white shadow text-amber-600" : "text-gray-500 hover:text-gray-700"}`} aria-label="Grid view"><LayoutGrid className="w-4 h-4" /></button>
-                          <button onClick={() => setBulletinsView("list")} className={`p-2 rounded-md transition-colors ${bulletinsView === "list" ? "bg-white shadow text-amber-600" : "text-gray-500 hover:text-gray-700"}`} aria-label="List view"><List className="w-4 h-4" /></button>
+                          <button onClick={() => setBulletinsView("grid")} className={`p-2 rounded-md transition-colors ${bulletinsView === "grid" ? "bg-white shadow text-amber-700" : "text-gray-500 hover:text-gray-700"}`} aria-label="Grid view"><LayoutGrid className="w-4 h-4" /></button>
+                          <button onClick={() => setBulletinsView("list")} className={`p-2 rounded-md transition-colors ${bulletinsView === "list" ? "bg-white shadow text-amber-700" : "text-gray-500 hover:text-gray-700"}`} aria-label="List view"><List className="w-4 h-4" /></button>
                         </div>
                       </div>
                     </div>

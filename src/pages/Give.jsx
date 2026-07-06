@@ -145,7 +145,7 @@ export default function Give() {
                       aria-pressed={selectedAmount === amount}
                       className={`p-3 rounded-lg border-2 transition-all duration-200 ${
                         selectedAmount === amount 
-                          ? 'border-amber-500 bg-amber-50 text-amber-700' 
+                          ? 'border-amber-600 bg-amber-50 text-amber-800' 
                           : 'border-gray-300 hover:border-amber-300'
                       }`}
                     >
@@ -209,7 +209,7 @@ export default function Give() {
                       aria-pressed={givingFrequency === freq.id}
                       className={`p-3 rounded-lg border-2 transition-all duration-200 flex items-center justify-center gap-2 ${
                         givingFrequency === freq.id 
-                          ? 'border-amber-500 bg-amber-50 text-amber-700' 
+                          ? 'border-amber-600 bg-amber-50 text-amber-800' 
                           : 'border-gray-300 hover:border-amber-300'
                       }`}
                     >
@@ -222,7 +222,7 @@ export default function Give() {
 
               {/* Give Button */}
               <div className="pt-4">
-                <Button className="w-full bg-amber-600 hover:bg-amber-700 text-lg py-3">
+                <Button className="w-full bg-amber-700 hover:bg-amber-800 text-lg py-3">
                   <Heart className="w-5 h-5 mr-2" />
                   Give ${customAmount || selectedAmount || "0"} {givingFrequency !== "one-time" && `(${givingFrequency})`}
                 </Button>
@@ -248,7 +248,7 @@ export default function Give() {
               <Card key={fund.id} className="hover:shadow-lg transition-shadow duration-300">
                 <CardHeader className="text-center">
                   <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <fund.icon className="w-8 h-8 text-amber-600" />
+                    <fund.icon className="w-8 h-8 text-amber-700" />
                   </div>
                   <CardTitle className="text-xl">{fund.name}</CardTitle>
                 </CardHeader>
@@ -311,7 +311,7 @@ export default function Give() {
                     <CardTitle className="text-xl">{story.title}</CardTitle>
                     <Badge className="bg-green-100 text-green-800">{story.period}</Badge>
                   </div>
-                  <p className="text-2xl font-bold text-amber-600">{story.amount}</p>
+                  <p className="text-2xl font-bold text-amber-700">{story.amount}</p>
                 </CardHeader>
                 <CardContent>
                   <p className="text-gray-600">{story.description}</p>

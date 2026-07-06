@@ -241,7 +241,7 @@ export default function Prayer() {
             <Card className="border-2 border-amber-200 shadow-xl bg-white/80 backdrop-blur-sm">
               <CardHeader className="text-center bg-gradient-to-r from-amber-100 to-yellow-100 rounded-t-lg">
                 <div className="flex justify-center mb-4">
-                  <div className="bg-amber-500 rounded-full p-3">
+                  <div className="bg-amber-700 rounded-full p-3">
                     <Sparkles className="w-8 h-8 text-white" />
                   </div>
                 </div>
@@ -268,7 +268,7 @@ export default function Prayer() {
                   
                   <div className="text-center pt-4">
                     <p className="text-gray-600 mb-4">Join us in praying this prayer throughout the week</p>
-                    <Badge className="bg-amber-500 text-white text-sm px-4 py-2">
+                    <Badge className="bg-amber-700 text-white text-sm px-4 py-2">
                       Updated Weekly
                     </Badge>
                   </div>
@@ -283,7 +283,7 @@ export default function Prayer() {
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-8">
               <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 flex items-center justify-center gap-3">
-                <HandHeart className="w-8 h-8 text-amber-600" />
+                <HandHeart className="w-8 h-8 text-amber-700" />
                 Submit a Prayer Request
               </h2>
               <p className="text-lg text-gray-600 max-w-2xl mx-auto">
@@ -388,7 +388,7 @@ export default function Prayer() {
                   <Button
                     type="submit"
                     disabled={submitting}
-                    className="w-full bg-amber-600 hover:bg-amber-700 text-white font-semibold py-3"
+                    className="w-full bg-amber-700 hover:bg-amber-800 text-white font-semibold py-3"
                   >
                     {submitting ? (
                       <>
@@ -420,7 +420,7 @@ export default function Prayer() {
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-8">
               <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 flex items-center justify-center gap-3">
-                <Users className="w-8 h-8 text-amber-600" />
+                <Users className="w-8 h-8 text-amber-700" />
                 Congregational Prayer List
               </h2>
               <p className="text-lg text-gray-600 max-w-2xl mx-auto">
@@ -433,7 +433,7 @@ export default function Prayer() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {congregationalPrayerList.map((name, index) => (
                     <div key={index} className="flex items-start gap-3 p-3 bg-amber-50 rounded-lg hover:bg-amber-100 transition-colors">
-                      <div className="bg-amber-500 rounded-full p-2 flex-shrink-0 mt-0.5">
+                      <div className="bg-amber-700 rounded-full p-2 flex-shrink-0 mt-0.5">
                         <Heart className="w-4 h-4 text-white" />
                       </div>
                       <div className="flex-1">

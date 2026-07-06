@@ -218,8 +218,10 @@ export default function Layout({ children, currentPageName }) {
             pointer-events: auto;
           }
 
-          /* New rule to hide dropdown for active page */
-          .dropdown-container.is-active:hover .dropdown-menu {
+          /* Keep focus-opened menus from overlapping hover-opened menus. */
+          nav:hover .dropdown-container:focus-within:not(:hover) .dropdown-menu,
+          .dropdown-container.is-active:hover .dropdown-menu,
+          .dropdown-container.is-active:focus-within .dropdown-menu {
             opacity: 0;
             visibility: hidden;
             pointer-events: none;
@@ -608,7 +610,7 @@ export default function Layout({ children, currentPageName }) {
           <Button
               onClick={scrollToTop}
               size="icon"
-              className="fixed bottom-6 right-6 h-12 w-12 rounded-full bg-amber-600 hover:bg-amber-700 text-white shadow-lg transition-all duration-300 animate-bounce z-50"
+              className="fixed bottom-6 right-6 h-12 w-12 rounded-full bg-amber-700 hover:bg-amber-800 text-white shadow-lg transition-all duration-300 animate-bounce z-50"
               aria-label="Back to top"
           >
               <ArrowUp className="h-6 w-6" />

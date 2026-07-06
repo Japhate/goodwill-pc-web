@@ -11,6 +11,7 @@
     "images:responsive": "node scripts/generate-responsive-images.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
+    "test:a11y": "playwright test",
     "migrate:hero-firebase": "node scripts/upload-optimized-hero-images-to-firebase.js",
     "typecheck": "tsc -p ./jsconfig.json",
     "preview": "node scripts/vite-node16.js preview --host localhost --port 3100 --strictPort"
@@ -84,7 +85,9 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.12.1",
     "@eslint/js": "^9.19.0",
+    "@playwright/test": "^1.61.1",
     "@types/node": "^22.13.5",
     "@types/react": "^18.2.66",
     "@types/react-dom": "^18.2.22",

@@ -217,7 +217,7 @@ export default function Updates() {
       <button
         type="button"
         onClick={() => copyContactValue(copyId, value)}
-        className="ml-2 inline-flex items-center gap-1 rounded border border-amber-200 px-1.5 py-0.5 text-[11px] font-semibold text-amber-700 transition hover:bg-amber-50"
+        className="ml-2 inline-flex items-center gap-1 rounded border border-amber-200 px-1.5 py-0.5 text-[11px] font-semibold text-amber-800 transition hover:bg-amber-50"
         aria-label={`Copy ${label}`}
         title={copied ? "Copied" : `Copy ${label}`}
       >
@@ -572,11 +572,11 @@ export default function Updates() {
                       Today's service is at Second Presbyterian Church in Sumter. No service at Goodwill's main sanctuary. No livestream today.
                     </p>
                     <p className="mt-3 flex items-center gap-2 text-sm font-semibold text-gray-700">
-                      <MapPin className="h-4 w-4 text-amber-600" />
+                      <MapPin className="h-4 w-4 text-amber-700" />
                       {inPersonOnlyNotice.locationLabel}
                     </p>
                   </div>
-                  <Button asChild className="bg-amber-600 text-white hover:bg-amber-700">
+                  <Button asChild className="bg-amber-700 text-white hover:bg-amber-800">
                     <a href={inPersonOnlyNotice.directionsUrl} target="_blank" rel="noopener noreferrer">
                       <MapPin className="mr-2 h-4 w-4" />
                       Get Directions
@@ -594,7 +594,7 @@ export default function Updates() {
                   aria-pressed={activeCategory === 'all'}
                   className={`h-8 rounded-md px-3 text-xs font-semibold transition-colors ${
                     activeCategory === 'all'
-                      ? 'bg-white text-amber-700 shadow'
+                      ? 'bg-white text-amber-800 shadow'
                       : 'text-gray-600 hover:bg-white/70 hover:text-gray-800'
                   }`}
                 >
@@ -608,7 +608,7 @@ export default function Updates() {
                   aria-pressed={activeCategory === key}
                   className={`h-8 rounded-md px-3 text-xs font-semibold transition-colors ${
                     activeCategory === key
-                      ? 'bg-white text-amber-700 shadow'
+                      ? 'bg-white text-amber-800 shadow'
                       : 'text-gray-600 hover:bg-white/70 hover:text-gray-800'
                   }`}
                 >
@@ -642,17 +642,17 @@ export default function Updates() {
                       </div>
                     ) : null}
                     <div className="flex min-h-0 flex-grow flex-col p-4 md:max-h-[calc((100vw-1.5rem)*0.32*9/16)] md:overflow-hidden md:py-2 md:pl-2 md:pr-4 lg:max-h-[calc((100vw-2rem)*0.32*9/16)] xl:max-h-[calc((100vw-2rem)*0.30*9/16)] xl:py-2 xl:pl-2 xl:pr-5">
-                      <div className="min-h-0 md:h-full md:overflow-y-auto md:pr-2">
+                      <div className="min-h-0 md:h-full md:overflow-y-auto md:pr-2" tabIndex={0} aria-label={`Scrollable details for ${item.title}`}>
                       <div className="mb-2 flex items-start justify-between gap-2">
                           <h3 className="text-xl font-bold text-gray-800">{item.title}</h3>
-                          <Badge variant="outline" className="shrink-0 border-amber-500 px-2 py-0.5 text-[10px] font-semibold leading-tight text-amber-600">
+                          <Badge variant="outline" className="shrink-0 border-amber-500 px-2 py-0.5 text-[10px] font-semibold leading-tight text-amber-700">
                             {categories[item.category] || 'Church-Wide'}
                           </Badge>
                       </div>
                       <div className="prose prose-sm max-w-none text-gray-600 lg:prose-p:my-1.5 lg:text-[13px] lg:leading-relaxed xl:text-sm">
                         <ReactMarkdown
                           components={{
-                              a: ({ node: _node, ...props }) => <a {...props} target="_blank" rel="noopener noreferrer" className="text-amber-600 hover:underline"/>
+                              a: ({ node: _node, ...props }) => <a {...props} target="_blank" rel="noopener noreferrer" className="text-amber-700 hover:underline"/>
                           }}
                         >
                             {item.content}
@@ -720,7 +720,7 @@ export default function Updates() {
                               </a>
                             )}
                             {hasPhysicalLocation(item) && item.directions_url && (
-                              <a href={item.directions_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-md bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700">
+                              <a href={item.directions_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-md bg-amber-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-800">
                                 <MapPin className="h-3.5 w-3.5" />
                                 Get Directions
                               </a>
@@ -874,7 +874,7 @@ export default function Updates() {
                   ))
                 ) : (
                   <div className="rounded-xl border border-dashed border-amber-300 bg-white/80 px-6 py-12 text-center shadow-sm">
-                    <Calendar className="mx-auto mb-3 h-12 w-12 text-amber-600" />
+                    <Calendar className="mx-auto mb-3 h-12 w-12 text-amber-700" />
                     <h3 className="text-xl font-semibold text-gray-900">No worship calendar events yet</h3>
                     <p className="mt-2 text-gray-600">Dated announcements will appear here automatically.</p>
                   </div>
@@ -916,7 +916,7 @@ export default function Updates() {
                       <div className="flex-1">
                         <div className="mb-2 flex items-start justify-between gap-2">
                           <h3 className="text-xl font-bold text-gray-800">{item.title}</h3>
-                          <Badge variant="outline" className="shrink-0 border-amber-500 px-2 py-0.5 text-[10px] font-semibold leading-tight text-amber-600">
+                          <Badge variant="outline" className="shrink-0 border-amber-500 px-2 py-0.5 text-[10px] font-semibold leading-tight text-amber-700">
                             {categories[item.category] || 'Church-Wide'}
                           </Badge>
                         </div>
@@ -924,7 +924,7 @@ export default function Updates() {
                           <div className="text-gray-600 text-sm mb-3 prose prose-sm max-w-none">
                             <ReactMarkdown
                               components={{
-                                  a: ({ node: _node, ...props }) => <a {...props} target="_blank" rel="noopener noreferrer" className="text-amber-600 hover:underline"/>
+                                  a: ({ node: _node, ...props }) => <a {...props} target="_blank" rel="noopener noreferrer" className="text-amber-700 hover:underline"/>
                               }}
                             >
                                 {item.content}
@@ -994,7 +994,7 @@ export default function Updates() {
                               </a>
                             )}
                             {hasPhysicalLocation(item) && item.directions_url && (
-                              <a href={item.directions_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-md bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700">
+                              <a href={item.directions_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-md bg-amber-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-800">
                                 <MapPin className="h-3.5 w-3.5" />
                                 Get Directions
                               </a>

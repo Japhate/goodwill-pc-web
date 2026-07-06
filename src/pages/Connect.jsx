@@ -318,7 +318,7 @@ export default function Connect() {
                 <p className="mx-auto mt-2 max-w-2xl rounded-md bg-red-600 px-4 py-3 text-sm font-bold text-white">
                   Today's service is at Second Presbyterian Church in Sumter. No service at Goodwill's main sanctuary. No livestream today.
                 </p>
-                <Button asChild className="mt-4 bg-amber-600 text-white hover:bg-amber-700">
+                <Button asChild className="mt-4 bg-amber-700 text-white hover:bg-amber-800">
                   <a href={inPersonOnlyNotice.directionsUrl} target="_blank" rel="noopener noreferrer">
                     <MapPin className="mr-2 h-4 w-4" />
                     Get Directions
@@ -330,7 +330,7 @@ export default function Connect() {
             <div className="grid md:grid-cols-3 gap-8 mb-12">
               <div className="text-center">
                 <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Clock className="w-8 h-8 text-amber-600" />
+                  <Clock className="w-8 h-8 text-amber-700" />
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">When to Arrive</h3>
                 <p className="text-gray-600">
@@ -375,10 +375,10 @@ export default function Connect() {
                   <div key={idx} className="relative flex flex-col w-full">
                     <div className="flex flex-row items-center md:flex-col md:items-center gap-3 md:gap-2 relative md:flex-1">
                       <div className="relative w-14 h-14">
-                        <div className="w-14 h-14 rounded-full bg-amber-100 border-4 border-amber-600 flex items-center justify-center text-2xl shadow-md">
+                        <div className="w-14 h-14 rounded-full bg-amber-100 border-4 border-amber-700 flex items-center justify-center text-2xl shadow-md">
                           {step.icon}
                         </div>
-                        <div className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-amber-600 text-white text-xs font-bold flex items-center justify-center border-2 border-white shadow-md">
+                        <div className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-amber-700 text-white text-xs font-bold flex items-center justify-center border-2 border-white shadow-md">
                           {idx < 3 ? idx + 1 : idx}
                         </div>
                       </div>
@@ -412,7 +412,7 @@ export default function Connect() {
                       <CardHeader>
                         <div className="flex items-center gap-3">
                           <div className="w-12 h-12 bg-amber-100 rounded-lg flex items-center justify-center">
-                            <item.icon className="w-6 h-6 text-amber-600" />
+                            <item.icon className="w-6 h-6 text-amber-700" />
                           </div>
                           <CardTitle className="text-xl">{item.title}</CardTitle>
                         </div>
@@ -429,7 +429,7 @@ export default function Connect() {
                               <button
                                 type="button"
                                 onClick={() => copyToClipboard(item.copyText, item.copyId, item.copyType)}
-                                className="p-1 text-gray-400 hover:text-amber-600 transition-colors"
+                                className="p-1 text-gray-400 hover:text-amber-700 transition-colors"
                                 title="Copy to clipboard"
                                 aria-label={`Copy ${item.title.toLowerCase()}`}
                               >
@@ -447,7 +447,7 @@ export default function Connect() {
                                 <button
                                   type="button"
                                   onClick={() => copyToClipboard(item.copyText, item.copyId, item.copyType)}
-                                  className="p-1 text-gray-400 hover:text-amber-600 transition-colors"
+                                  className="p-1 text-gray-400 hover:text-amber-700 transition-colors"
                                   title="Copy to clipboard"
                                   aria-label={`Copy ${item.title.toLowerCase()}`}
                                 >
@@ -460,7 +460,7 @@ export default function Connect() {
                               </div>
                             ))
                           )}
-                          <Button asChild variant="outline" className="mt-4 text-amber-600 border-amber-600 hover:bg-amber-50">
+                          <Button asChild variant="outline" className="mt-4 text-amber-700 border-amber-700 hover:bg-amber-50">
                             <a href={item.href} target={item.target || "_self"}>
                               {item.actionText}
                             </a>
@@ -477,7 +477,7 @@ export default function Connect() {
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-2xl">
-                      <Clock className="w-6 h-6 text-amber-600" />
+                      <Clock className="w-6 h-6 text-amber-700" />
                       Service Times
                     </CardTitle>
                   </CardHeader>
@@ -493,7 +493,7 @@ export default function Connect() {
                           </div>
                           <div className="flex flex-wrap items-center gap-3">
                             {service.directionsUrl && (
-                              <Button asChild size="sm" className="bg-amber-600 text-white hover:bg-amber-700">
+                              <Button asChild size="sm" className="bg-amber-700 text-white hover:bg-amber-800">
                                 <a href={service.directionsUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1">
                                   <MapPin className="w-4 h-4" />
                                   <span>Directions</span>
@@ -508,7 +508,7 @@ export default function Connect() {
                                 </a>
                               </Button>
                             )}
-                            <p className="font-semibold text-amber-600">{service.time}</p>
+                            <p className="font-semibold text-amber-700">{service.time}</p>
                           </div>
                         </div>
                       ))}
@@ -519,7 +519,7 @@ export default function Connect() {
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-2xl">
-                      <Car className="w-6 h-6 text-amber-600" />
+                      <Car className="w-6 h-6 text-amber-700" />
                       Parking & Accessibility
                     </CardTitle>
                   </CardHeader>
@@ -575,7 +575,7 @@ export default function Connect() {
                         <p className="text-gray-600">{opportunity.skills}</p>
                       </div>
                     </div>
-                    <Button asChild className="w-full bg-amber-600 hover:bg-amber-700 mt-4">
+                    <Button asChild className="w-full bg-amber-700 hover:bg-amber-800 mt-4">
                       <a href="#contact">Learn More</a>
                     </Button>
                   </CardContent>
@@ -594,10 +594,10 @@ export default function Connect() {
                     or to schedule a meeting with one of our ministry leaders.
                   </p>
                   <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                    <Button asChild className="bg-amber-600 hover:bg-amber-700">
+                    <Button asChild className="bg-amber-700 hover:bg-amber-800">
                       <a href={CHURCH_CONTACT.emailHref}>Contact Church Office</a>
                     </Button>
-                    <Button asChild variant="outline" className="border-amber-600 text-amber-600 hover:bg-amber-50">
+                    <Button asChild variant="outline" className="border-amber-700 text-amber-700 hover:bg-amber-50">
                       <Link to={createPageUrl("Prayer")}>Submit Prayer Request</Link>
                     </Button>
                   </div>
@@ -629,7 +629,7 @@ export default function Connect() {
                       Goodwill's main sanctuary will not host today's {PRIMARY_WORSHIP_SERVICE.time} service.
                     </p>
                   </div>
-                  <Button asChild className="bg-amber-600 text-white hover:bg-amber-700">
+                  <Button asChild className="bg-amber-700 text-white hover:bg-amber-800">
                     <a href={inPersonOnlyNotice.directionsUrl} target="_blank" rel="noopener noreferrer">
                       <MapPin className="mr-2 h-4 w-4" />
                       Get Directions
@@ -644,7 +644,7 @@ export default function Connect() {
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-2xl">
-                      <MapPin className="w-6 h-6 text-amber-600" />
+                      <MapPin className="w-6 h-6 text-amber-700" />
                       Address & Detailed Directions
                     </CardTitle>
                   </CardHeader>

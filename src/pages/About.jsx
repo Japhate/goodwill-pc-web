@@ -342,7 +342,7 @@ export default function About() {
                 <Card key={index} className="text-center hover:shadow-lg transition-shadow duration-300">
                   <CardHeader>
                     <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <value.icon className="w-8 h-8 text-amber-600" />
+                      <value.icon className="w-8 h-8 text-amber-700" />
                     </div>
                     <CardTitle className="text-xl text-gray-900">{value.title}</CardTitle>
                   </CardHeader>
@@ -423,7 +423,7 @@ export default function About() {
                 <Card key={index} className="hover:shadow-lg transition-shadow duration-300">
                   <CardHeader className="text-center">
                     <CardTitle className="text-xl text-gray-900">{person.name}</CardTitle>
-                    <p className="text-amber-600 font-medium">{person.role}</p>
+                    <p className="text-amber-700 font-medium">{person.role}</p>
                   </CardHeader>
                   <CardContent>
                     <p className="text-gray-600 text-center">{person.bio}</p>
@@ -449,7 +449,7 @@ export default function About() {
                 <Card key={index} className="hover:shadow-lg transition-shadow duration-300">
                   <CardHeader>
                     <CardTitle className="flex items-start gap-3 text-xl text-gray-900">
-                      <HelpCircle className="w-6 h-6 text-amber-600 mt-0.5 flex-shrink-0" />
+                      <HelpCircle className="w-6 h-6 text-amber-700 mt-0.5 flex-shrink-0" />
                       {faq.question}
                     </CardTitle>
                   </CardHeader>
@@ -469,10 +469,10 @@ export default function About() {
                     any questions you might have about our church, programs, or beliefs.
                   </p>
                   <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                    <Button asChild className="bg-amber-600 hover:bg-amber-700">
+                    <Button asChild className="bg-amber-700 hover:bg-amber-800">
                       <Link to={createPageUrl("Connect") + "#contact"}>Contact Us</Link>
                     </Button>
-                    <Button asChild variant="outline" className="border-amber-600 text-amber-600 hover:bg-amber-50">
+                    <Button asChild variant="outline" className="border-amber-700 text-amber-700 hover:bg-amber-50">
                       <Link to={createPageUrl("Connect") + "#visit"}>Plan a Visit</Link>
                     </Button>
                   </div>

@@ -1006,15 +1006,15 @@ export default function Home() {
                 </p>
                 <div className="mb-5 space-y-2 text-sm text-gray-700">
                   <p className="flex items-center gap-2 font-semibold">
-                    <Clock className="h-4 w-4 text-amber-600" />
+                    <Clock className="h-4 w-4 text-amber-700" />
                     {inPersonOnlyNotice.serviceTimeLabel}
                   </p>
                   <p className="flex items-center gap-2 font-semibold">
-                    <MapPin className="h-4 w-4 text-amber-600" />
+                    <MapPin className="h-4 w-4 text-amber-700" />
                     {inPersonOnlyNotice.locationLabel}
                   </p>
                 </div>
-                <Button asChild className="bg-amber-600 text-white hover:bg-amber-700">
+                <Button asChild className="bg-amber-700 text-white hover:bg-amber-800">
                   <a href={inPersonOnlyNotice.directionsUrl} target="_blank" rel="noopener noreferrer">
                     <Navigation className="mr-2 h-4 w-4" />
                     Get Directions
@@ -1090,7 +1090,7 @@ export default function Home() {
                 <div className="flex flex-col gap-2 sm:flex-row md:gap-3">
                   <a 
                     href={createPageUrl("Connect") + "#visit"}
-                    className="inline-flex items-center justify-center rounded-md bg-amber-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-amber-700 md:px-5 md:py-3"
+                    className="inline-flex items-center justify-center rounded-md bg-amber-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-amber-800 md:px-5 md:py-3"
                   >
                     <MapPin className="mr-2 h-4 w-4" />
                     Visit In Person
@@ -1313,7 +1313,7 @@ export default function Home() {
                             aria-describedby={newsletterMessage ? "newsletter-status" : undefined}
                             required
                         />
-                        <Button type="submit" disabled={isNewsletterSubmitting} aria-busy={isNewsletterSubmitting} className="bg-amber-600 hover:bg-amber-700 text-white glow-effect disabled:cursor-not-allowed disabled:opacity-70 sm:col-span-2 lg:col-span-1">
+                        <Button type="submit" disabled={isNewsletterSubmitting} aria-busy={isNewsletterSubmitting} className="bg-amber-700 hover:bg-amber-800 text-white glow-effect disabled:cursor-not-allowed disabled:opacity-70 sm:col-span-2 lg:col-span-1">
                             <Send className="w-4 h-4 mr-2" /><span>{isNewsletterSubmitting ? "Subscribing..." : "Subscribe"}</span>
                         </Button>
                     </form>
