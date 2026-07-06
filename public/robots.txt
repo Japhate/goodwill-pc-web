@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /Admin
+Disallow: /AdminSetup
+
+Sitemap: https://www.goodwillpresch1867.com/sitemap.xml
