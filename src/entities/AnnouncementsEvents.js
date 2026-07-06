@@ -1,3 +1,3 @@
-import { firebaseApi } from "@/api/firebaseApiClient";
+import { localApi } from "@/api/localApiClient";
 
-export const AnnouncementsEvents = firebaseApi.entities.AnnouncementsEvents;
+export const AnnouncementsEvents = localApi.entities.AnnouncementsEvents;

@@ -619,7 +619,6 @@ export default function Updates() {
                   const isFarFuture = itemDate && itemDate.getFullYear() > 2090;
                   const dateLabel = !isFarFuture ? formatDateRange(itemDate, itemEndDate) : "";
                   const timeLabel = formatTimeRange(item.time, item.end_time);
-                  const locationType = getLocationType(item);
                   const calendarUrl = getGoogleCalendarUrl(item);
                   return (
                   <div
@@ -891,7 +890,6 @@ export default function Updates() {
                   const itemEndDate = parseDateAsLocal(item.end_date);
                   const dateLabel = formatDateRange(itemDate, itemEndDate);
                   const timeLabel = formatTimeRange(item.time, item.end_time);
-                  const locationType = getLocationType(item);
                   const calendarUrl = getGoogleCalendarUrl(item);
                   return (
                   <div

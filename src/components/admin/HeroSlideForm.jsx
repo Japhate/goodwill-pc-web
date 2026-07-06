@@ -36,7 +36,6 @@ const DEFAULT_RELATED_ANNOUNCEMENT = {
   category: "church_wide",
   status: "Active",
 };
-const RELATED_ANNOUNCEMENT_DEFAULT_ONLY_FIELDS = new Set(["category", "status", "location_type"]);
 const AUTOMATIC_BANNER_FIELDS = [
   "live_banner_message",
   "date",
@@ -57,13 +56,6 @@ const AUTOMATIC_BANNER_FIELDS = [
   "contact_phone",
   "directions_url",
 ];
-
-function hasRelatedAnnouncementDraftStarted(draft) {
-  return Object.entries(draft).some(([field, value]) => {
-    if (RELATED_ANNOUNCEMENT_DEFAULT_ONLY_FIELDS.has(field)) return false;
-    return String(value || "").trim() !== "";
-  });
-}
 
 function getScaledImageSize(sourceWidth, sourceHeight, maxWidth, maxHeight) {
   const scale = Math.min(1, maxWidth / sourceWidth, maxHeight / sourceHeight);

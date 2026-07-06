@@ -34,7 +34,7 @@ import { firebaseAuth, firebaseEnabled } from '@/lib/firebase';
 import { localApi } from '@/api/localApiClient';
 import { collection, doc, getDocs, updateDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase';
-import { DEFAULT_EMAIL_TEMPLATES, NEWSLETTER_TEMPLATE_IDS } from '@/lib/newsletterTemplates';
+import { DEFAULT_EMAIL_TEMPLATES } from '@/lib/newsletterTemplates';
 import { createSpecialServicePopup } from '@/lib/specialServiceNotice';
 import { Camera, CheckCircle2, XCircle, Loader2, ShieldAlert, CalendarHeart, PlaySquare, FileText, MessageSquare, LayoutTemplate, LogOut, BellRing, Mail, ShieldCheck, UserRound, Code2, Search, Grid2X2, List, Plus, Info, ChevronDown, EyeOff, RotateCcw, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -1095,53 +1095,6 @@ export default function AdminPage() {
     } catch (error) {
       console.error('Unable to save email template:', error);
       showError(getSaveErrorMessage(error));
-    }
-  };
-
-  const handleSendNewsletterTestEmail = async (templateId, email) => {
-    const normalizedEmail = email.trim().toLowerCase();
-    if (!normalizedEmail) return;
-
-    const unsubscribeToken = createUnsubscribeToken();
-    const emailKey = encodeURIComponent(normalizedEmail);
-    const endpoint = templateId === NEWSLETTER_TEMPLATE_IDS.duplicate
-      ? '/api/send-duplicate-subscription-email'
-      : '/api/send-welcome-email';
-    const payload = templateId === NEWSLETTER_TEMPLATE_IDS.duplicate
-      ? { email: normalizedEmail, firstName: 'Test', lastName: 'Subscriber' }
-      : {
-          email: normalizedEmail,
-          firstName: 'Test',
-          lastName: 'Subscriber',
-          emailKey,
-          unsubscribeToken,
-          host: window.location.host,
-          protocol: window.location.protocol.replace(':', ''),
-        };
-
-    try {
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        const errorMessage = await getApiErrorMessage(response, 'Unable to send the test email.');
-        showError(errorMessage);
-        return;
-      }
-
-      showSuccess('The test email was sent successfully.');
-      await logAdminActivity({
-        action: 'sent_test_email',
-        section: 'Newsletter',
-        itemType: 'email template',
-        itemId: templateId,
-        itemLabel: normalizedEmail,
-      });
-    } catch (error) {
-      showError(`Unable to send the test email: ${error.message}`);
     }
   };
 
@@ -2314,28 +2267,8 @@ export default function AdminPage() {
   // Filter by status for admin view
   const allPast = announcements.filter(item => item.status === 'Inactive');
   const allHidden = announcements.filter(item => item.status === 'Hidden');
-  const allUpcomingAndUndated = announcements.filter(item => 
-    item.status !== 'Inactive' && item.status !== 'Hidden'
-  );
-
   // Sort PAST events: Newest-past first (descending)
   const pastAnnouncements = allPast.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-  // Sort UPCOMING events: Soonest-upcoming first (ascending), with undated items last
-  const upcomingAnnouncements = allUpcomingAndUndated.sort((a, b) => {
-    const aHasDate = a.date && a.date.trim() !== '';
-    const bHasDate = b.date && b.date.trim() !== '';
-
-    if (aHasDate && !bHasDate) return -1; // Dated items first
-    if (!aHasDate && bHasDate) return 1;  // Undated items last
-
-    if (aHasDate && bHasDate) {
-      return new Date(a.date) - new Date(b.date); // Soonest date first (ascending)
-    }
-
-    // Both are undated, sort by creation date (newest first)
-    return new Date(b.created_date) - new Date(a.created_date);
-  });
   const inactiveAnnouncements = [...allHidden, ...pastAnnouncements];
   const linkedAnnouncementIds = new Set(
     heroSlides
@@ -2509,6 +2442,11 @@ export default function AdminPage() {
           {selectionActions}
         </div>
         {description && <p className="mt-1 text-sm text-gray-600">{description}</p>}
+        {showReorderHint && (
+          <p className="mt-1 text-xs font-medium text-amber-700">
+            Drag visible slides to adjust their homepage order.
+          </p>
+        )}
       </div>
       <div className="flex flex-wrap items-center justify-end gap-3">
         {searchOpen && (

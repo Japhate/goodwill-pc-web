@@ -65,6 +65,62 @@ function isAllowedCorsOrigin(origin) {
   return PRODUCTION_CORS_ORIGINS.has(origin) || isLocalDevelopmentOrigin(origin);
 }
 
+function buildContentSecurityPolicy() {
+  const directives = [
+    "default-src 'self'",
+    "base-uri 'self'",
+    "object-src 'none'",
+    "frame-ancestors 'self'",
+    "script-src 'self'",
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob: https:",
+    "font-src 'self' data:",
+    "media-src 'self' data: blob: https:",
+    "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://maps.google.com https://www.google.com",
+    "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.firebase.com https://firebasestorage.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com",
+    "form-action 'self'",
+    "upgrade-insecure-requests",
+  ];
+
+  if (process.env.LOCAL_VITE_DEV === 'true') {
+    return directives
+      .filter((directive) => directive !== "upgrade-insecure-requests")
+      .join('; ');
+  }
+
+  return directives.join('; ');
+}
+
+function applySecurityHeaders(req, res, next) {
+  res.set({
+    'Content-Security-Policy': buildContentSecurityPolicy(),
+    'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
+    'Cross-Origin-Resource-Policy': 'same-origin',
+    'Origin-Agent-Cluster': '?1',
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
+    'X-Content-Type-Options': 'nosniff',
+    'X-DNS-Prefetch-Control': 'off',
+    'X-Download-Options': 'noopen',
+    'X-Frame-Options': 'SAMEORIGIN',
+    'X-Permitted-Cross-Domain-Policies': 'none',
+    'Permissions-Policy': [
+      'camera=()',
+      'microphone=()',
+      'geolocation=(self)',
+      'payment=()',
+      'usb=()',
+    ].join(', '),
+  });
+
+  if (process.env.LOCAL_VITE_DEV !== 'true') {
+    res.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
+
+  next();
+}
+
+app.use(applySecurityHeaders);
+
 app.use((req, res, next) => {
   const host = req.hostname?.toLowerCase();
 
