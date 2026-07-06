@@ -1,0 +1,26 @@
+{
+  "name": "Goodwill Presbyterian Church USA-Mayesville, SC",
+  "short_name": "Goodwill PC-USA",
+  "description": "Connect with Goodwill Presbyterian Church in Mayesville, South Carolina for worship, events, sermons, prayer requests, and community news.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#4b342a",
+  "background_color": "#f8f1e5",
+  "categories": ["lifestyle", "news"],
+  "icons": [
+    {
+      "src": "/images/site/site-icon.png",
+      "sizes": "500x500",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/images/site/church-logo.png",
+      "sizes": "900x900",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

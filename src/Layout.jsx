@@ -13,6 +13,11 @@ import { localApi } from '@/api/localApiClient';
 import { firebaseEnabled } from '@/lib/firebase';
 import { getActiveSpecialServiceNotice } from '@/lib/specialServiceNotice';
 
+function prefersReducedMotion() {
+  return typeof window !== "undefined"
+    && window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+}
+
 export default function Layout({ children, currentPageName }) {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -68,7 +73,7 @@ export default function Layout({ children, currentPageName }) {
   const isActive = (href) => location.pathname === href;
 
   const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
   };
 
   const navigation = [
@@ -129,6 +134,12 @@ export default function Layout({ children, currentPageName }) {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-md focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-bold focus:text-[#3D2519] focus:shadow-lg"
+      >
+        Skip to main content
+      </a>
       <style>
         {`
           :root {
@@ -188,6 +199,13 @@ export default function Layout({ children, currentPageName }) {
 
           .dropdown-container:hover .dropdown-menu {
             transform: translateX(-50%) scale(1); /* Scale to full size when active */
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+          }
+
+          .dropdown-container:focus-within .dropdown-menu {
+            transform: translateX(-50%) scale(1);
             opacity: 1;
             visibility: visible;
             pointer-events: auto;
@@ -329,10 +347,10 @@ export default function Layout({ children, currentPageName }) {
 
               {/* Social Media and Search Row */}
               <div className="flex items-center space-x-1">
-                <a href="https://www.facebook.com/share/177iq2ZzgN/" target="_blank" rel="noopener noreferrer" className="p-2 rounded-full text-white social-facebook transition-all duration-300 hover:scale-110">
+                <a href="https://www.facebook.com/share/177iq2ZzgN/" target="_blank" rel="noopener noreferrer" className="p-2 rounded-full text-white social-facebook transition-all duration-300 hover:scale-110" aria-label="Visit Goodwill Presbyterian Church on Facebook">
                   <Facebook className="w-4 h-4" />
                 </a>
-                <a href="https://www.youtube.com/@goodwillpresbyterianchurch1867" target="_blank" rel="noopener noreferrer" className="p-2 rounded-full text-white social-youtube transition-all duration-300 hover:scale-110">
+                <a href="https://www.youtube.com/@goodwillpresbyterianchurch1867" target="_blank" rel="noopener noreferrer" className="p-2 rounded-full text-white social-youtube transition-all duration-300 hover:scale-110" aria-label="Visit Goodwill Presbyterian Church on YouTube">
                   <Youtube className="w-4 h-4" />
                 </a>
 
@@ -373,8 +391,10 @@ export default function Layout({ children, currentPageName }) {
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="lg:hidden p-2 rounded-md text-amber-100 hover:bg-black/30"
+              aria-expanded={mobileMenuOpen}
+              aria-controls="mobile-navigation"
+              aria-label={mobileMenuOpen ? "Close main menu" : "Open main menu"}
             >
-              <span className="sr-only">Open main menu</span>
               {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </button>
           </div>
@@ -382,7 +402,7 @@ export default function Layout({ children, currentPageName }) {
 
         {/* Mobile Navigation */}
         {mobileMenuOpen && (
-          <div className="border-t border-white/20 bg-black/20 lg:hidden">
+          <div id="mobile-navigation" className="border-t border-white/20 bg-black/20 lg:hidden">
             <div className="px-4 py-2 space-y-1">
                {navigation.map((item) => (
                   <Link
@@ -425,10 +445,10 @@ export default function Layout({ children, currentPageName }) {
 
               {/* Social Media Links for Mobile */}
               <div className="flex items-center justify-center space-x-4 pt-2">
-                <a href="https://www.facebook.com/share/177iq2ZzgN/" target="_blank" rel="noopener noreferrer" className="p-3 rounded-full text-white bg-blue-600 transition-transform hover:scale-110">
+                <a href="https://www.facebook.com/share/177iq2ZzgN/" target="_blank" rel="noopener noreferrer" className="p-3 rounded-full text-white bg-blue-600 transition-transform hover:scale-110" aria-label="Visit Goodwill Presbyterian Church on Facebook">
                   <Facebook className="w-5 h-5" />
                 </a>
-                <a href="https://www.youtube.com/@goodwillpresbyterianchurch1867" target="_blank" rel="noopener noreferrer" className="p-3 rounded-full text-white bg-red-600 transition-transform hover:scale-110">
+                <a href="https://www.youtube.com/@goodwillpresbyterianchurch1867" target="_blank" rel="noopener noreferrer" className="p-3 rounded-full text-white bg-red-600 transition-transform hover:scale-110" aria-label="Visit Goodwill Presbyterian Church on YouTube">
                   <Youtube className="w-5 h-5" />
                 </a>
                 <button
@@ -445,7 +465,7 @@ export default function Layout({ children, currentPageName }) {
       </header>
 
       {/* Add padding-top to main content to account for fixed header */}
-      <main className="flex-1 pt-20">
+      <main id="main-content" className="flex-1 pt-20" tabIndex={-1}>
         {children}
       </main>
 
@@ -541,10 +561,10 @@ export default function Layout({ children, currentPageName }) {
 
             {/* Social Media */}
             <div className="flex items-center justify-center space-x-3 md:justify-self-center">
-              <a href="https://www.facebook.com/share/177iq2ZzgN/" target="_blank" rel="noopener noreferrer" className="p-2 rounded-full text-white social-facebook transition-all duration-300 hover:scale-110">
+              <a href="https://www.facebook.com/share/177iq2ZzgN/" target="_blank" rel="noopener noreferrer" className="p-2 rounded-full text-white social-facebook transition-all duration-300 hover:scale-110" aria-label="Visit Goodwill Presbyterian Church on Facebook">
                 <Facebook className="w-4 h-4" />
               </a>
-              <a href="https://www.youtube.com/@goodwillpresbyterianchurch1867" target="_blank" rel="noopener noreferrer" className="p-2 rounded-full text-white social-youtube transition-all duration-300 hover:scale-110">
+              <a href="https://www.youtube.com/@goodwillpresbyterianchurch1867" target="_blank" rel="noopener noreferrer" className="p-2 rounded-full text-white social-youtube transition-all duration-300 hover:scale-110" aria-label="Visit Goodwill Presbyterian Church on YouTube">
                 <Youtube className="w-4 h-4" />
               </a>
             </div>
@@ -581,6 +601,7 @@ export default function Layout({ children, currentPageName }) {
               onClick={scrollToTop}
               size="icon"
               className="fixed bottom-6 right-6 h-12 w-12 rounded-full bg-amber-600 hover:bg-amber-700 text-white shadow-lg transition-all duration-300 animate-bounce z-50"
+              aria-label="Back to top"
           >
               <ArrowUp className="h-6 w-6" />
           </Button>

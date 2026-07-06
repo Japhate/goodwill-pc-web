@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Church, Clock, MapPin, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -31,6 +31,8 @@ export function getActivePopup(popups, now = new Date()) {
 export default function SitePopupModal({ popup }) {
   const dismissKey = useMemo(() => popup ? getPopupDismissKey(popup) : "", [popup]);
   const [isOpen, setIsOpen] = useState(false);
+  const dialogRef = useRef(null);
+  const previousFocusRef = useRef(null);
 
   useEffect(() => {
     if (!popup || !dismissKey) {
@@ -45,18 +47,77 @@ export default function SitePopupModal({ popup }) {
     setIsOpen(!wasDismissed);
   }, [dismissKey, popup]);
 
-  if (!popup || !isOpen) return null;
-
-  const dismiss = () => {
+  const dismiss = useCallback(() => {
     if (popup.dismissible !== false && typeof window !== "undefined") {
       window.localStorage.setItem(dismissKey, "true");
     }
     setIsOpen(false);
-  };
+  }, [dismissKey, popup]);
+
+  useEffect(() => {
+    if (!popup || !isOpen) return undefined;
+
+    previousFocusRef.current = document.activeElement;
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    window.setTimeout(() => {
+      const firstFocusable = dialogRef.current?.querySelector(
+        'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      );
+      firstFocusable?.focus?.();
+    }, 0);
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape" && popup.dismissible !== false) {
+        event.preventDefault();
+        dismiss();
+        return;
+      }
+
+      if (event.key !== "Tab" || !dialogRef.current) return;
+
+      const focusableElements = Array.from(
+        dialogRef.current.querySelectorAll(
+          'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        )
+      );
+
+      if (focusableElements.length === 0) return;
+
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements[focusableElements.length - 1];
+
+      if (event.shiftKey && document.activeElement === firstElement) {
+        event.preventDefault();
+        lastElement.focus();
+      } else if (!event.shiftKey && document.activeElement === lastElement) {
+        event.preventDefault();
+        firstElement.focus();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = originalOverflow;
+      previousFocusRef.current?.focus?.();
+    };
+  }, [dismiss, isOpen, popup]);
+
+  if (!popup || !isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/75 px-4 py-6 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="site-popup-title">
-      <div className="relative w-full max-w-2xl overflow-hidden rounded-lg border border-amber-300/70 bg-[#321d15] text-white shadow-2xl">
+    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/75 px-4 py-6 backdrop-blur-sm">
+      <div
+        ref={dialogRef}
+        className="relative w-full max-w-2xl overflow-hidden rounded-lg border border-amber-300/70 bg-[#321d15] text-white shadow-2xl"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="site-popup-title"
+        aria-describedby="site-popup-message"
+      >
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(251,191,36,0.25),transparent_38%),linear-gradient(135deg,rgba(255,255,255,0.08),transparent_35%)]" />
         {popup.dismissible !== false && (
           <button
@@ -88,7 +149,7 @@ export default function SitePopupModal({ popup }) {
             </p>
           )}
 
-          <div className="mt-6 rounded-lg border border-red-200/70 bg-red-700 px-4 py-4 text-center shadow-lg">
+          <div id="site-popup-message" className="mt-6 rounded-lg border border-red-200/70 bg-red-700 px-4 py-4 text-center shadow-lg">
             <p className="text-base font-bold leading-relaxed text-white sm:text-lg">
               {popup.message}
             </p>

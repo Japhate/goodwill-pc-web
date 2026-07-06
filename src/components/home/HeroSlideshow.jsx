@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowRight, ArrowUpRight, ChevronLeft, ChevronRight, ExternalLink, Video, Clock, Navigation } from "lucide-react";
+import { ArrowRight, ArrowUpRight, ChevronLeft, ChevronRight, ExternalLink, Video, Clock, Navigation, Pause, Play } from "lucide-react";
 import { HeroSlide } from "@/entities/HeroSlide";
 import { AnnouncementsEvents } from "@/entities/AnnouncementsEvents";
 import { LandingImage } from "@/entities/LandingImage";
 import { HomeBannerMessages } from "@/entities/HomeBannerMessages";
 import { getPublicAnnouncements, getPublicHeroSlides } from "@/lib/publicAnnouncements";
+import { getResponsiveImage, getResponsiveImageProps } from "@/lib/responsiveImages";
 import { format } from "date-fns";
 import { createSpecialServiceHeroSlide, getActiveSpecialServiceNotice } from "@/lib/specialServiceNotice";
 
@@ -33,6 +34,11 @@ const DEFAULT_LANDING_IMAGE = {
   is_landing_image: true,
   is_active: true,
 };
+
+function prefersReducedMotion() {
+  return typeof window !== "undefined"
+    && window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+}
 
 function isPermanentWelcomeHeroSlide(slide) {
   if (!slide) return false;
@@ -336,6 +342,7 @@ export default function HeroSlideshow({ onReady }) {
   const [current, setCurrent] = useState(0);
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
   const [isTickerClosed, setIsTickerClosed] = useState(false);
+  const [isSlideshowPaused, setIsSlideshowPaused] = useState(() => prefersReducedMotion());
   const [now, setNow] = useState(new Date());
   const timerRef = useRef(null);
   const sectionRef = useRef(null);
@@ -584,11 +591,16 @@ export default function HeroSlideshow({ onReady }) {
   const getSlideImageUrl = (slide) => getLinkedAnnouncementImage(slide) || slide?.image_url || "";
   const currentImageUrl = getSlideImageUrl(currentSlide);
   const nextImageUrl = getSlideImageUrl(nextSlide);
-  const currentImageAspectRatio = imageAspectRatios[currentImageUrl] || "1920 / 900";
   const linkedAnnouncement = getAnnouncementForSlide(currentSlide);
   const isPermanentWelcomeHero = isPermanentWelcomeHeroSlide(currentSlide);
   const isFirstLandingSlide = current === 0 && !currentSlide?.is_priority_announcement && !isZoomBibleStudySlide(currentSlide);
   const showWelcomeHeroIntro = isPermanentWelcomeHero || isFirstLandingSlide;
+  const currentResponsiveImage = getResponsiveImage(currentImageUrl);
+  const currentResponsiveImageProps = getResponsiveImageProps(
+    currentImageUrl,
+    showWelcomeHeroIntro ? "100vw" : "(max-width: 768px) 100vw, 90vw",
+  );
+  const currentImageAspectRatio = imageAspectRatios[currentImageUrl] || currentResponsiveImage?.aspectRatio || "1920 / 900";
   const welcomeHeroUrl = isPermanentWelcomeHero ? ABOUT_PAGE_URL : "";
   const relatedAnnouncementId = currentSlide?.announcement_id || linkedAnnouncement?.id || "";
   const relatedAnnouncementUrl = !isPermanentWelcomeHero && relatedAnnouncementId
@@ -674,6 +686,7 @@ export default function HeroSlideshow({ onReady }) {
   };
 
   const resetTimer = () => {
+    if (isSlideshowPaused || prefersReducedMotion() || activeSlides.length <= 1) return;
     clearInterval(timerRef.current);
     timerRef.current = setInterval(() => {
       setCurrent(prev => (prev + 1) % activeSlides.length);
@@ -681,11 +694,16 @@ export default function HeroSlideshow({ onReady }) {
   };
 
   useEffect(() => {
+    if (isSlideshowPaused || prefersReducedMotion() || activeSlides.length <= 1) {
+      clearInterval(timerRef.current);
+      return undefined;
+    }
+
     timerRef.current = setInterval(() => {
       setCurrent(prev => (prev + 1) % activeSlides.length);
     }, SLIDE_INTERVAL);
     return () => clearInterval(timerRef.current);
-  }, [activeSlides.length]);
+  }, [activeSlides.length, isSlideshowPaused]);
 
   useEffect(() => {
     if (!nextImageUrl) return;
@@ -717,13 +735,13 @@ export default function HeroSlideshow({ onReady }) {
   const handleNext = () => {
     setCurrent(prev => (prev + 1) % activeSlides.length);
     resetTimer();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
   };
 
   const handleBack = () => {
     setCurrent(prev => (prev - 1 + activeSlides.length) % activeSlides.length);
     resetTimer();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
   };
 
   const handleSlideClick = () => {
@@ -879,6 +897,19 @@ export default function HeroSlideshow({ onReady }) {
             pointer-events: none;
             animation: welcomeHeroCtaSheen 4.8s ease-in-out 2.4s infinite;
           }
+
+          @media (prefers-reduced-motion: reduce) {
+            .welcome-hero-image,
+            .hero-slide-image-slow-zoom,
+            .welcome-hero-copy,
+            .welcome-hero-line,
+            .welcome-hero-cta,
+            .welcome-hero-cta::before {
+              animation: none !important;
+              transform: none !important;
+              filter: none !important;
+            }
+          }
         `}
       </style>
 
@@ -926,7 +957,6 @@ export default function HeroSlideshow({ onReady }) {
           className={`relative w-full overflow-hidden bg-[#f7edcf] ${primarySlideUrl ? "cursor-pointer" : ""}`}
           style={{
             aspectRatio: showWelcomeHeroIntro ? "16 / 9" : currentImageAspectRatio,
-            backgroundImage: currentImageUrl ? `url("${currentImageUrl}")` : undefined,
             backgroundPosition: "center",
             backgroundRepeat: "no-repeat",
             backgroundSize: showWelcomeHeroIntro ? "cover" : "contain",
@@ -946,17 +976,36 @@ export default function HeroSlideshow({ onReady }) {
               exit={{ opacity: 0 }}
               transition={{ duration: 1.1, ease: "easeInOut" }}
             >
-              <img
-                src={currentImageUrl}
-                alt={currentSlide.alt_text || "Slide"}
-                className={`block h-full w-full ${showWelcomeHeroIntro ? "object-cover welcome-hero-image" : "object-contain hero-slide-image-slow-zoom"}`}
-                draggable={false}
-                decoding="async"
-                fetchPriority="high"
-                loading="eager"
-                onLoad={handleCurrentImageReady}
-                onError={handleCurrentImageError}
-              />
+              <picture>
+                {currentResponsiveImageProps.avifSrcSet && (
+                  <source
+                    type="image/avif"
+                    srcSet={currentResponsiveImageProps.avifSrcSet}
+                    sizes={currentResponsiveImageProps.sizes}
+                  />
+                )}
+                {currentResponsiveImageProps.webpSrcSet && (
+                  <source
+                    type="image/webp"
+                    srcSet={currentResponsiveImageProps.webpSrcSet}
+                    sizes={currentResponsiveImageProps.sizes}
+                  />
+                )}
+                <img
+                  src={currentResponsiveImageProps.fallbackSrc || currentImageUrl}
+                  sizes={currentResponsiveImageProps.sizes}
+                  width={currentResponsiveImageProps.width}
+                  height={currentResponsiveImageProps.height}
+                  alt={currentSlide.alt_text || "Slide"}
+                  className={`block h-full w-full ${showWelcomeHeroIntro ? "object-cover welcome-hero-image" : "object-contain hero-slide-image-slow-zoom"}`}
+                  draggable={false}
+                  decoding="async"
+                  fetchPriority="high"
+                  loading="eager"
+                  onLoad={handleCurrentImageReady}
+                  onError={handleCurrentImageError}
+                />
+              </picture>
               {showWelcomeHeroIntro && (
                 <div className="pointer-events-none absolute inset-0 z-[25] flex items-center justify-start bg-gradient-to-r from-black/72 via-black/34 to-transparent px-4 text-left sm:px-8 md:px-14">
                   <div className="welcome-hero-copy ml-[3vw] max-w-[min(68vw,620px)] sm:ml-[6vw] sm:max-w-[min(64vw,660px)] md:ml-[10vw] md:max-w-[min(78vw,720px)] lg:ml-[12vw]">
@@ -1089,6 +1138,21 @@ export default function HeroSlideshow({ onReady }) {
               event={virtualCountdownEvent}
               fallbackSchedule={null}
             />
+          )}
+
+          {activeSlides.length > 1 && (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                setIsSlideshowPaused((paused) => !paused);
+              }}
+              className="absolute bottom-3 left-3 z-30 inline-flex h-10 w-10 items-center justify-center rounded-full bg-black/55 text-white shadow-lg backdrop-blur-sm transition-colors hover:bg-black/75 focus-visible:ring-2 focus-visible:ring-white"
+              aria-label={isSlideshowPaused ? "Resume slideshow" : "Pause slideshow"}
+              aria-pressed={isSlideshowPaused}
+            >
+              {isSlideshowPaused ? <Play className="h-5 w-5" /> : <Pause className="h-5 w-5" />}
+            </button>
           )}
         </div>
       )}

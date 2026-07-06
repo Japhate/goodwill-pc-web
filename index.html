@@ -3,8 +3,20 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/images/site/site-icon.png" />
+    <link rel="apple-touch-icon" href="/images/site/site-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="manifest" href="/manifest.json" />
+    <link
+      rel="preload"
+      as="image"
+      href="/images/optimized/hero-goodwill-presbyterian-church-hero-1440.avif"
+      type="image/avif"
+      imagesrcset="/images/optimized/hero-goodwill-presbyterian-church-hero-640.avif 640w, /images/optimized/hero-goodwill-presbyterian-church-hero-1024.avif 1024w, /images/optimized/hero-goodwill-presbyterian-church-hero-1440.avif 1440w, /images/optimized/hero-goodwill-presbyterian-church-hero-1672.avif 1672w"
+      imagesizes="100vw"
+    />
+    <meta name="theme-color" content="#4b342a" />
+    <meta name="application-name" content="Goodwill Presbyterian Church" />
+    <meta name="apple-mobile-web-app-title" content="Goodwill PC-USA" />
     <title>Goodwill Presbyterian Church USA-Mayesville, SC</title>
     <meta name="description" content="Connect with Goodwill Presbyterian Church in Mayesville, South Carolina. Stay updated on worship, events, sermons, prayer requests, and community news." />
     <link rel="canonical" href="https://www.goodwillpresch1867.com/" />
@@ -20,6 +32,52 @@
     <meta name="twitter:description" content="Connect with Goodwill Presbyterian Church in Mayesville, South Carolina. Stay updated on worship, events, sermons, prayer requests, and community news." />
     <meta name="twitter:image" content="https://www.goodwillpresch1867.com/images/site/about-header.jpg" />
     <meta name="twitter:image:alt" content="Goodwill Presbyterian Church community in Mayesville, South Carolina" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": ["Church", "Organization"],
+            "@id": "https://www.goodwillpresch1867.com/#church",
+            "name": "Goodwill Presbyterian Church USA-Mayesville, SC",
+            "alternateName": "Goodwill Presbyterian Church, USA",
+            "url": "https://www.goodwillpresch1867.com/",
+            "description": "Connect with Goodwill Presbyterian Church in Mayesville, South Carolina. Stay updated on worship, events, sermons, prayer requests, and community news.",
+            "foundingDate": "1867",
+            "telephone": "+1-803-495-3599",
+            "logo": {
+              "@type": "ImageObject",
+              "url": "https://www.goodwillpresch1867.com/images/site/site-icon.png",
+              "width": 500,
+              "height": 500
+            },
+            "image": "https://www.goodwillpresch1867.com/images/site/about-header.jpg",
+            "address": {
+              "@type": "PostalAddress",
+              "streetAddress": "295 North Brick Church Road",
+              "addressLocality": "Mayesville",
+              "addressRegion": "SC",
+              "postalCode": "29104",
+              "addressCountry": "US"
+            },
+            "sameAs": [
+              "https://www.facebook.com/share/177iq2ZzgN/",
+              "https://www.youtube.com/@goodwillpresbyterianchurch1867"
+            ]
+          },
+          {
+            "@type": "WebSite",
+            "@id": "https://www.goodwillpresch1867.com/#website",
+            "name": "Goodwill Presbyterian Church USA-Mayesville, SC",
+            "url": "https://www.goodwillpresch1867.com/",
+            "publisher": {
+              "@id": "https://www.goodwillpresch1867.com/#church"
+            },
+            "inLanguage": "en-US"
+          }
+        ]
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

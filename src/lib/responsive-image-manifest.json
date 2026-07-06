@@ -1,0 +1,1156 @@
+{
+  "/images/hero/celebrating-achievements.png": {
+    "width": 1994,
+    "height": 789,
+    "aspectRatio": "1994 / 789",
+    "variants": {
+      "avif": [
+        {
+          "width": 640,
+          "url": "/images/optimized/hero-celebrating-achievements-640.avif"
+        },
+        {
+          "width": 1024,
+          "url": "/images/optimized/hero-celebrating-achievements-1024.avif"
+        },
+        {
+          "width": 1440,
+          "url": "/images/optimized/hero-celebrating-achievements-1440.avif"
+        },
+        {
+          "width": 1994,
+          "url": "/images/optimized/hero-celebrating-achievements-1994.avif"
+        }
+      ],
+      "webp": [
+        {
+          "width": 640,
+          "url": "/images/optimized/hero-celebrating-achievements-640.webp"
+        },
+        {
+          "width": 1024,
+          "url": "/images/optimized/hero-celebrating-achievements-1024.webp"
+        },
+        {
+          "width": 1440,
+          "url": "/images/optimized/hero-celebrating-achievements-1440.webp"
+        },
+        {
+          "width": 1994,
+          "url": "/images/optimized/hero-celebrating-achievements-1994.webp"
+        }
+      ]
+    }
+  },
+  "/images/hero/chancel-choir-spring-concert.png": {
+    "width": 1993,
+    "height": 789,
+    "aspectRatio": "1993 / 789",
+    "variants": {
+      "avif": [
+        {
+          "width": 640,
+          "url": "/images/optimized/hero-chancel-choir-spring-concert-640.avif"
+        },
+        {
+          "width": 1024,
+          "url": "/images/optimized/hero-chancel-choir-spring-concert-1024.avif"
+        },
+        {
+          "width": 1440,
+          "url": "/images/optimized/hero-chancel-choir-spring-concert-1440.avif"
+        },
+        {
+          "width": 1993,
+          "url": "/images/optimized/hero-chancel-choir-spring-concert-1993.avif"
+        }
+      ],
+      "webp": [
+        {
+          "width": 640,
+          "url": "/images/optimized/hero-chancel-choir-spring-concert-640.webp"
+        },
+        {
+          "width": 1024,
+          "url": "/images/optimized/hero-chancel-choir-spring-concert-1024.webp"
+        },
+        {
+          "width": 1440,
+          "url": "/images/optimized/hero-chancel-choir-spring-concert-1440.webp"
+        },
+        {
+          "width": 1993,
+          "url": "/images/optimized/hero-chancel-choir-spring-concert-1993.webp"
+        }
+      ]
+    }
+  },
+  "/images/hero/christian-education-youth-ministry.png": {
+    "width": 1997,
+    "height": 788,
+    "aspectRatio": "1997 / 788",
+    "variants": {
+      "avif": [
+        {
+          "width": 640,
+          "url": "/images/optimized/hero-christian-education-youth-ministry-640.avif"
+        },
+        {
+          "width": 1024,
+          "url": "/images/optimized/hero-christian-education-youth-ministry-1024.avif"
+        },
+        {
+          "width": 1440,
+          "url": "/images/optimized/hero-christian-education-youth-ministry-1440.avif"
+        },
+        {
+          "width": 1997,
+          "url": "/images/optimized/hero-christian-education-youth-ministry-1997.avif"
+        }
+      ],
+      "webp": [
+        {
+          "width": 640,
+          "url": "/images/optimized/hero-christian-education-youth-ministry-640.webp"
+        },
+        {
+          "width": 1024,
+          "url": "/images/optimized/hero-christian-education-youth-ministry-1024.webp"
+        },
+        {
+          "width": 1440,
+          "url": "/images/optimized/hero-christian-education-youth-ministry-1440.webp"
+        },
+        {
+          "width": 1997,
+          "url": "/images/optimized/hero-christian-education-youth-ministry-1997.webp"
+        }
+      ]
+    }
+  },
+  "/images/hero/devotional-booklet.png": {
+    "width": 1994,
+    "height": 789,
+    "aspectRatio": "1994 / 789",
+    "variants": {
+      "avif": [
+        {
+          "width": 640,
+          "url": "/images/optimized/hero-devotional-booklet-640.avif"
+        },
+        {
+          "width": 1024,
+          "url": "/images/optimized/hero-devotional-booklet-1024.avif"
+        },
+        {
+          "width": 1440,
+          "url": "/images/optimized/hero-devotional-booklet-1440.avif"
+        },
+        {
+          "width": 1994,
+          "url": "/images/optimized/hero-devotional-booklet-1994.avif"
+        }
+      ],
+      "webp": [
+        {
+          "width": 640,
+          "url": "/images/optimized/hero-devotional-booklet-640.webp"
+        },
+        {
+          "width": 1024,
+          "url": "/images/optimized/hero-devotional-booklet-1024.webp"
+        },
+        {
+          "width": 1440,
+          "url": "/images/optimized/hero-devotional-booklet-1440.webp"
+        },
+        {
+          "width": 1994,
+          "url": "/images/optimized/hero-devotional-booklet-1994.webp"
+        }
+      ]
+    }
+  },
+  "/images/hero/dr-lawson-fortune-phd.png": {
+    "width": 1991,
+    "height": 790,
+    "aspectRatio": "1991 / 790",
+    "variants": {
+      "avif": [
+        {
+          "width": 640,
+          "url": "/images/optimized/hero-dr-lawson-fortune-phd-640.avif"
+        },
+        {
+          "width": 1024,
+          "url": "/images/optimized/hero-dr-lawson-fortune-phd-1024.avif"
+        },
+        {
+          "width": 1440,
+          "url": "/images/optimized/hero-dr-lawson-fortune-phd-1440.avif"
+        },
+        {
+          "width": 1991,
+          "url": "/images/optimized/hero-dr-lawson-fortune-phd-1991.avif"
+        }
+      ],
+      "webp": [
+        {
+          "width": 640,
+          "url": "/images/optimized/hero-dr-lawson-fortune-phd-640.webp"
+        },
+        {
+          "width": 1024,
+          "url": "/images/optimized/hero-dr-lawson-fortune-phd-1024.webp"
+        },
+        {
+          "width": 1440,
+          "url": "/images/optimized/hero-dr-lawson-fortune-phd-1440.webp"
+        },
+        {
+          "width": 1991,
+          "url": "/images/optimized/hero-dr-lawson-fortune-phd-1991.webp"
+        }
+      ]
+    }
+  },
+  "/images/hero/goodwill-presbyterian-church-hero.png": {
+    "width": 1672,
+    "height": 941,
+    "aspectRatio": "1672 / 941",
+    "variants": {
+      "avif": [
+        {
+          "width": 640,
+          "url": "/images/optimized/hero-goodwill-presbyterian-church-hero-640.avif"
+        },
+        {
+          "width": 1024,
+          "url": "/images/optimized/hero-goodwill-presbyterian-church-hero-1024.avif"
+        },
+        {
+          "width": 1440,
+          "url": "/images/optimized/hero-goodwill-presbyterian-church-hero-1440.avif"
+        },
+        {
+          "width": 1672,
+          "url": "/images/optimized/hero-goodwill-presbyterian-church-hero-1672.avif"
+        }
+      ],
+      "webp": [
+        {
+          "width": 640,
+          "url": "/images/optimized/hero-goodwill-presbyterian-church-hero-640.webp"
+        },
+        {
+          "width": 1024,
+          "url": "/images/optimized/hero-goodwill-presbyterian-church-hero-1024.webp"
+        },
+        {
+          "width": 1440,
+          "url": "/images/optimized/hero-goodwill-presbyterian-church-hero-1440.webp"
+        },
+        {
+          "width": 1672,
+          "url": "/images/optimized/hero-goodwill-presbyterian-church-hero-1672.webp"
+        }
+      ]
+    }
+  },
+  "/images/hero/health-focused-hero.png": {
+    "width": 1994,
+    "height": 789,
+    "aspectRatio": "1994 / 789",
+    "variants": {
+      "avif": [
+        {
+          "width": 640,
+          "url": "/images/optimized/hero-health-focused-hero-640.avif"
+        },
+        {
+          "width": 1024,
+          "url": "/images/optimized/hero-health-focused-hero-1024.avif"
+        },
+        {
+          "width": 1440,
+          "url": "/images/optimized/hero-health-focused-hero-1440.avif"
+        },
+        {
+          "width": 1994,
+          "url": "/images/optimized/hero-health-focused-hero-1994.avif"
+        }
+      ],
+      "webp": [
+        {
+          "width": 640,
+          "url": "/images/optimized/hero-health-focused-hero-640.webp"
+        },
+        {
+          "width": 1024,
+          "url": "/images/optimized/hero-health-focused-hero-1024.webp"
+        },
+        {
+          "width": 1440,
+          "url": "/images/optimized/hero-health-focused-hero-1440.webp"
+        },
+        {
+          "width": 1994,
+          "url": "/images/optimized/hero-health-focused-hero-1994.webp"
+        }
+      ]
+    }
+  },
+  "/images/hero/health-prayer-focus.png": {
+    "width": 1993,
+    "height": 789,
+    "aspectRatio": "1993 / 789",
+    "variants": {
+      "avif": [
+        {
+          "width": 640,
+          "url": "/images/optimized/hero-health-prayer-focus-640.avif"
+        },
+        {
+          "width": 1024,
+          "url": "/images/optimized/hero-health-prayer-focus-1024.avif"
+        },
+        {
+          "width": 1440,
+          "url": "/images/optimized/hero-health-prayer-focus-1440.avif"
+        },
+        {
+          "width": 1993,
+          "url": "/images/optimized/hero-health-prayer-focus-1993.avif"
+        }
+      ],
+      "webp": [
+        {
+          "width": 640,
+          "url": "/images/optimized/hero-health-prayer-focus-640.webp"
+        },
+        {
+          "width": 1024,
+          "url": "/images/optimized/hero-health-prayer-focus-1024.webp"
+        },
+        {
+          "width": 1440,
+          "url": "/images/optimized/hero-health-prayer-focus-1440.webp"
+        },
+        {
+          "width": 1993,
+          "url": "/images/optimized/hero-health-prayer-focus-1993.webp"
+        }
+      ]
+    }
+  },
+  "/images/hero/honoring-our-educators-hero.png": {
+    "width": 1994,
+    "height": 789,
+    "aspectRatio": "1994 / 789",
+    "variants": {
+      "avif": [
+        {
+          "width": 640,
+          "url": "/images/optimized/hero-honoring-our-educators-hero-640.avif"
+        },
+        {
+          "width": 1024,
+          "url": "/images/optimized/hero-honoring-our-educators-hero-1024.avif"
+        },
+        {
+          "width": 1440,
+          "url": "/images/optimized/hero-honoring-our-educators-hero-1440.avif"
+        },
+        {
+          "width": 1994,
+          "url": "/images/optimized/hero-honoring-our-educators-hero-1994.avif"
+        }
+      ],
+      "webp": [
+        {
+          "width": 640,
+          "url": "/images/optimized/hero-honoring-our-educators-hero-640.webp"
+        },
+        {
+          "width": 1024,
+          "url": "/images/optimized/hero-honoring-our-educators-hero-1024.webp"
+        },
+        {
+          "width": 1440,
+          "url": "/images/optimized/hero-honoring-our-educators-hero-1440.webp"
+        },
+        {
+          "width": 1994,
+          "url": "/images/optimized/hero-honoring-our-educators-hero-1994.webp"
+        }
+      ]
+    }
+  },
+  "/images/hero/johnson-c-smith-university-day.png": {
+    "width": 1993,
+    "height": 789,
+    "aspectRatio": "1993 / 789",
+    "variants": {
+      "avif": [
+        {
+          "width": 640,
+          "url": "/images/optimized/hero-johnson-c-smith-university-day-640.avif"
+        },
+        {
+          "width": 1024,
+          "url": "/images/optimized/hero-johnson-c-smith-university-day-1024.avif"
+        },
+        {
+          "width": 1440,
+          "url": "/images/optimized/hero-johnson-c-smith-university-day-1440.avif"
+        },
+        {
+          "width": 1993,
+          "url": "/images/optimized/hero-johnson-c-smith-university-day-1993.avif"
+        }
+      ],
+      "webp": [
+        {
+          "width": 640,
+          "url": "/images/optimized/hero-johnson-c-smith-university-day-640.webp"
+        },
+        {
+          "width": 1024,
+          "url": "/images/optimized/hero-johnson-c-smith-university-day-1024.webp"
+        },
+        {
+          "width": 1440,
+          "url": "/images/optimized/hero-johnson-c-smith-university-day-1440.webp"
+        },
+        {
+          "width": 1993,
+          "url": "/images/optimized/hero-johnson-c-smith-university-day-1993.webp"
+        }
+      ]
+    }
+  },
+  "/images/hero/juneteenth-celebration-2.png": {
+    "width": 1993,
+    "height": 789,
+    "aspectRatio": "1993 / 789",
+    "variants": {
+      "avif": [
+        {
+          "width": 640,
+          "url": "/images/optimized/hero-juneteenth-celebration-2-640.avif"
+        },
+        {
+          "width": 1024,
+          "url": "/images/optimized/hero-juneteenth-celebration-2-1024.avif"
+        },
+        {
+          "width": 1440,
+          "url": "/images/optimized/hero-juneteenth-celebration-2-1440.avif"
+        },
+        {
+          "width": 1993,
+          "url": "/images/optimized/hero-juneteenth-celebration-2-1993.avif"
+        }
+      ],
+      "webp": [
+        {
+          "width": 640,
+          "url": "/images/optimized/hero-juneteenth-celebration-2-640.webp"
+        },
+        {
+          "width": 1024,
+          "url": "/images/optimized/hero-juneteenth-celebration-2-1024.webp"
+        },
+        {
+          "width": 1440,
+          "url": "/images/optimized/hero-juneteenth-celebration-2-1440.webp"
+        },
+        {
+          "width": 1993,
+          "url": "/images/optimized/hero-juneteenth-celebration-2-1993.webp"
+        }
+      ]
+    }
+  },
+  "/images/hero/juneteenth-celebration-hero.png": {
+    "width": 1993,
+    "height": 789,
+    "aspectRatio": "1993 / 789",
+    "variants": {
+      "avif": [
+        {
+          "width": 640,
+          "url": "/images/optimized/hero-juneteenth-celebration-hero-640.avif"
+        },
+        {
+          "width": 1024,
+          "url": "/images/optimized/hero-juneteenth-celebration-hero-1024.avif"
+        },
+        {
+          "width": 1440,
+          "url": "/images/optimized/hero-juneteenth-celebration-hero-1440.avif"
+        },
+        {
+          "width": 1993,
+          "url": "/images/optimized/hero-juneteenth-celebration-hero-1993.avif"
+        }
+      ],
+      "webp": [
+        {
+          "width": 640,
+          "url": "/images/optimized/hero-juneteenth-celebration-hero-640.webp"
+        },
+        {
+          "width": 1024,
+          "url": "/images/optimized/hero-juneteenth-celebration-hero-1024.webp"
+        },
+        {
+          "width": 1440,
+          "url": "/images/optimized/hero-juneteenth-celebration-hero-1440.webp"
+        },
+        {
+          "width": 1993,
+          "url": "/images/optimized/hero-juneteenth-celebration-hero-1993.webp"
+        }
+      ]
+    }
+  },
+  "/images/hero/may-birthdays.png": {
+    "width": 1991,
+    "height": 789,
+    "aspectRatio": "1991 / 789",
+    "variants": {
+      "avif": [
+        {
+          "width": 640,
+          "url": "/images/optimized/hero-may-birthdays-640.avif"
+        },
+        {
+          "width": 1024,
+          "url": "/images/optimized/hero-may-birthdays-1024.avif"
+        },
+        {
+          "width": 1440,
+          "url": "/images/optimized/hero-may-birthdays-1440.avif"
+        },
+        {
+          "width": 1991,
+          "url": "/images/optimized/hero-may-birthdays-1991.avif"
+        }
+      ],
+      "webp": [
+        {
+          "width": 640,
+          "url": "/images/optimized/hero-may-birthdays-640.webp"
+        },
+        {
+          "width": 1024,
+          "url": "/images/optimized/hero-may-birthdays-1024.webp"
+        },
+        {
+          "width": 1440,
+          "url": "/images/optimized/hero-may-birthdays-1440.webp"
+        },
+        {
+          "width": 1991,
+          "url": "/images/optimized/hero-may-birthdays-1991.webp"
+        }
+      ]
+    }
+  },
+  "/images/hero/midlands-gives.png": {
+    "width": 1991,
+    "height": 789,
+    "aspectRatio": "1991 / 789",
+    "variants": {
+      "avif": [
+        {
+          "width": 640,
+          "url": "/images/optimized/hero-midlands-gives-640.avif"
+        },
+        {
+          "width": 1024,
+          "url": "/images/optimized/hero-midlands-gives-1024.avif"
+        },
+        {
+          "width": 1440,
+          "url": "/images/optimized/hero-midlands-gives-1440.avif"
+        },
+        {
+          "width": 1991,
+          "url": "/images/optimized/hero-midlands-gives-1991.avif"
+        }
+      ],
+      "webp": [
+        {
+          "width": 640,
+          "url": "/images/optimized/hero-midlands-gives-640.webp"
+        },
+        {
+          "width": 1024,
+          "url": "/images/optimized/hero-midlands-gives-1024.webp"
+        },
+        {
+          "width": 1440,
+          "url": "/images/optimized/hero-midlands-gives-1440.webp"
+        },
+        {
+          "width": 1991,
+          "url": "/images/optimized/hero-midlands-gives-1991.webp"
+        }
+      ]
+    }
+  },
+  "/images/hero/online-worshipers-hero.png": {
+    "width": 1991,
+    "height": 789,
+    "aspectRatio": "1991 / 789",
+    "variants": {
+      "avif": [
+        {
+          "width": 640,
+          "url": "/images/optimized/hero-online-worshipers-hero-640.avif"
+        },
+        {
+          "width": 1024,
+          "url": "/images/optimized/hero-online-worshipers-hero-1024.avif"
+        },
+        {
+          "width": 1440,
+          "url": "/images/optimized/hero-online-worshipers-hero-1440.avif"
+        },
+        {
+          "width": 1991,
+          "url": "/images/optimized/hero-online-worshipers-hero-1991.avif"
+        }
+      ],
+      "webp": [
+        {
+          "width": 640,
+          "url": "/images/optimized/hero-online-worshipers-hero-640.webp"
+        },
+        {
+          "width": 1024,
+          "url": "/images/optimized/hero-online-worshipers-hero-1024.webp"
+        },
+        {
+          "width": 1440,
+          "url": "/images/optimized/hero-online-worshipers-hero-1440.webp"
+        },
+        {
+          "width": 1991,
+          "url": "/images/optimized/hero-online-worshipers-hero-1991.webp"
+        }
+      ]
+    }
+  },
+  "/images/hero/pentecost-sunday-hero.png": {
+    "width": 1991,
+    "height": 789,
+    "aspectRatio": "1991 / 789",
+    "variants": {
+      "avif": [
+        {
+          "width": 640,
+          "url": "/images/optimized/hero-pentecost-sunday-hero-640.avif"
+        },
+        {
+          "width": 1024,
+          "url": "/images/optimized/hero-pentecost-sunday-hero-1024.avif"
+        },
+        {
+          "width": 1440,
+          "url": "/images/optimized/hero-pentecost-sunday-hero-1440.avif"
+        },
+        {
+          "width": 1991,
+          "url": "/images/optimized/hero-pentecost-sunday-hero-1991.avif"
+        }
+      ],
+      "webp": [
+        {
+          "width": 640,
+          "url": "/images/optimized/hero-pentecost-sunday-hero-640.webp"
+        },
+        {
+          "width": 1024,
+          "url": "/images/optimized/hero-pentecost-sunday-hero-1024.webp"
+        },
+        {
+          "width": 1440,
+          "url": "/images/optimized/hero-pentecost-sunday-hero-1440.webp"
+        },
+        {
+          "width": 1991,
+          "url": "/images/optimized/hero-pentecost-sunday-hero-1991.webp"
+        }
+      ]
+    }
+  },
+  "/images/hero/scholarship-fund.png": {
+    "width": 1993,
+    "height": 789,
+    "aspectRatio": "1993 / 789",
+    "variants": {
+      "avif": [
+        {
+          "width": 640,
+          "url": "/images/optimized/hero-scholarship-fund-640.avif"
+        },
+        {
+          "width": 1024,
+          "url": "/images/optimized/hero-scholarship-fund-1024.avif"
+        },
+        {
+          "width": 1440,
+          "url": "/images/optimized/hero-scholarship-fund-1440.avif"
+        },
+        {
+          "width": 1993,
+          "url": "/images/optimized/hero-scholarship-fund-1993.avif"
+        }
+      ],
+      "webp": [
+        {
+          "width": 640,
+          "url": "/images/optimized/hero-scholarship-fund-640.webp"
+        },
+        {
+          "width": 1024,
+          "url": "/images/optimized/hero-scholarship-fund-1024.webp"
+        },
+        {
+          "width": 1440,
+          "url": "/images/optimized/hero-scholarship-fund-1440.webp"
+        },
+        {
+          "width": 1993,
+          "url": "/images/optimized/hero-scholarship-fund-1993.webp"
+        }
+      ]
+    }
+  },
+  "/images/hero/sds.png": {
+    "width": 1994,
+    "height": 789,
+    "aspectRatio": "1994 / 789",
+    "variants": {
+      "avif": [
+        {
+          "width": 640,
+          "url": "/images/optimized/hero-sds-640.avif"
+        },
+        {
+          "width": 1024,
+          "url": "/images/optimized/hero-sds-1024.avif"
+        },
+        {
+          "width": 1440,
+          "url": "/images/optimized/hero-sds-1440.avif"
+        },
+        {
+          "width": 1994,
+          "url": "/images/optimized/hero-sds-1994.avif"
+        }
+      ],
+      "webp": [
+        {
+          "width": 640,
+          "url": "/images/optimized/hero-sds-640.webp"
+        },
+        {
+          "width": 1024,
+          "url": "/images/optimized/hero-sds-1024.webp"
+        },
+        {
+          "width": 1440,
+          "url": "/images/optimized/hero-sds-1440.webp"
+        },
+        {
+          "width": 1994,
+          "url": "/images/optimized/hero-sds-1994.webp"
+        }
+      ]
+    }
+  },
+  "/images/hero/summer-summit.png": {
+    "width": 1994,
+    "height": 789,
+    "aspectRatio": "1994 / 789",
+    "variants": {
+      "avif": [
+        {
+          "width": 640,
+          "url": "/images/optimized/hero-summer-summit-640.avif"
+        },
+        {
+          "width": 1024,
+          "url": "/images/optimized/hero-summer-summit-1024.avif"
+        },
+        {
+          "width": 1440,
+          "url": "/images/optimized/hero-summer-summit-1440.avif"
+        },
+        {
+          "width": 1994,
+          "url": "/images/optimized/hero-summer-summit-1994.avif"
+        }
+      ],
+      "webp": [
+        {
+          "width": 640,
+          "url": "/images/optimized/hero-summer-summit-640.webp"
+        },
+        {
+          "width": 1024,
+          "url": "/images/optimized/hero-summer-summit-1024.webp"
+        },
+        {
+          "width": 1440,
+          "url": "/images/optimized/hero-summer-summit-1440.webp"
+        },
+        {
+          "width": 1994,
+          "url": "/images/optimized/hero-summer-summit-1994.webp"
+        }
+      ]
+    }
+  },
+  "/images/hero/united-service-second-presbyterian.png": {
+    "width": 1994,
+    "height": 789,
+    "aspectRatio": "1994 / 789",
+    "variants": {
+      "avif": [
+        {
+          "width": 640,
+          "url": "/images/optimized/hero-united-service-second-presbyterian-640.avif"
+        },
+        {
+          "width": 1024,
+          "url": "/images/optimized/hero-united-service-second-presbyterian-1024.avif"
+        },
+        {
+          "width": 1440,
+          "url": "/images/optimized/hero-united-service-second-presbyterian-1440.avif"
+        },
+        {
+          "width": 1994,
+          "url": "/images/optimized/hero-united-service-second-presbyterian-1994.avif"
+        }
+      ],
+      "webp": [
+        {
+          "width": 640,
+          "url": "/images/optimized/hero-united-service-second-presbyterian-640.webp"
+        },
+        {
+          "width": 1024,
+          "url": "/images/optimized/hero-united-service-second-presbyterian-1024.webp"
+        },
+        {
+          "width": 1440,
+          "url": "/images/optimized/hero-united-service-second-presbyterian-1440.webp"
+        },
+        {
+          "width": 1994,
+          "url": "/images/optimized/hero-united-service-second-presbyterian-1994.webp"
+        }
+      ]
+    }
+  },
+  "/images/hero/vacation-bible-school.png": {
+    "width": 1994,
+    "height": 789,
+    "aspectRatio": "1994 / 789",
+    "variants": {
+      "avif": [
+        {
+          "width": 640,
+          "url": "/images/optimized/hero-vacation-bible-school-640.avif"
+        },
+        {
+          "width": 1024,
+          "url": "/images/optimized/hero-vacation-bible-school-1024.avif"
+        },
+        {
+          "width": 1440,
+          "url": "/images/optimized/hero-vacation-bible-school-1440.avif"
+        },
+        {
+          "width": 1994,
+          "url": "/images/optimized/hero-vacation-bible-school-1994.avif"
+        }
+      ],
+      "webp": [
+        {
+          "width": 640,
+          "url": "/images/optimized/hero-vacation-bible-school-640.webp"
+        },
+        {
+          "width": 1024,
+          "url": "/images/optimized/hero-vacation-bible-school-1024.webp"
+        },
+        {
+          "width": 1440,
+          "url": "/images/optimized/hero-vacation-bible-school-1440.webp"
+        },
+        {
+          "width": 1994,
+          "url": "/images/optimized/hero-vacation-bible-school-1994.webp"
+        }
+      ]
+    }
+  },
+  "/images/hero/zoom-meeting-hero.png": {
+    "width": 1994,
+    "height": 789,
+    "aspectRatio": "1994 / 789",
+    "variants": {
+      "avif": [
+        {
+          "width": 640,
+          "url": "/images/optimized/hero-zoom-meeting-hero-640.avif"
+        },
+        {
+          "width": 1024,
+          "url": "/images/optimized/hero-zoom-meeting-hero-1024.avif"
+        },
+        {
+          "width": 1440,
+          "url": "/images/optimized/hero-zoom-meeting-hero-1440.avif"
+        },
+        {
+          "width": 1994,
+          "url": "/images/optimized/hero-zoom-meeting-hero-1994.avif"
+        }
+      ],
+      "webp": [
+        {
+          "width": 640,
+          "url": "/images/optimized/hero-zoom-meeting-hero-640.webp"
+        },
+        {
+          "width": 1024,
+          "url": "/images/optimized/hero-zoom-meeting-hero-1024.webp"
+        },
+        {
+          "width": 1440,
+          "url": "/images/optimized/hero-zoom-meeting-hero-1440.webp"
+        },
+        {
+          "width": 1994,
+          "url": "/images/optimized/hero-zoom-meeting-hero-1994.webp"
+        }
+      ]
+    }
+  },
+  "/images/site/about-community.png": {
+    "width": 700,
+    "height": 525,
+    "aspectRatio": "700 / 525",
+    "variants": {
+      "avif": [
+        {
+          "width": 640,
+          "url": "/images/optimized/site-about-community-640.avif"
+        },
+        {
+          "width": 700,
+          "url": "/images/optimized/site-about-community-700.avif"
+        }
+      ],
+      "webp": [
+        {
+          "width": 640,
+          "url": "/images/optimized/site-about-community-640.webp"
+        },
+        {
+          "width": 700,
+          "url": "/images/optimized/site-about-community-700.webp"
+        }
+      ]
+    }
+  },
+  "/images/site/about-header.jpg": {
+    "width": 1024,
+    "height": 683,
+    "aspectRatio": "1024 / 683",
+    "variants": {
+      "avif": [
+        {
+          "width": 640,
+          "url": "/images/optimized/site-about-header-640.avif"
+        },
+        {
+          "width": 1024,
+          "url": "/images/optimized/site-about-header-1024.avif"
+        }
+      ],
+      "webp": [
+        {
+          "width": 640,
+          "url": "/images/optimized/site-about-header-640.webp"
+        },
+        {
+          "width": 1024,
+          "url": "/images/optimized/site-about-header-1024.webp"
+        }
+      ]
+    }
+  },
+  "/images/site/church-logo.png": {
+    "width": 900,
+    "height": 900,
+    "aspectRatio": "900 / 900",
+    "variants": {
+      "avif": [
+        {
+          "width": 640,
+          "url": "/images/optimized/site-church-logo-640.avif"
+        },
+        {
+          "width": 900,
+          "url": "/images/optimized/site-church-logo-900.avif"
+        }
+      ],
+      "webp": [
+        {
+          "width": 640,
+          "url": "/images/optimized/site-church-logo-640.webp"
+        },
+        {
+          "width": 900,
+          "url": "/images/optimized/site-church-logo-900.webp"
+        }
+      ]
+    }
+  },
+  "/images/site/connect-header.png": {
+    "width": 1024,
+    "height": 683,
+    "aspectRatio": "1024 / 683",
+    "variants": {
+      "avif": [
+        {
+          "width": 640,
+          "url": "/images/optimized/site-connect-header-640.avif"
+        },
+        {
+          "width": 1024,
+          "url": "/images/optimized/site-connect-header-1024.avif"
+        }
+      ],
+      "webp": [
+        {
+          "width": 640,
+          "url": "/images/optimized/site-connect-header-640.webp"
+        },
+        {
+          "width": 1024,
+          "url": "/images/optimized/site-connect-header-1024.webp"
+        }
+      ]
+    }
+  },
+  "/images/site/prayer-header.jpg": {
+    "width": 950,
+    "height": 323,
+    "aspectRatio": "950 / 323",
+    "variants": {
+      "avif": [
+        {
+          "width": 640,
+          "url": "/images/optimized/site-prayer-header-640.avif"
+        },
+        {
+          "width": 950,
+          "url": "/images/optimized/site-prayer-header-950.avif"
+        }
+      ],
+      "webp": [
+        {
+          "width": 640,
+          "url": "/images/optimized/site-prayer-header-640.webp"
+        },
+        {
+          "width": 950,
+          "url": "/images/optimized/site-prayer-header-950.webp"
+        }
+      ]
+    }
+  },
+  "/images/site/resources-header.jpg": {
+    "width": 1024,
+    "height": 684,
+    "aspectRatio": "1024 / 684",
+    "variants": {
+      "avif": [
+        {
+          "width": 640,
+          "url": "/images/optimized/site-resources-header-640.avif"
+        },
+        {
+          "width": 1024,
+          "url": "/images/optimized/site-resources-header-1024.avif"
+        }
+      ],
+      "webp": [
+        {
+          "width": 640,
+          "url": "/images/optimized/site-resources-header-640.webp"
+        },
+        {
+          "width": 1024,
+          "url": "/images/optimized/site-resources-header-1024.webp"
+        }
+      ]
+    }
+  },
+  "/images/site/site-icon.png": {
+    "width": 500,
+    "height": 500,
+    "aspectRatio": "500 / 500",
+    "variants": {
+      "avif": [
+        {
+          "width": 500,
+          "url": "/images/optimized/site-site-icon-500.avif"
+        }
+      ],
+      "webp": [
+        {
+          "width": 500,
+          "url": "/images/optimized/site-site-icon-500.webp"
+        }
+      ]
+    }
+  },
+  "/images/site/updates-header.png": {
+    "width": 1024,
+    "height": 414,
+    "aspectRatio": "1024 / 414",
+    "variants": {
+      "avif": [
+        {
+          "width": 640,
+          "url": "/images/optimized/site-updates-header-640.avif"
+        },
+        {
+          "width": 1024,
+          "url": "/images/optimized/site-updates-header-1024.avif"
+        }
+      ],
+      "webp": [
+        {
+          "width": 640,
+          "url": "/images/optimized/site-updates-header-640.webp"
+        },
+        {
+          "width": 1024,
+          "url": "/images/optimized/site-updates-header-1024.webp"
+        }
+      ]
+    }
+  }
+}

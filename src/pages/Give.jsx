@@ -133,13 +133,15 @@ export default function Give() {
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Amount Selection */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">Select Amount</label>
-                <div className="grid grid-cols-3 md:grid-cols-6 gap-3 mb-4">
+              <fieldset>
+                <legend className="block text-sm font-medium text-gray-700 mb-3">Select Amount</legend>
+                <div className="grid grid-cols-3 md:grid-cols-6 gap-3 mb-4" role="group" aria-label="Quick donation amounts">
                   {quickAmounts.map((amount) => (
                     <button
+                      type="button"
                       key={amount}
                       onClick={() => {setSelectedAmount(amount); setCustomAmount("");}}
+                      aria-pressed={selectedAmount === amount}
                       className={`p-3 rounded-lg border-2 transition-all duration-200 ${
                         selectedAmount === amount 
                           ? 'border-amber-500 bg-amber-50 text-amber-700' 
@@ -152,21 +154,25 @@ export default function Give() {
                 </div>
                 <div className="flex items-center gap-2">
                   <DollarSign className="w-5 h-5 text-gray-400" />
+                  <label htmlFor="custom-giving-amount" className="sr-only">Custom donation amount</label>
                   <Input
+                    id="custom-giving-amount"
                     type="number"
                     placeholder="Custom amount"
                     value={customAmount}
                     onChange={(e) => {setCustomAmount(e.target.value); setSelectedAmount("");}}
+                    min="1"
+                    inputMode="decimal"
                     className="flex-1"
                   />
                 </div>
-              </div>
+              </fieldset>
 
               {/* Fund Selection */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">Choose Fund</label>
+                <label id="giving-fund-label" className="block text-sm font-medium text-gray-700 mb-3">Choose Fund</label>
                 <Select value={selectedFund} onValueChange={setSelectedFund}>
-                  <SelectTrigger>
+                  <SelectTrigger aria-labelledby="giving-fund-label">
                     <SelectValue placeholder="Select a fund" />
                   </SelectTrigger>
                   <SelectContent>
@@ -187,17 +193,19 @@ export default function Give() {
               </div>
 
               {/* Frequency Selection */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">Giving Frequency</label>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <fieldset>
+                <legend className="block text-sm font-medium text-gray-700 mb-3">Giving Frequency</legend>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3" role="group" aria-label="Giving frequency">
                   {[
                     { id: "one-time", label: "One Time", icon: Calendar },
                     { id: "monthly", label: "Monthly", icon: Repeat },
                     { id: "weekly", label: "Weekly", icon: Repeat }
                   ].map((freq) => (
                     <button
+                      type="button"
                       key={freq.id}
                       onClick={() => setGivingFrequency(freq.id)}
+                      aria-pressed={givingFrequency === freq.id}
                       className={`p-3 rounded-lg border-2 transition-all duration-200 flex items-center justify-center gap-2 ${
                         givingFrequency === freq.id 
                           ? 'border-amber-500 bg-amber-50 text-amber-700' 
@@ -209,7 +217,7 @@ export default function Give() {
                     </button>
                   ))}
                 </div>
-              </div>
+              </fieldset>
 
               {/* Give Button */}
               <div className="pt-4">

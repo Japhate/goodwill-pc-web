@@ -157,6 +157,15 @@ button:focus-visible {
     @apply bg-background text-foreground;
   }
 
+  :focus-visible {
+    outline: 3px solid hsl(var(--ring));
+    outline-offset: 3px;
+  }
+
+  [id] {
+    scroll-margin-top: 7rem;
+  }
+
   html,
   body,
   #root {
@@ -198,6 +207,10 @@ button:focus-visible {
   animation-play-state: paused;
 }
 
+.homepage-ticker:focus-within .homepage-ticker__message {
+  animation-play-state: paused;
+}
+
 @keyframes homepage-ticker-scroll {
   from {
     transform: translateX(100vw);
@@ -211,5 +224,30 @@ button:focus-visible {
 @media (min-width: 768px) {
   .homepage-ticker__message {
     animation-duration: 22s;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .homepage-ticker__message {
+    position: static;
+    width: auto;
+    max-width: 100%;
+    animation: none !important;
+    white-space: normal;
+  }
+
+  .homepage-ticker__track {
+    height: auto;
+    min-height: 1.75rem;
+    padding-block: 0.25rem;
   }
 }

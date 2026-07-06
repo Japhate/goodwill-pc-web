@@ -9,6 +9,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { HandHeart, Send, Users, Loader2, Heart, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
+function getScrollBehavior() {
+  return window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ? "auto" : "smooth";
+}
+
 export default function Prayer() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -16,6 +20,7 @@ export default function Prayer() {
   const [isPublic, setIsPublic] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [formError, setFormError] = useState("");
   const [activeSection, setActiveSection] = useState("");
   const location = useLocation();
 
@@ -36,7 +41,7 @@ export default function Prayer() {
         setTimeout(() => {
           const element = document.getElementById(id);
           if (element) {
-            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            element.scrollIntoView({ behavior: getScrollBehavior(), block: 'start' });
             setActiveSection(id);
           }
         }, 200);
@@ -105,7 +110,7 @@ export default function Prayer() {
       clickNavigating.current = true;
       setActiveSection(id);
       window.history.pushState(null, '', href);
-      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      element.scrollIntoView({ behavior: getScrollBehavior(), block: 'start' });
 
       setTimeout(() => {
         clickNavigating.current = false;
@@ -115,9 +120,10 @@ export default function Prayer() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setFormError("");
     
     if (!name.trim() || !prayerRequest.trim()) {
-      alert("Please provide your name and prayer request.");
+      setFormError("Please provide your name and prayer request.");
       return;
     }
 
@@ -136,11 +142,12 @@ export default function Prayer() {
       setPrayerRequest("");
       setIsPublic(false);
       setSubmitted(true);
+      setFormError("");
 
       setTimeout(() => setSubmitted(false), 5000);
     } catch (error) {
       console.error("Error submitting prayer request:", error);
-      alert("There was an error submitting your prayer request. Please try again.");
+      setFormError("There was an error submitting your prayer request. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -185,7 +192,7 @@ export default function Prayer() {
       <section
         className="text-white relative overflow-hidden"
         style={{
-          backgroundImage: "url('/images/site/prayer-header.jpg')",
+          backgroundImage: "image-set(url('/images/optimized/site-prayer-header-950.avif') type('image/avif'), url('/images/optimized/site-prayer-header-950.webp') type('image/webp'), url('/images/site/prayer-header.jpg') type('image/jpeg'))",
           backgroundSize: 'cover',
           backgroundPosition: 'top',
         }}
@@ -287,54 +294,72 @@ export default function Prayer() {
             <Card className="shadow-lg">
               <CardContent className="p-8">
                 {submitted && (
-                  <div className="mb-6 p-4 bg-green-50 border-l-4 border-green-500 rounded-r-lg">
+                  <div className="mb-6 p-4 bg-green-50 border-l-4 border-green-500 rounded-r-lg" role="status" aria-live="polite">
                     <p className="text-green-800 font-semibold">
                       ✓ Your prayer request has been submitted. Our prayer team will be praying for you.
                     </p>
                   </div>
                 )}
 
-                <form onSubmit={handleSubmit} className="space-y-6">
+                {formError && (
+                  <div id="prayer-form-error" className="mb-6 rounded-r-lg border-l-4 border-red-500 bg-red-50 p-4" role="alert">
+                    <p className="font-semibold text-red-800">{formError}</p>
+                  </div>
+                )}
+
+                <form onSubmit={handleSubmit} className="space-y-6" aria-describedby={formError ? "prayer-form-error" : undefined} noValidate>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    <label htmlFor="prayer-name" className="block text-sm font-semibold text-gray-700 mb-2">
                       Your Name *
                     </label>
                     <Input
+                      id="prayer-name"
                       type="text"
                       value={name}
-                      onChange={(e) => setName(e.target.value)}
+                      onChange={(e) => {
+                        setName(e.target.value);
+                        if (formError) setFormError("");
+                      }}
                       placeholder="Enter your name"
                       required
+                      aria-invalid={Boolean(formError && !name.trim())}
                       className="w-full"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    <label htmlFor="prayer-email" className="block text-sm font-semibold text-gray-700 mb-2">
                       Email (Optional)
                     </label>
                     <Input
+                      id="prayer-email"
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="your.email@example.com"
+                      aria-describedby="prayer-email-help"
                       className="w-full"
                     />
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p id="prayer-email-help" className="text-xs text-gray-500 mt-1">
                       We'll only use this to follow up if needed
                     </p>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    <label htmlFor="prayer-request" className="block text-sm font-semibold text-gray-700 mb-2">
                       Prayer Request *
                     </label>
                     <Textarea
+                      id="prayer-request"
                       value={prayerRequest}
-                      onChange={(e) => setPrayerRequest(e.target.value)}
+                      onChange={(e) => {
+                        setPrayerRequest(e.target.value);
+                        if (formError) setFormError("");
+                      }}
                       placeholder="Share your prayer request..."
                       rows={6}
                       required
+                      aria-invalid={Boolean(formError && !prayerRequest.trim())}
                       className="w-full"
                     />
                   </div>
@@ -345,6 +370,7 @@ export default function Prayer() {
                       checked={isPublic}
                       onCheckedChange={setIsPublic}
                       className="mt-1"
+                      aria-describedby="is-public-help"
                     />
                     <div>
                       <label
@@ -353,7 +379,7 @@ export default function Prayer() {
                       >
                         Share with congregation
                       </label>
-                      <p className="text-xs text-gray-600 mt-1">
+                      <p id="is-public-help" className="text-xs text-gray-600 mt-1">
                         Your request will be reviewed and may be shared on our Congregational Prayer List
                       </p>
                     </div>

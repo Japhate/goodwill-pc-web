@@ -4,6 +4,11 @@ import { createPageUrl } from "@/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Heart, Users, BookOpen, Globe, HelpCircle, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { getResponsiveImageProps } from "@/lib/responsiveImages";
+
+function getScrollBehavior() {
+  return window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ? "auto" : "smooth";
+}
 
 export default function About() {
   const location = useLocation();
@@ -27,7 +32,7 @@ export default function About() {
         setTimeout(() => {
           const element = document.getElementById(id);
           if (element) {
-            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            element.scrollIntoView({ behavior: getScrollBehavior(), block: 'start' });
             setActiveSection(id);
           }
         }, 300); // Changed delay to 300ms
@@ -114,7 +119,7 @@ export default function About() {
       clickNavigating.current = true;
       setActiveSection(id);
       window.history.pushState(null, '', href);
-      element.scrollIntoView({ behavior: 'smooth', block: 'start' }); // Changed to scrollIntoView
+      element.scrollIntoView({ behavior: getScrollBehavior(), block: 'start' });
 
       setTimeout(() => {
         clickNavigating.current = false;
@@ -172,6 +177,10 @@ export default function About() {
       bio: "Dwayne provides spiritual leadership and governance, offering wisdom and guidance to our church family."
     }
   ];
+  const aboutCommunityImage = getResponsiveImageProps(
+    "/images/site/about-community.png",
+    "(max-width: 768px) 100vw, 50vw",
+  );
 
   const faqs = [
     {
@@ -206,7 +215,7 @@ export default function About() {
       <section
         className="text-white relative overflow-hidden"
         style={{
-          backgroundImage: "url('/images/site/about-header.jpg')",
+          backgroundImage: "image-set(url('/images/optimized/site-about-header-1024.avif') type('image/avif'), url('/images/optimized/site-about-header-1024.webp') type('image/webp'), url('/images/site/about-header.jpg') type('image/jpeg'))",
           backgroundSize: 'cover',
           backgroundPosition: '50% 75%',
         }}
@@ -272,11 +281,23 @@ export default function About() {
                 </div>
               </div>
               <div>
-                <img 
-                  src="/images/site/about-community.png"
-                  alt="Goodwill Presbyterian Church building"
-                  className="rounded-lg shadow-lg"
-                />
+                <picture>
+                  {aboutCommunityImage.avifSrcSet && (
+                    <source type="image/avif" srcSet={aboutCommunityImage.avifSrcSet} sizes={aboutCommunityImage.sizes} />
+                  )}
+                  {aboutCommunityImage.webpSrcSet && (
+                    <source type="image/webp" srcSet={aboutCommunityImage.webpSrcSet} sizes={aboutCommunityImage.sizes} />
+                  )}
+                  <img
+                    src={aboutCommunityImage.fallbackSrc || "/images/site/about-community.png"}
+                    alt="Goodwill Presbyterian Church building"
+                    className="rounded-lg shadow-lg"
+                    width={aboutCommunityImage.width}
+                    height={aboutCommunityImage.height}
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </picture>
               </div>
             </div>
           </div>

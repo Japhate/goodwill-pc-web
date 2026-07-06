@@ -6,6 +6,10 @@ import { Button } from "@/components/ui/button";
 import { MapPin, Phone, Mail, Clock, Car, Users, Heart, Copy, Check, Map, MailQuestion, Handshake, Video } from "lucide-react";
 import { getActiveSpecialServiceNotice } from "@/lib/specialServiceNotice";
 
+function getScrollBehavior() {
+  return window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ? "auto" : "smooth";
+}
+
 export default function Connect() {
   const location = useLocation();
   const [copiedItem, setCopiedItem] = useState(null);
@@ -37,7 +41,7 @@ export default function Connect() {
         setTimeout(() => {
           const element = document.getElementById(id);
           if (element) {
-            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            element.scrollIntoView({ behavior: getScrollBehavior(), block: 'start' });
             setActiveSection(id);
           }
         }, 200);
@@ -183,7 +187,7 @@ export default function Connect() {
       clickNavigating.current = true;
       setActiveSection(id);
       window.history.pushState(null, '', href);
-      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      element.scrollIntoView({ behavior: getScrollBehavior(), block: 'start' });
 
       setTimeout(() => {
         clickNavigating.current = false;
@@ -236,7 +240,7 @@ export default function Connect() {
       <section
         className="text-white relative overflow-hidden"
         style={{
-          backgroundImage: "url('/images/site/connect-header.png')",
+          backgroundImage: "image-set(url('/images/optimized/site-connect-header-1024.avif') type('image/avif'), url('/images/optimized/site-connect-header-1024.webp') type('image/webp'), url('/images/site/connect-header.png') type('image/png'))",
           backgroundSize: 'cover',
           backgroundPosition: '50% 65%',
         }}
@@ -412,9 +416,11 @@ export default function Connect() {
                                 ))}
                               </div>
                               <button
+                                type="button"
                                 onClick={() => copyToClipboard(item.copyText, item.copyId, item.copyType)}
                                 className="p-1 text-gray-400 hover:text-amber-600 transition-colors"
                                 title="Copy to clipboard"
+                                aria-label={`Copy ${item.title.toLowerCase()}`}
                               >
                                 {copiedItem === item.copyId ? (
                                   <Check className="w-4 h-4 text-green-600" />
@@ -428,9 +434,11 @@ export default function Connect() {
                               <div key={i} className="flex items-center justify-between">
                                 <p className="text-gray-600">{detail}</p>
                                 <button
+                                  type="button"
                                   onClick={() => copyToClipboard(item.copyText, item.copyId, item.copyType)}
                                   className="p-1 text-gray-400 hover:text-amber-600 transition-colors"
                                   title="Copy to clipboard"
+                                  aria-label={`Copy ${item.title.toLowerCase()}`}
                                 >
                                   {copiedItem === item.copyId ? (
                                     <Check className="w-4 h-4 text-green-600" />

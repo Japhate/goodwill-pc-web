@@ -1132,6 +1132,8 @@ export default function Home() {
                                   src={`https://img.youtube.com/vi/${getYouTubeVideoId(latestSermon.youtube_url)}/hqdefault.jpg`}
                                   alt={latestSermon.title}
                                   className="w-full h-full object-cover"
+                                  loading="lazy"
+                                  decoding="async"
                               />
                           ) : (
                               <p className="text-sm font-medium text-gray-500">Video not available</p>

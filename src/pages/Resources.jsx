@@ -14,6 +14,10 @@ import PageLoadingScreen from "@/components/PageLoadingScreen";
 
 const SERMON_BACKGROUND_VIDEO_URL = "/videos/latest-sermon-spiritual-skies.mp4";
 
+function getScrollBehavior() {
+  return window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ? "auto" : "smooth";
+}
+
 // Helper function to extract video ID from YouTube URL
 const getYoutubeVideoId = (url) => {
   if (!url) return null;
@@ -401,7 +405,7 @@ export default function Resources() {
       if (liveStreamSection) {
         // Use a timeout to allow the component to render before scrolling
         setTimeout(() => {
-          liveStreamSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          liveStreamSection.scrollIntoView({ behavior: getScrollBehavior(), block: 'center' });
         }, 100);
       }
     }
@@ -416,7 +420,7 @@ export default function Resources() {
         setTimeout(() => {
           const element = document.getElementById(id);
           if (element) {
-            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            element.scrollIntoView({ behavior: getScrollBehavior(), block: 'start' });
             setActiveSection(id);
           }
         }, 300); // Longer delay for data-dependent pages
@@ -501,7 +505,7 @@ export default function Resources() {
       // 3. Update URL without triggering hashchange listener
       window.history.pushState(null, '', href);
       // 4. Perform smooth scroll
-      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      element.scrollIntoView({ behavior: getScrollBehavior(), block: 'start' });
 
       // 5. After scroll animation, re-enable scroll listener
       setTimeout(() => {
@@ -518,7 +522,7 @@ export default function Resources() {
     if (latestSermonSection) {
       // Use a timeout to ensure the state update has rendered before scrolling
       setTimeout(() => {
-        latestSermonSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        latestSermonSection.scrollIntoView({ behavior: getScrollBehavior(), block: 'center' });
       }, 100);
     }
   };
@@ -531,7 +535,7 @@ export default function Resources() {
     setTimeout(() => {
       const playingCard = document.querySelector(`[data-sermon-id="${sermonId}"]`);
       if (playingCard) {
-        playingCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        playingCard.scrollIntoView({ behavior: getScrollBehavior(), block: 'center' });
       }
     }, 350); // Wait for the 300ms transition to finish
   };
@@ -616,7 +620,7 @@ export default function Resources() {
       <section
         className="text-white relative overflow-hidden"
         style={{
-          backgroundImage: "url('/images/site/resources-header.jpg')",
+          backgroundImage: "image-set(url('/images/optimized/site-resources-header-1024.avif') type('image/avif'), url('/images/optimized/site-resources-header-1024.webp') type('image/webp'), url('/images/site/resources-header.jpg') type('image/jpeg'))",
           backgroundSize: 'cover',
           backgroundPosition: 'center',
         }}
@@ -1001,7 +1005,12 @@ export default function Resources() {
                 className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white"
               />
               {sermonSearch && (
-                <button onClick={() => setSermonSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                <button
+                  type="button"
+                  onClick={() => setSermonSearch("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  aria-label="Clear sermon search"
+                >
                   <X className="w-4 h-4" />
                 </button>
               )}
@@ -1029,10 +1038,15 @@ export default function Resources() {
                           </div>
                         ) : (
                           <>
-                            <img src={thumbnailUrl} alt={sermon.title} className="w-full h-auto aspect-video object-cover" />
-                            <div className="absolute inset-0 bg-black/30 hover:bg-black/50 transition-all duration-300 flex items-center justify-center cursor-pointer" onClick={() => handleInlineSermonPlay(sermon.id)}>
+                            <img src={thumbnailUrl} alt={sermon.title} className="w-full h-auto aspect-video object-cover" loading="lazy" decoding="async" />
+                            <button
+                              type="button"
+                              className="absolute inset-0 flex cursor-pointer items-center justify-center bg-black/30 transition-all duration-300 hover:bg-black/50"
+                              onClick={() => handleInlineSermonPlay(sermon.id)}
+                              aria-label={`Play sermon: ${sermon.title}`}
+                            >
                               <PlayCircle className="w-12 h-12 text-white/80 hover:text-white hover:scale-110 transition-transform duration-300" />
-                            </div>
+                            </button>
                           </>
                         )}
                         {selectedSermon?.id === sermon.id && <div className="absolute top-0 left-0 bg-amber-500 text-white px-2 py-1 text-xs font-bold">NOW PLAYING</div>}
@@ -1080,12 +1094,17 @@ export default function Resources() {
                         </div>
                       ) : (
                         <div className="flex items-center gap-4 p-3">
-                          <div className="relative flex-shrink-0 w-28 h-16 rounded overflow-hidden cursor-pointer" onClick={() => handleInlineSermonPlay(sermon.id)}>
-                            <img src={thumbnailUrl} alt={sermon.title} className="w-full h-full object-cover" />
+                          <button
+                            type="button"
+                            className="relative h-16 w-28 flex-shrink-0 cursor-pointer overflow-hidden rounded"
+                            onClick={() => handleInlineSermonPlay(sermon.id)}
+                            aria-label={`Play sermon: ${sermon.title}`}
+                          >
+                            <img src={thumbnailUrl} alt={sermon.title} className="w-full h-full object-cover" loading="lazy" decoding="async" />
                             <div className="absolute inset-0 bg-black/30 hover:bg-black/50 flex items-center justify-center transition-colors">
                               <PlayCircle className="w-8 h-8 text-white/80" />
                             </div>
-                          </div>
+                          </button>
                           <div className="flex-1 min-w-0">
                             <p className="font-semibold text-gray-800 leading-tight truncate">{sermon.title}</p>
                             {sermon.scripture && (
@@ -1150,15 +1169,23 @@ export default function Resources() {
                           </CardContent>
                       </div>
                       <div className="p-4 bg-gray-100 flex items-center justify-center min-h-[300px] md:min-h-0 order-1 md:order-2">
-                        <img
+                        <button
+                          type="button"
+                          className="rounded-md"
+                          onClick={() => setEnlargedBulletin(currentBulletin)}
+                          aria-label={`Enlarge bulletin: ${currentBulletin.title}`}
+                        >
+                          <img
                             src={currentBulletin.thumbnail_url}
                             alt={currentBulletin.title}
-                            className="max-w-full max-h-[400px] h-auto object-contain rounded-md shadow-lg cursor-pointer hover:opacity-80 transition-opacity"
-                            onClick={() => setEnlargedBulletin(currentBulletin)}
+                            className="max-w-full max-h-[400px] h-auto object-contain rounded-md shadow-lg hover:opacity-80 transition-opacity"
+                            loading="lazy"
+                            decoding="async"
                             onError={(e) => {
                               e.target.src = "https://via.placeholder.com/400x600/f3f4f6/374151?text=Bulletin+Thumbnail";
                             }}
                           />
+                        </button>
                       </div>
                     </Card>
                   </div>
@@ -1223,7 +1250,12 @@ export default function Resources() {
                         className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white"
                       />
                       {bulletinSearch && (
-                        <button onClick={() => setBulletinSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                        <button
+                          type="button"
+                          onClick={() => setBulletinSearch("")}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                          aria-label="Clear bulletin search"
+                        >
                           <X className="w-4 h-4" />
                         </button>
                       )}
@@ -1237,7 +1269,14 @@ export default function Resources() {
                               <p className="text-sm text-amber-700">{formatBulletinDate(bulletin.date)}</p>
                             </div>
                             <div className="aspect-[3/4] bg-gray-100 p-2 overflow-hidden">
-                              <img src={bulletin.thumbnail_url} alt={bulletin.title} className="w-full h-full object-contain rounded-md group-hover:scale-105 transition-transform duration-300 cursor-pointer" onClick={() => setEnlargedBulletin(bulletin)} onError={(e) => { e.target.src = "https://via.placeholder.com/300x400/f3f4f6/374151?text=Bulletin"; }} />
+                              <button
+                                type="button"
+                                className="h-full w-full rounded-md"
+                                onClick={() => setEnlargedBulletin(bulletin)}
+                                aria-label={`Enlarge bulletin: ${bulletin.title}`}
+                              >
+                                <img src={bulletin.thumbnail_url} alt={bulletin.title} className="w-full h-full object-contain rounded-md group-hover:scale-105 transition-transform duration-300" loading="lazy" decoding="async" onError={(e) => { e.target.src = "https://via.placeholder.com/300x400/f3f4f6/374151?text=Bulletin"; }} />
+                              </button>
                             </div>
                             <div className="p-4 mt-auto">
                               <Button asChild variant="outline" className="w-full text-amber-700 border-amber-600 hover:bg-amber-50">
@@ -1252,9 +1291,14 @@ export default function Resources() {
                         {previousBulletins.slice(0, visibleBulletinsCount).map((bulletin) => (
                           <Card key={bulletin.id} className="overflow-hidden hover:shadow-md transition-all duration-300">
                             <div className="flex items-center gap-4 p-3">
-                              <div className="flex-shrink-0 w-12 h-16 bg-gray-100 rounded overflow-hidden cursor-pointer" onClick={() => setEnlargedBulletin(bulletin)}>
-                                <img src={bulletin.thumbnail_url} alt={bulletin.title} className="w-full h-full object-cover hover:opacity-80 transition-opacity" onError={(e) => { e.target.src = "https://via.placeholder.com/100x130/f3f4f6/374151?text=Bulletin"; }} />
-                              </div>
+                              <button
+                                type="button"
+                                className="h-16 w-12 flex-shrink-0 overflow-hidden rounded bg-gray-100"
+                                onClick={() => setEnlargedBulletin(bulletin)}
+                                aria-label={`Enlarge bulletin: ${bulletin.title}`}
+                              >
+                                <img src={bulletin.thumbnail_url} alt={bulletin.title} className="w-full h-full object-cover hover:opacity-80 transition-opacity" loading="lazy" decoding="async" onError={(e) => { e.target.src = "https://via.placeholder.com/100x130/f3f4f6/374151?text=Bulletin"; }} />
+                              </button>
                               <div className="flex-1 min-w-0">
                                 <p className="font-semibold text-gray-800 truncate">{bulletin.title}</p>
                                 <p className="text-sm text-amber-700">{formatBulletinDate(bulletin.date)}</p>
@@ -1312,6 +1356,7 @@ export default function Resources() {
                 src={enlargedBulletin.thumbnail_url}
                 alt={`Enlarged view of ${enlargedBulletin.title}`}
                 className="block max-w-[90vw] max-h-[90vh] w-auto h-auto object-contain rounded-lg"
+                decoding="async"
               />
               <Button
                 variant="ghost"

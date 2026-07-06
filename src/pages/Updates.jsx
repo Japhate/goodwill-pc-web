@@ -13,6 +13,10 @@ import { getActiveSpecialServiceNotice } from "@/lib/specialServiceNotice";
 import PageLoadingScreen from "@/components/PageLoadingScreen";
 import { getPublicAnnouncements } from "@/lib/publicAnnouncements";
 
+function getScrollBehavior() {
+  return window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ? "auto" : "smooth";
+}
+
 // Helper to parse date string as local time to avoid timezone shifts
 // and handle potential invalid date values gracefully.
 const parseDateAsLocal = (dateString) => {
@@ -406,7 +410,7 @@ export default function Updates() {
         setTimeout(() => {
           const element = document.getElementById(id);
           if (element) {
-            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            element.scrollIntoView({ behavior: getScrollBehavior(), block: 'start' });
 
             let activeIdToSet = id;
             if (id.startsWith('announcement-')) {
@@ -487,7 +491,7 @@ export default function Updates() {
       clickNavigating.current = true;
       setActiveSection(id);
       window.history.pushState(null, '', href);
-      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      element.scrollIntoView({ behavior: getScrollBehavior(), block: 'start' });
 
       setTimeout(() => {
         clickNavigating.current = false;
@@ -511,7 +515,7 @@ export default function Updates() {
       <section
         className="text-white relative overflow-hidden"
         style={{
-          backgroundImage: "url('/images/site/updates-header.png')",
+          backgroundImage: "image-set(url('/images/optimized/site-updates-header-1024.avif') type('image/avif'), url('/images/optimized/site-updates-header-1024.webp') type('image/webp'), url('/images/site/updates-header.png') type('image/png'))",
           backgroundSize: 'cover',
           backgroundPosition: 'center',
         }}
@@ -585,7 +589,9 @@ export default function Updates() {
             <div className="mb-5 flex justify-center">
               <div className="flex max-w-full flex-wrap items-center justify-center gap-1 rounded-lg bg-gray-200 p-1">
                 <button
+                  type="button"
                   onClick={() => handleCategoryChange('all')}
+                  aria-pressed={activeCategory === 'all'}
                   className={`h-8 rounded-md px-3 text-xs font-semibold transition-colors ${
                     activeCategory === 'all'
                       ? 'bg-white text-amber-700 shadow'
@@ -596,8 +602,10 @@ export default function Updates() {
                 </button>
                 {Object.entries(categories).map(([key, value]) => (
                 <button
+                  type="button"
                   key={key}
                   onClick={() => handleCategoryChange(key)}
+                  aria-pressed={activeCategory === key}
                   className={`h-8 rounded-md px-3 text-xs font-semibold transition-colors ${
                     activeCategory === key
                       ? 'bg-white text-amber-700 shadow'
@@ -630,7 +638,7 @@ export default function Updates() {
                   >
                     {(item.image_upload || item.image_url) ? (
                       <div className="flex aspect-video w-full shrink-0 items-center justify-center overflow-hidden bg-white p-2 md:w-[32%] md:self-start xl:w-[30%]">
-                        <img src={item.image_upload || item.image_url} alt={item.title} className="h-full w-full object-contain object-left" />
+                        <img src={item.image_upload || item.image_url} alt={item.title} className="h-full w-full object-contain object-left" loading="lazy" decoding="async" />
                       </div>
                     ) : null}
                     <div className="flex min-h-0 flex-grow flex-col p-4 md:max-h-[calc((100vw-1.5rem)*0.32*9/16)] md:overflow-hidden md:py-2 md:pl-2 md:pr-4 lg:max-h-[calc((100vw-2rem)*0.32*9/16)] xl:max-h-[calc((100vw-2rem)*0.30*9/16)] xl:py-2 xl:pl-2 xl:pr-5">
@@ -902,7 +910,7 @@ export default function Updates() {
                     <div className="flex flex-col gap-5">
                       {(item.image_upload || item.image_url) && (
                         <div className="flex aspect-[32/15] w-full items-center justify-center overflow-hidden rounded-lg bg-gray-950">
-                          <img src={item.image_upload || item.image_url} alt={item.title} className="h-full w-full object-contain" />
+                          <img src={item.image_upload || item.image_url} alt={item.title} className="h-full w-full object-contain" loading="lazy" decoding="async" />
                         </div>
                       )}
                       <div className="flex-1">

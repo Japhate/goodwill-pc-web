@@ -8,6 +8,7 @@
     "api": "node server/index.js",
     "start": "node server/index.js",
     "build": "node scripts/vite-node16.js build",
+    "images:responsive": "node scripts/generate-responsive-images.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "migrate:hero-firebase": "node scripts/upload-optimized-hero-images-to-firebase.js",
@@ -95,6 +96,7 @@
     "eslint-plugin-unused-imports": "^4.3.0",
     "globals": "^15.14.0",
     "postcss": "^8.5.3",
+    "sharp": "^0.35.3",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.8.2",
     "vite": "^6.1.0"
