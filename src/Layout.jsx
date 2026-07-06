@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import SearchModal from "@/components/search/SearchModal";
 import { Button } from "@/components/ui/button";
+import ChurchLogoImage from "@/components/ChurchLogoImage";
 import { localApi } from '@/api/localApiClient';
 import { firebaseEnabled } from '@/lib/firebase';
 import { getActiveSpecialServiceNotice } from '@/lib/specialServiceNotice';
@@ -279,10 +280,13 @@ export default function Layout({ children, currentPageName }) {
           {/* Logo */}
           <Link to={createPageUrl("Home")} className="flex flex-shrink-0 items-center space-x-3">
             <div className="w-14 h-14 rounded-full bg-white p-1 shadow-lg flex items-center justify-center">
-              <img
-                src="/images/site/church-logo.png"
+              <ChurchLogoImage
                 alt={`${CHURCH_IDENTITY.shortName} Logo`}
+                pictureClassName="block h-full w-full"
                 className="h-full w-full object-contain rounded-full"
+                sizes="56px"
+                width={56}
+                height={56}
               />
             </div>
             <div className="flex flex-col">
@@ -486,10 +490,13 @@ export default function Layout({ children, currentPageName }) {
             <div className="lg:col-span-1 space-y-4">
               <div className="flex items-center space-x-3">
                 <div className="w-14 h-14 bg-white rounded-full p-1 flex items-center justify-center shadow-lg">
-                  <img
-                    src="/images/site/church-logo.png"
+                  <ChurchLogoImage
                     alt={`${CHURCH_IDENTITY.shortName} Logo`}
+                    pictureClassName="block h-full w-full"
                     className="w-full h-full object-contain rounded-full"
+                    sizes="56px"
+                    width={56}
+                    height={56}
                   />
                 </div>
                 <div>

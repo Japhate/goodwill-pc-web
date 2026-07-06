@@ -6,10 +6,10 @@ import { localApi } from "@/api/localApiClient";
 import { Loader2, Upload } from "lucide-react";
 import ConfirmedDateTimePicker from "@/components/admin/ConfirmedDateTimePicker";
 
-const HERO_IMAGE_MAX_WIDTH = 1920;
-const HERO_IMAGE_MAX_HEIGHT = 1080;
+const HERO_IMAGE_MAX_WIDTH = 1440;
+const HERO_IMAGE_MAX_HEIGHT = 810;
 const HERO_IMAGE_QUALITIES = [0.72, 0.66, 0.6, 0.54];
-const HERO_IMAGE_TARGET_BYTES = 420 * 1024;
+const HERO_IMAGE_TARGET_BYTES = 260 * 1024;
 const DEFAULT_RELATED_ANNOUNCEMENT = {
   title: "",
   content: "",
@@ -432,7 +432,7 @@ export default function HeroSlideForm({ slide, announcement, announcementMode = 
             {validationErrors.image_url && <p className="text-xs font-semibold text-red-600 mt-2">{validationErrors.image_url}</p>}
             {uploadError && <p className="text-xs text-red-600 mt-2">{uploadError}</p>}
             <p className="mt-2 text-xs text-gray-500">
-              Recommended hero size: 1920 x 1080 px. Uploaded images are converted to optimized JPG and compressed before they are saved.
+              Recommended hero size: 1440 x 810 px. Uploaded images are converted to optimized JPG and compressed before they are saved.
             </p>
             {uploadedImages.length > 1 ? (
               <>

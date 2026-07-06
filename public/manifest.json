@@ -11,16 +11,16 @@
   "categories": ["lifestyle", "news"],
   "icons": [
     {
-      "src": "/images/site/site-icon.png",
-      "sizes": "500x500",
+      "src": "/images/optimized/site-icon-192.png",
+      "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/images/site/church-logo.png",
-      "sizes": "900x900",
+      "src": "/images/optimized/site-icon-512.png",
+      "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any"
+      "purpose": "any maskable"
     }
   ]
 }

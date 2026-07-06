@@ -5,6 +5,10 @@ import { Input } from "@/components/ui/input";
 import { localApi } from "@/api/localApiClient";
 
 const LANDING_IMAGE_ID = "landing-image";
+const LANDING_IMAGE_MAX_WIDTH = 1440;
+const LANDING_IMAGE_MAX_HEIGHT = 810;
+const LANDING_IMAGE_QUALITIES = [0.72, 0.66, 0.6, 0.54, 0.48];
+const LANDING_IMAGE_TARGET_BYTES = 220 * 1024;
 
 const DEFAULT_LANDING_IMAGE = {
   id: LANDING_IMAGE_ID,
@@ -19,6 +23,85 @@ function formatBytes(bytes = 0) {
   if (!bytes) return "";
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function getScaledImageSize(sourceWidth, sourceHeight, maxWidth, maxHeight) {
+  const scale = Math.min(1, maxWidth / sourceWidth, maxHeight / sourceHeight);
+  return {
+    width: Math.max(1, Math.round(sourceWidth * scale)),
+    height: Math.max(1, Math.round(sourceHeight * scale)),
+  };
+}
+
+function canvasToBlob(canvas, type, quality) {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (blob) {
+        resolve(blob);
+        return;
+      }
+      reject(new Error("Unable to optimize this landing image."));
+    }, type, quality);
+  });
+}
+
+async function canvasToOptimizedLandingBlob(canvas) {
+  let smallestBlob = null;
+
+  for (const quality of LANDING_IMAGE_QUALITIES) {
+    const blob = await canvasToBlob(canvas, "image/webp", quality);
+    smallestBlob = !smallestBlob || blob.size < smallestBlob.size ? blob : smallestBlob;
+    if (blob.size <= LANDING_IMAGE_TARGET_BYTES) return blob;
+  }
+
+  return smallestBlob;
+}
+
+function loadImageElement(file) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    const objectUrl = URL.createObjectURL(file);
+
+    image.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve(image);
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error("Unable to read this image file."));
+    };
+    image.src = objectUrl;
+  });
+}
+
+function optimizedLandingFileName(fileName) {
+  const baseName = fileName.replace(/\.[^.]+$/, "").replace(/[^a-zA-Z0-9._-]/g, "-") || "landing-image";
+  return `${baseName}-optimized.webp`;
+}
+
+async function prepareLandingImageForUpload(file) {
+  const image = await loadImageElement(file);
+  const imageSize = getScaledImageSize(
+    image.naturalWidth,
+    image.naturalHeight,
+    LANDING_IMAGE_MAX_WIDTH,
+    LANDING_IMAGE_MAX_HEIGHT,
+  );
+
+  const canvas = document.createElement("canvas");
+  canvas.width = imageSize.width;
+  canvas.height = imageSize.height;
+
+  const context = canvas.getContext("2d");
+  if (!context) throw new Error("Unable to prepare this landing image.");
+
+  context.drawImage(image, 0, 0, imageSize.width, imageSize.height);
+
+  const blob = await canvasToOptimizedLandingBlob(canvas);
+  return new File([blob], optimizedLandingFileName(file.name), {
+    type: "image/webp",
+    lastModified: Date.now(),
+  });
 }
 
 export default function LandingImageManager({ landingImage, onSaved }) {
@@ -59,8 +142,9 @@ export default function LandingImageManager({ landingImage, onSaved }) {
       let imageUrl = formData.image_url || DEFAULT_LANDING_IMAGE.image_url;
 
       if (selectedFile) {
+        const preparedFile = await prepareLandingImageForUpload(selectedFile);
         const uploaded = await localApi.integrations.Core.UploadFile({
-          file: selectedFile,
+          file: preparedFile,
           destination: "landingImage",
         });
         imageUrl = uploaded.file_url;
@@ -125,7 +209,7 @@ export default function LandingImageManager({ landingImage, onSaved }) {
             <label className="mb-1 block text-sm font-semibold text-gray-700">Upload landing image</label>
             <Input type="file" accept="image/*" onChange={handleFileChange} />
             <p className="mt-1 text-xs text-gray-500">
-              This upload keeps the original file. Use a high-quality 16:9 image with room for text on the left side.
+              Uploads are resized and saved as compressed WebP. Use a high-quality 16:9 image with room for text on the left side.
               {fileSizeLabel ? ` Selected file: ${fileSizeLabel}.` : ""}
             </p>
           </div>
