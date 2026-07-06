@@ -43,6 +43,25 @@ async function getApiErrorMessage(response, fallback) {
   return [body?.error, body?.detail].filter(Boolean).join(" ") || fallback;
 }
 
+function scheduleNonCriticalWork(callback, delay = 1800) {
+  if (typeof window === "undefined") return () => {};
+
+  let idleHandle = null;
+  const timeoutHandle = window.setTimeout(() => {
+    if ("requestIdleCallback" in window) {
+      idleHandle = window.requestIdleCallback(callback, { timeout: 2400 });
+      return;
+    }
+
+    callback();
+  }, delay);
+
+  return () => {
+    window.clearTimeout(timeoutHandle);
+    if (idleHandle !== null) window.cancelIdleCallback(idleHandle);
+  };
+}
+
 export default function Home() {
   const [announcements, setAnnouncements] = useState([]);
   const [latestSermon, setLatestSermon] = useState(null);
@@ -67,7 +86,6 @@ export default function Home() {
   const [playingSermonId, setPlayingSermonId] = useState(null); // To prevent multiple videos playing simultaneously
   const [hasLiveSermon, setHasLiveSermon] = useState(false); // NEW: Track if there's a Live sermon in DB
   const [liveSermon, setLiveSermon] = useState(null); // NEW: Store the actual live sermon object
-  const [isHomeDataReady, setIsHomeDataReady] = useState(false);
   const [isHeroReady, setIsHeroReady] = useState(false);
   const [isLoaderMinimumDone, setIsLoaderMinimumDone] = useState(false);
   const [isLoaderFallbackDone, setIsLoaderFallbackDone] = useState(false);
@@ -77,7 +95,7 @@ export default function Home() {
   const serviceLocationLabel = activeSpecialServiceNotice?.locationLabel || CHURCH_LOCATION.displayAddress;
   const serviceDirectionsUrl = activeSpecialServiceNotice?.directionsUrl || CHURCH_LOCATION.directionsUrl;
   const activeSitePopup = useMemo(() => getActivePopup(sitePopups), [sitePopups]);
-  const isHomepageReady = (isHomeDataReady && isHeroReady && isLoaderMinimumDone) || isLoaderFallbackDone;
+  const isHomepageReady = (isHeroReady && isLoaderMinimumDone) || isLoaderFallbackDone;
 
   // Scripture verses that rotate
   const scriptureVerses = [
@@ -261,6 +279,8 @@ export default function Home() {
   }, [announcements, latestSermon, isLive]);
 
   useEffect(() => {
+    let isMounted = true;
+
     const loadData = async () => {
       try {
         const [allAnnouncements, allHeroSlides, allSermons, allSitePopups] = await Promise.all([
@@ -269,6 +289,8 @@ export default function Home() {
             Sermons.list('-date', 10),
             SitePopups.list('priority', 50).catch(() => [])
         ]);
+
+        if (!isMounted) return;
 
         const activeAnnouncements = getPublicAnnouncements(allAnnouncements, allHeroSlides);
         
@@ -337,11 +359,15 @@ export default function Home() {
         
       } catch (error) {
         console.error("Error loading homepage data:", error);
-      } finally {
-        setIsHomeDataReady(true);
       }
     };
-    loadData();
+
+    const cancelScheduledLoad = scheduleNonCriticalWork(loadData);
+
+    return () => {
+      isMounted = false;
+      cancelScheduledLoad();
+    };
   }, []);
 
   // Live stream and countdown logic - UPDATED to check for Live sermon in DB

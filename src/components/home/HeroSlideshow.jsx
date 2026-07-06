@@ -35,6 +35,25 @@ const DEFAULT_LANDING_IMAGE = {
   is_active: true,
 };
 
+function readDocumentMeta(name) {
+  if (typeof document === "undefined") return "";
+  return document.querySelector(`meta[name="${name}"]`)?.getAttribute("content")?.trim() || "";
+}
+
+function getInitialLandingImage() {
+  const imageUrl = readDocumentMeta("goodwill:landing-image-url");
+  if (!imageUrl) return DEFAULT_LANDING_IMAGE;
+
+  return {
+    ...DEFAULT_LANDING_IMAGE,
+    image_url: imageUrl,
+    alt_text: readDocumentMeta("goodwill:landing-image-alt") || DEFAULT_LANDING_IMAGE.alt_text,
+    link_url: readDocumentMeta("goodwill:landing-image-link-url") || DEFAULT_LANDING_IMAGE.link_url,
+    link_label: readDocumentMeta("goodwill:landing-image-link-label") || DEFAULT_LANDING_IMAGE.link_label,
+    is_landing_image: true,
+  };
+}
+
 function prefersReducedMotion() {
   return typeof window !== "undefined"
     && window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
@@ -260,6 +279,25 @@ function warmHeroImage(url) {
   image.decode?.().catch(() => {});
 }
 
+function scheduleNonCriticalHeroWork(callback, delay = 1600) {
+  if (typeof window === "undefined") return () => {};
+
+  let idleHandle = null;
+  const timeoutHandle = window.setTimeout(() => {
+    if ("requestIdleCallback" in window) {
+      idleHandle = window.requestIdleCallback(callback, { timeout: 2400 });
+      return;
+    }
+
+    callback();
+  }, delay);
+
+  return () => {
+    window.clearTimeout(timeoutHandle);
+    if (idleHandle !== null) window.cancelIdleCallback(idleHandle);
+  };
+}
+
 function ZoomCountdownOverlay({ event, fallbackSchedule = null }) {
   const [now, setNow] = useState(new Date());
 
@@ -329,7 +367,7 @@ function ZoomCountdownOverlay({ event, fallbackSchedule = null }) {
 
 export default function HeroSlideshow({ onReady }) {
   const [slides, setSlides] = useState([]);
-  const [landingImage, setLandingImage] = useState(DEFAULT_LANDING_IMAGE);
+  const [landingImage, setLandingImage] = useState(getInitialLandingImage);
   const [announcements, setAnnouncements] = useState([]);
   const [failedAnnouncementImageIds, setFailedAnnouncementImageIds] = useState(() => new Set());
   const [imageAspectRatios, setImageAspectRatios] = useState({});
@@ -345,6 +383,7 @@ export default function HeroSlideshow({ onReady }) {
   const [isTickerClosed, setIsTickerClosed] = useState(false);
   const [isSlideshowPaused, setIsSlideshowPaused] = useState(() => prefersReducedMotion());
   const [now, setNow] = useState(new Date());
+  const [hasInitialHeroReady, setHasInitialHeroReady] = useState(false);
   const timerRef = useRef(null);
   const sectionRef = useRef(null);
   const hasReportedReadyRef = useRef(false);
@@ -450,54 +489,99 @@ export default function HeroSlideshow({ onReady }) {
   const currentBannerIsYoutubeLive = isYoutubeLiveBanner && currentBannerMessage === youtubeLiveBannerMessage;
 
   useEffect(() => {
-    const loadSlides = async () => {
+    if (!hasInitialHeroReady) return undefined;
+
+    let isMounted = true;
+
+    const loadLandingImage = async () => {
       try {
-        const [data, announcementData, landingImageData] = await Promise.all([
-          HeroSlide.list('order', 50),
-          AnnouncementsEvents.list('-created_date', 200),
-          LandingImage.list('-updated_date', 10).catch(() => []),
-        ]);
-        setAnnouncements(getPublicAnnouncements(announcementData, data));
+        const landingImageData = await LandingImage.list('-updated_date', 10);
         const activeLandingImage = Array.isArray(landingImageData)
           ? landingImageData.find((item) => item?.is_active !== false && item?.image_url)
           : null;
+
+        if (!isMounted || !activeLandingImage?.image_url) return;
+
+        warmHeroImage(activeLandingImage.image_url);
         setLandingImage({
           ...DEFAULT_LANDING_IMAGE,
-          ...(activeLandingImage || {}),
-          id: activeLandingImage?.id || DEFAULT_LANDING_IMAGE.id,
+          ...activeLandingImage,
+          id: activeLandingImage.id || DEFAULT_LANDING_IMAGE.id,
           is_landing_image: true,
-          link_url: activeLandingImage?.link_url || ABOUT_PAGE_URL,
-          link_label: activeLandingImage?.link_label || "Learn More",
+          link_url: activeLandingImage.link_url || ABOUT_PAGE_URL,
+          link_label: activeLandingImage.link_label || "Learn More",
         });
+      } catch {
+        // Keep the server-provided or local fallback landing image.
+      }
+    };
+
+    const loadSlides = async () => {
+      try {
+        const [data, announcementData] = await Promise.all([
+          HeroSlide.list('order', 50),
+          AnnouncementsEvents.list('-created_date', 200),
+        ]);
+
+        if (!isMounted) return;
+
+        setAnnouncements(getPublicAnnouncements(announcementData, data));
         const active = getPublicHeroSlides(data, announcementData)
           .filter((slide) => !isPermanentWelcomeHeroSlide(slide));
         setSlides(active);
       } catch {
+        if (!isMounted) return;
+
         setAnnouncements([]);
-        setLandingImage(DEFAULT_LANDING_IMAGE);
         setSlides([]);
       }
     };
-    loadSlides();
-  }, []);
+
+    const cancelScheduledLoad = scheduleNonCriticalHeroWork(() => {
+      loadLandingImage();
+      loadSlides();
+    });
+
+    return () => {
+      isMounted = false;
+      cancelScheduledLoad();
+    };
+  }, [hasInitialHeroReady]);
 
   useEffect(() => {
+    if (!hasInitialHeroReady) return undefined;
+
+    let isMounted = true;
+
     const loadBanners = async () => {
       try {
         const data = await HomeBannerMessages.list('-created_date', 100);
+        if (!isMounted) return;
+
         const live = data.filter((banner) => banner.status === "live");
         const standard = data.filter((banner) => banner.status === "active");
         const inactive = data.filter((banner) => banner.status !== "live" && banner.status !== "active");
         setManagedBanners([...live, ...standard, ...inactive]);
       } catch {
+        if (!isMounted) return;
+
         setManagedBanners([]);
       }
     };
-    loadBanners();
-  }, []);
+
+    const cancelScheduledLoad = scheduleNonCriticalHeroWork(loadBanners, 2200);
+
+    return () => {
+      isMounted = false;
+      cancelScheduledLoad();
+    };
+  }, [hasInitialHeroReady]);
 
   useEffect(() => {
+    if (!hasInitialHeroReady) return undefined;
+
     let isMounted = true;
+    let interval = null;
 
     const loadYoutubeLiveStatus = async () => {
       try {
@@ -522,14 +606,17 @@ export default function HeroSlideshow({ onReady }) {
       }
     };
 
-    loadYoutubeLiveStatus();
-    const interval = setInterval(loadYoutubeLiveStatus, YOUTUBE_LIVE_STATUS_POLL_MS);
+    const cancelScheduledLoad = scheduleNonCriticalHeroWork(() => {
+      loadYoutubeLiveStatus();
+      interval = setInterval(loadYoutubeLiveStatus, YOUTUBE_LIVE_STATUS_POLL_MS);
+    }, 2600);
 
     return () => {
       isMounted = false;
-      clearInterval(interval);
+      cancelScheduledLoad();
+      if (interval) clearInterval(interval);
     };
-  }, []);
+  }, [hasInitialHeroReady]);
 
   useEffect(() => {
     const interval = setInterval(() => setNow(new Date()), 1000);
@@ -777,6 +864,7 @@ export default function HeroSlideshow({ onReady }) {
 
     if (hasReportedReadyRef.current) return;
     hasReportedReadyRef.current = true;
+    setHasInitialHeroReady(true);
     onReady?.();
   };
 

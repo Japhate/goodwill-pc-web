@@ -6,6 +6,46 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/images/optimized/site-icon-180.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="manifest" href="/manifest.json" />
+    <style>
+      :root {
+        --background: 38 50% 96%;
+        --foreground: 220 20% 17%;
+        --border: 33 27% 85%;
+        --ring: 40 52% 52%;
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        border: 0 solid hsl(var(--border));
+      }
+
+      html,
+      body,
+      #root {
+        min-height: 100%;
+        max-width: 100%;
+        overflow-x: hidden;
+      }
+
+      body {
+        margin: 0;
+        background: hsl(var(--background));
+        color: hsl(var(--foreground));
+        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
+      }
+
+      img,
+      video,
+      canvas {
+        max-width: 100%;
+      }
+    </style>
+    <script type="module" src="/src/loadDeferredStylesheets.js"></script>
+    <!-- GOODWILL_LANDING_IMAGE_PRELOAD_START -->
     <link
       rel="preload"
       as="image"
@@ -13,7 +53,13 @@
       type="image/avif"
       imagesrcset="/images/optimized/hero-goodwill-presbyterian-church-hero-640.avif 640w, /images/optimized/hero-goodwill-presbyterian-church-hero-1024.avif 1024w, /images/optimized/hero-goodwill-presbyterian-church-hero-1440.avif 1440w, /images/optimized/hero-goodwill-presbyterian-church-hero-1672.avif 1672w"
       imagesizes="100vw"
+      fetchpriority="high"
     />
+    <meta name="goodwill:landing-image-url" content="/images/hero/goodwill-presbyterian-church-hero.png" />
+    <meta name="goodwill:landing-image-alt" content="Welcome to Goodwill Presbyterian Church" />
+    <meta name="goodwill:landing-image-link-url" content="/About" />
+    <meta name="goodwill:landing-image-link-label" content="Learn More" />
+    <!-- GOODWILL_LANDING_IMAGE_PRELOAD_END -->
     <meta name="theme-color" content="#4b342a" />
     <meta name="application-name" content="Goodwill Presbyterian Church" />
     <meta name="apple-mobile-web-app-title" content="Goodwill PC-USA" />

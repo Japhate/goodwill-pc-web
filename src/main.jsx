@@ -9,11 +9,33 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   // </React.StrictMode>,
 )
 
-import('@/lib/webVitals')
-  .then(({ initWebVitals }) => initWebVitals())
-  .catch(() => {
-    // Web Vitals collection should never affect rendering.
-  });
+function scheduleWebVitals() {
+  const loadWebVitals = () => {
+    const init = () => {
+      import('@/lib/webVitals')
+        .then(({ initWebVitals }) => initWebVitals())
+        .catch(() => {
+          // Web Vitals collection should never affect rendering.
+        });
+    };
+
+    if ('requestIdleCallback' in window) {
+      window.requestIdleCallback(init, { timeout: 4000 });
+      return;
+    }
+
+    window.setTimeout(init, 2500);
+  };
+
+  if (document.readyState === 'complete') {
+    loadWebVitals();
+    return;
+  }
+
+  window.addEventListener('load', loadWebVitals, { once: true });
+}
+
+scheduleWebVitals();
 
 if (import.meta.hot) {
   import.meta.hot.on('vite:beforeUpdate', () => {
@@ -23,5 +45,4 @@ if (import.meta.hot) {
     window.parent?.postMessage({ type: 'sandbox:afterUpdate' }, '*');
   });
 }
-
 

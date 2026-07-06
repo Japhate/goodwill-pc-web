@@ -5,7 +5,7 @@ import cors from 'cors';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import { initializeApp as initializeClientApp, getApps as getClientApps } from 'firebase/app';
-import { doc, getDoc, getFirestore as getClientFirestore } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, getFirestore as getClientFirestore } from 'firebase/firestore';
 import { applicationDefault, cert, getApps as getAdminApps, initializeApp as initializeAdminApp } from 'firebase-admin/app';
 import { getAuth as getAdminAuth } from 'firebase-admin/auth';
 import { getFirestore as getAdminFirestore } from 'firebase-admin/firestore';
@@ -39,6 +39,23 @@ const YOUTUBE_LIVE_CACHE_TTL_MS = Math.max(
   30 * 1000,
   Number(process.env.YOUTUBE_LIVE_CACHE_TTL_MS || 2 * 60 * 1000),
 );
+const LANDING_IMAGE_PRELOAD_CACHE_TTL_MS = Math.max(
+  60 * 1000,
+  Number(process.env.LANDING_IMAGE_PRELOAD_CACHE_TTL_MS || 5 * 60 * 1000),
+);
+const LANDING_IMAGE_PRELOAD_RENDER_WAIT_MS = Math.max(
+  0,
+  Number(process.env.LANDING_IMAGE_PRELOAD_RENDER_WAIT_MS || 1200),
+);
+const LANDING_IMAGE_PRELOAD_BLOCK_PATTERN = /<!-- GOODWILL_LANDING_IMAGE_PRELOAD_START -->[\s\S]*?<!-- GOODWILL_LANDING_IMAGE_PRELOAD_END -->/;
+const DEFAULT_LANDING_IMAGE_RECORD = {
+  id: 'landing-image',
+  image_url: '/images/hero/goodwill-presbyterian-church-hero.png',
+  alt_text: 'Welcome to Goodwill Presbyterian Church',
+  link_url: '/About',
+  link_label: 'Learn More',
+  is_active: true,
+};
 const ADMIN_ROLES = {
   SITE_ADMIN: 'site_admin',
   SITE_DEVELOPER: 'site_developer',
@@ -56,6 +73,13 @@ const publicEmailRateLimitStore = new Map();
 const webVitalsRateLimitStore = new Map();
 const clientErrorRateLimitStore = new Map();
 let youtubeLiveStatusCache = null;
+let landingImagePreloadCache = {
+  value: null,
+  expiresAt: 0,
+  pending: null,
+};
+let responsiveImageManifestCache = null;
+let distIndexHtmlCache = null;
 
 app.set('trust proxy', 1);
 
@@ -585,6 +609,224 @@ function getServerFirestore() {
 
   const app = getClientApps().find((firebaseApp) => firebaseApp.name === 'server') || initializeClientApp(config, 'server');
   return getClientFirestore(app);
+}
+
+function toTimestamp(value) {
+  const timestamp = Date.parse(String(value || ''));
+  return Number.isFinite(timestamp) ? timestamp : 0;
+}
+
+function selectActiveLandingImage(items = []) {
+  return [...items]
+    .filter((item) => item?.is_active !== false && item?.image_url)
+    .sort((a, b) => (
+      toTimestamp(b.updated_date || b.created_date) - toTimestamp(a.updated_date || a.created_date)
+    ))[0] || null;
+}
+
+function getLocalLandingImagePreloadRecord() {
+  const localLandingImage = selectActiveLandingImage(readEntity('LandingImage'));
+  return {
+    ...DEFAULT_LANDING_IMAGE_RECORD,
+    ...(localLandingImage || {}),
+    id: localLandingImage?.id || DEFAULT_LANDING_IMAGE_RECORD.id,
+  };
+}
+
+async function readFirestoreLandingImagePreloadRecord() {
+  const db = getServerFirestore();
+  if (!db) return null;
+
+  const snapshot = await getDocs(collection(db, 'LandingImage'));
+  return selectActiveLandingImage(
+    snapshot.docs.map((entry) => ({ ...entry.data(), id: entry.id })),
+  );
+}
+
+function refreshLandingImagePreloadCache() {
+  if (landingImagePreloadCache.pending) return landingImagePreloadCache.pending;
+
+  landingImagePreloadCache.pending = (async () => {
+    try {
+      const firestoreLandingImage = await readFirestoreLandingImagePreloadRecord();
+      const value = {
+        ...DEFAULT_LANDING_IMAGE_RECORD,
+        ...(firestoreLandingImage || getLocalLandingImagePreloadRecord()),
+        id: firestoreLandingImage?.id || DEFAULT_LANDING_IMAGE_RECORD.id,
+      };
+
+      landingImagePreloadCache = {
+        value,
+        expiresAt: Date.now() + LANDING_IMAGE_PRELOAD_CACHE_TTL_MS,
+        pending: null,
+      };
+
+      return value;
+    } catch (error) {
+      console.warn('Unable to refresh landing image preload metadata', error?.message || error);
+      const value = landingImagePreloadCache.value || getLocalLandingImagePreloadRecord();
+      landingImagePreloadCache = {
+        value,
+        expiresAt: Date.now() + Math.min(LANDING_IMAGE_PRELOAD_CACHE_TTL_MS, 60 * 1000),
+        pending: null,
+      };
+      return value;
+    }
+  })();
+
+  return landingImagePreloadCache.pending;
+}
+
+function getCachedLandingImagePreloadRecord() {
+  if (Date.now() >= landingImagePreloadCache.expiresAt && !landingImagePreloadCache.pending) {
+    refreshLandingImagePreloadCache().catch(() => {});
+  }
+
+  return landingImagePreloadCache.value || getLocalLandingImagePreloadRecord();
+}
+
+function resolveWithTimeout(promise, timeoutMs) {
+  if (!timeoutMs) return promise.catch(() => null);
+
+  let timeoutId;
+  return Promise.race([
+    promise.catch(() => null),
+    new Promise((resolve) => {
+      timeoutId = setTimeout(() => resolve(null), timeoutMs);
+    }),
+  ]).finally(() => clearTimeout(timeoutId));
+}
+
+async function getLandingImagePreloadRecordForRender() {
+  const hasFreshCache = landingImagePreloadCache.value
+    && Date.now() < landingImagePreloadCache.expiresAt;
+
+  if (hasFreshCache) return landingImagePreloadCache.value;
+
+  const refreshPromise = landingImagePreloadCache.pending || refreshLandingImagePreloadCache();
+
+  if (!landingImagePreloadCache.value) {
+    const refreshedRecord = await resolveWithTimeout(
+      refreshPromise,
+      LANDING_IMAGE_PRELOAD_RENDER_WAIT_MS,
+    );
+
+    if (refreshedRecord) return refreshedRecord;
+  }
+
+  return getCachedLandingImagePreloadRecord();
+}
+
+function getResponsiveImageManifest() {
+  if (responsiveImageManifestCache) return responsiveImageManifestCache;
+
+  try {
+    responsiveImageManifestCache = JSON.parse(
+      fs.readFileSync(path.join(ROOT_DIR, 'src', 'lib', 'responsive-image-manifest.json'), 'utf8'),
+    );
+  } catch {
+    responsiveImageManifestCache = {};
+  }
+
+  return responsiveImageManifestCache;
+}
+
+function normalizeLocalImageUrl(imageUrl = '') {
+  if (!imageUrl.startsWith('/images/')) return '';
+  return imageUrl.split('?')[0].split('#')[0];
+}
+
+function getPreferredResponsiveVariant(variants = []) {
+  return variants.find((variant) => Number(variant.width) >= 1440) || variants[variants.length - 1] || null;
+}
+
+function toSrcSet(variants = []) {
+  return variants
+    .map((variant) => `${variant.url} ${variant.width}w`)
+    .join(', ');
+}
+
+function getPreloadableImageUrl(imageUrl = '') {
+  const trimmedUrl = String(imageUrl || '').trim();
+  if (trimmedUrl.startsWith('/images/')) return normalizeLocalImageUrl(trimmedUrl);
+
+  try {
+    const url = new URL(trimmedUrl);
+    return url.protocol === 'https:' ? url.href : '';
+  } catch {
+    return '';
+  }
+}
+
+function buildLandingImagePreloadLink(imageUrl) {
+  const preloadableUrl = getPreloadableImageUrl(imageUrl) || DEFAULT_LANDING_IMAGE_RECORD.image_url;
+  const localUrl = normalizeLocalImageUrl(preloadableUrl);
+
+  if (localUrl) {
+    const image = getResponsiveImageManifest()[localUrl];
+    const avifVariants = image?.variants?.avif || [];
+    const webpVariants = image?.variants?.webp || [];
+    const preferredAvif = getPreferredResponsiveVariant(avifVariants);
+    const preferredWebp = getPreferredResponsiveVariant(webpVariants);
+    const preferred = preferredAvif || preferredWebp;
+
+    if (preferred) {
+      const srcSet = avifVariants.length > 0 ? toSrcSet(avifVariants) : toSrcSet(webpVariants);
+      const type = preferredAvif ? 'image/avif' : 'image/webp';
+      return [
+        '<link',
+        '  rel="preload"',
+        '  as="image"',
+        `  href="${escapeHtml(preferred.url)}"`,
+        `  type="${type}"`,
+        `  imagesrcset="${escapeHtml(srcSet)}"`,
+        '  imagesizes="100vw"',
+        '  fetchpriority="high"',
+        '/>',
+      ].join('\n');
+    }
+  }
+
+  return `<link rel="preload" as="image" href="${escapeHtml(preloadableUrl)}" fetchpriority="high" />`;
+}
+
+function buildLandingImagePreloadHead(record = DEFAULT_LANDING_IMAGE_RECORD) {
+  const imageUrl = getPreloadableImageUrl(record.image_url) || DEFAULT_LANDING_IMAGE_RECORD.image_url;
+  const preloadTags = [];
+
+  try {
+    const url = new URL(imageUrl);
+    preloadTags.push(`<link rel="preconnect" href="${escapeHtml(url.origin)}" />`);
+  } catch {
+    // Local images do not need an external origin preconnect.
+  }
+
+  preloadTags.push(buildLandingImagePreloadLink(imageUrl));
+  preloadTags.push(`<meta name="goodwill:landing-image-url" content="${escapeHtml(imageUrl)}" />`);
+  preloadTags.push(`<meta name="goodwill:landing-image-alt" content="${escapeHtml(record.alt_text || DEFAULT_LANDING_IMAGE_RECORD.alt_text)}" />`);
+  preloadTags.push(`<meta name="goodwill:landing-image-link-url" content="${escapeHtml(record.link_url || DEFAULT_LANDING_IMAGE_RECORD.link_url)}" />`);
+  preloadTags.push(`<meta name="goodwill:landing-image-link-label" content="${escapeHtml(record.link_label || DEFAULT_LANDING_IMAGE_RECORD.link_label)}" />`);
+
+  return [
+    '<!-- GOODWILL_LANDING_IMAGE_PRELOAD_START -->',
+    ...preloadTags,
+    '<!-- GOODWILL_LANDING_IMAGE_PRELOAD_END -->',
+  ].join('\n    ');
+}
+
+function getDistIndexHtml() {
+  if (!distIndexHtmlCache) {
+    distIndexHtmlCache = fs.readFileSync(path.join(DIST_DIR, 'index.html'), 'utf8');
+  }
+
+  return distIndexHtmlCache;
+}
+
+async function renderIndexHtmlWithLandingImagePreload() {
+  const html = getDistIndexHtml();
+  const landingImageRecord = await getLandingImagePreloadRecordForRender();
+  const landingImageHead = buildLandingImagePreloadHead(landingImageRecord);
+  return html.replace(LANDING_IMAGE_PRELOAD_BLOCK_PATTERN, landingImageHead);
 }
 
 function getFirebaseAdminConfig() {
@@ -1836,6 +2078,8 @@ const port = Number(process.env.PORT || 3100);
 const host = process.env.HOST || '0.0.0.0';
 const useLocalViteServer = process.env.LOCAL_VITE_DEV === 'true';
 
+refreshLandingImagePreloadCache().catch(() => {});
+
 if (useLocalViteServer) {
   if (!globalThis.crypto?.getRandomValues && crypto.webcrypto) {
     globalThis.crypto = crypto.webcrypto;
@@ -1872,14 +2116,18 @@ if (useLocalViteServer) {
     }
   });
 } else if (fs.existsSync(DIST_DIR)) {
-  app.use(express.static(DIST_DIR));
+  app.use(express.static(DIST_DIR, { index: false }));
 
-  app.use((req, res) => {
+  app.use(async (req, res, next) => {
     if (req.path.startsWith('/api/')) {
       return res.status(404).json({ error: 'API route not found' });
     }
 
-    res.sendFile(path.join(DIST_DIR, 'index.html'));
+    try {
+      res.status(200).type('html').send(await renderIndexHtmlWithLandingImagePreload());
+    } catch (error) {
+      next(error);
+    }
   });
 }
 
