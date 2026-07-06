@@ -27,6 +27,10 @@ const PUBLIC_EMAIL_RATE_LIMITS = {
   ip: { windowMs: 15 * 60 * 1000, max: 10 },
   email: { windowMs: 60 * 60 * 1000, max: 3 },
 };
+const YOUTUBE_LIVE_CACHE_TTL_MS = Math.max(
+  30 * 1000,
+  Number(process.env.YOUTUBE_LIVE_CACHE_TTL_MS || 2 * 60 * 1000),
+);
 const ADMIN_ROLES = {
   SITE_ADMIN: 'site_admin',
   SITE_DEVELOPER: 'site_developer',
@@ -41,6 +45,7 @@ const PRODUCTION_CORS_ORIGINS = new Set([
     .filter(Boolean),
 ]);
 const publicEmailRateLimitStore = new Map();
+let youtubeLiveStatusCache = null;
 
 app.set('trust proxy', 1);
 
@@ -227,6 +232,95 @@ function getPublicSiteOrigin(req) {
   }
 
   return `https://${CANONICAL_HOST}`;
+}
+
+function getYoutubeLiveConfig() {
+  return {
+    apiKey: String(process.env.YOUTUBE_API_KEY || process.env.GOOGLE_YOUTUBE_API_KEY || '').trim(),
+    channelId: String(process.env.YOUTUBE_CHANNEL_ID || '').trim(),
+  };
+}
+
+function getUnconfiguredYoutubeLiveStatus() {
+  return {
+    configured: false,
+    isLive: false,
+    checkedAt: new Date().toISOString(),
+  };
+}
+
+function normalizeYoutubeLiveItem(item) {
+  const videoId = item?.id?.videoId || '';
+  const title = item?.snippet?.title || 'Goodwill Presbyterian Church is live now';
+  const startedAt = item?.snippet?.publishedAt || null;
+
+  return {
+    configured: true,
+    isLive: Boolean(videoId),
+    videoId,
+    title,
+    url: videoId ? `https://www.youtube.com/watch?v=${videoId}` : '',
+    embedUrl: videoId ? `https://www.youtube.com/embed/${videoId}` : '',
+    startedAt,
+    checkedAt: new Date().toISOString(),
+  };
+}
+
+async function fetchYoutubeLiveStatus() {
+  const { apiKey, channelId } = getYoutubeLiveConfig();
+  if (!apiKey || !channelId) return getUnconfiguredYoutubeLiveStatus();
+
+  const params = new URLSearchParams({
+    part: 'snippet',
+    channelId,
+    eventType: 'live',
+    type: 'video',
+    maxResults: '1',
+    key: apiKey,
+  });
+  const response = await fetch(`https://www.googleapis.com/youtube/v3/search?${params.toString()}`);
+
+  if (!response.ok) {
+    throw new Error(`YouTube live status request failed with ${response.status}`);
+  }
+
+  const data = await response.json();
+  const liveItem = Array.isArray(data?.items) ? data.items[0] : null;
+
+  return normalizeYoutubeLiveItem(liveItem);
+}
+
+async function getCachedYoutubeLiveStatus({ forceRefresh = false } = {}) {
+  const now = Date.now();
+  if (!forceRefresh && youtubeLiveStatusCache && youtubeLiveStatusCache.expiresAt > now) {
+    return youtubeLiveStatusCache.status;
+  }
+
+  try {
+    const status = await fetchYoutubeLiveStatus();
+    youtubeLiveStatusCache = {
+      status,
+      expiresAt: now + YOUTUBE_LIVE_CACHE_TTL_MS,
+    };
+    return status;
+  } catch (error) {
+    console.warn('YouTube live status check failed', error?.message || error);
+
+    if (youtubeLiveStatusCache?.status) {
+      return {
+        ...youtubeLiveStatusCache.status,
+        stale: true,
+        checkedAt: new Date().toISOString(),
+      };
+    }
+
+    return {
+      configured: true,
+      isLive: false,
+      error: 'youtube_live_status_unavailable',
+      checkedAt: new Date().toISOString(),
+    };
+  }
 }
 
 function validatePublicEmailRecipient(body, { requireUnsubscribeToken = false } = {}) {
@@ -917,6 +1011,14 @@ app.put('/api/entities/:entity/:id', requireLocalEntityWriteAccess, (req, res) =
   items[index] = { ...items[index], ...req.body, id: items[index].id };
   writeEntity(entity, items);
   res.json(items[index]);
+});
+
+app.get('/api/youtube/live-status', async (req, res) => {
+  const status = await getCachedYoutubeLiveStatus({
+    forceRefresh: req.query?.refresh === 'true' && process.env.LOCAL_VITE_DEV === 'true',
+  });
+  res.set('Cache-Control', 'no-store');
+  res.json(status);
 });
 
 async function handleUnsubscribeRequest(req, res) {

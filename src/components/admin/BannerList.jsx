@@ -158,7 +158,7 @@ export default function BannerList({
             <div>
               <h3 className="text-sm font-bold text-amber-950">Automatic Live Banners</h3>
               <p className="mt-1 text-sm leading-5 text-amber-900">
-                Generated from hero slide schedules. Update the message and timing here, or open the source for every event detail.
+                YouTube live detection and scheduled hero-slide events can temporarily replace the normal homepage ticker.
               </p>
             </div>
           </div>
@@ -186,7 +186,7 @@ export default function BannerList({
                             <div className="flex flex-wrap items-center gap-2">
                               <h4 className="font-semibold text-gray-950">{banner.sourceTitle}</h4>
                               <Badge className={banner.isEnabled ? (banner.isLiveNow ? "bg-red-600" : "bg-blue-600") : "bg-gray-400"}>
-                                {banner.isEnabled ? (banner.isLiveNow ? "Live Now" : "Scheduled") : "Disabled"}
+                                {banner.isEnabled ? (banner.isYoutubeLiveBanner ? "Automatic" : (banner.isLiveNow ? "Live Now" : "Scheduled")) : "Disabled"}
                               </Badge>
                             </div>
                             <p className="mt-1 text-xs text-gray-500">{banner.sourceLabel}</p>
@@ -196,9 +196,11 @@ export default function BannerList({
                               <Button onClick={() => beginAutomaticMessageEdit(banner)} variant="outline" size="sm" className="text-blue-600">
                                 <Pencil className="mr-1.5 h-4 w-4" /> Edit
                               </Button>
-                              <Button onClick={() => onEditAutomaticBanner?.(banner)} variant="outline" size="sm" className="text-amber-700">
-                                <CalendarClock className="mr-1.5 h-4 w-4" /> Open Source
-                              </Button>
+                              {!banner.isYoutubeLiveBanner && (
+                                <Button onClick={() => onEditAutomaticBanner?.(banner)} variant="outline" size="sm" className="text-amber-700">
+                                  <CalendarClock className="mr-1.5 h-4 w-4" /> Open Source
+                                </Button>
+                              )}
                             </div>
                           )}
                         </div>
@@ -214,6 +216,8 @@ export default function BannerList({
                                   className="mt-1 bg-white"
                                 />
                               </label>
+                              {!banner.isYoutubeLiveBanner && (
+                              <>
                               <label className="block text-xs font-semibold text-gray-700">
                                 Start Date
                                 <Input type="date" value={automaticBannerDraft.date || ""} onChange={(event) => updateAutomaticBannerDraft("date", event.target.value)} className="mt-1 bg-white" />
@@ -245,21 +249,33 @@ export default function BannerList({
                                   <option value="Every evening">Every evening</option>
                                 </select>
                               </label>
+                              </>
+                              )}
                               <label className="block text-xs font-semibold text-gray-700">
                                 Status
                                 <select
-                                  value={automaticBannerDraft.status || "Active"}
+                                  value={automaticBannerDraft.status || (banner.isYoutubeLiveBanner ? "active" : "Active")}
                                   onChange={(event) => updateAutomaticBannerDraft("status", event.target.value)}
                                   className="mt-1 flex h-10 w-full rounded-md border border-input bg-white px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                                 >
-                                  <option value="Active">Active</option>
-                                  <option value="Hidden">Hidden</option>
-                                  <option value="Inactive">Inactive</option>
-                                  <option value="Draft">Draft</option>
+                                  {banner.isYoutubeLiveBanner ? (
+                                    <>
+                                      <option value="active">Enabled</option>
+                                      <option value="inactive">Disabled</option>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <option value="Active">Active</option>
+                                      <option value="Hidden">Hidden</option>
+                                      <option value="Inactive">Inactive</option>
+                                      <option value="Draft">Draft</option>
+                                    </>
+                                  )}
                                 </select>
                               </label>
                             </div>
 
+                            {!banner.isYoutubeLiveBanner && (
                             <details className="mt-4 border-t border-amber-200 pt-3">
                               <summary className="cursor-pointer select-none text-sm font-semibold text-amber-900">
                                 Advanced location and contact details
@@ -328,6 +344,7 @@ export default function BannerList({
                               </label>
                               </div>
                             </details>
+                            )}
 
                             <div className="mt-4 flex flex-wrap justify-end gap-2 border-t border-amber-200 pt-4">
                               <Button onClick={cancelAutomaticMessageEdit} variant="outline" size="sm" disabled={isSaving}>

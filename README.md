@@ -71,9 +71,12 @@ VITE_FIREBASE_MESSAGING_SENDER_ID
 VITE_FIREBASE_APP_ID
 RESEND_API_KEY
 RESEND_FROM_EMAIL
+YOUTUBE_API_KEY
+YOUTUBE_CHANNEL_ID
 ```
 
 `RESEND_FROM_EMAIL` should be a verified sender in Resend, for example `Goodwill Presbyterian Church <news@goodwillpresch1867.com>`.
+`YOUTUBE_API_KEY` and `YOUTUBE_CHANNEL_ID` power the homepage live banner. If they are not configured, the site keeps the normal banner behavior and skips the YouTube live check.
 
 After those values are configured, use **Manual Deploy > Deploy latest commit** in Render and test `/Admin` on `https://www.goodwillpresch1867.com/Admin`. Keep the IONOS DNS records for `goodwillpresch1867.com` and `www.goodwillpresch1867.com` pointing to Render.
 

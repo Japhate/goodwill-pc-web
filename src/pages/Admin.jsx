@@ -192,6 +192,12 @@ function isTimedBibleStudyBanner(banner) {
   return banner?.is_bible_study_live_banner === true;
 }
 
+const DEFAULT_YOUTUBE_LIVE_BANNER_MESSAGE = "📺 We’re Live! Come share this moment with us. Click the LIVE button to join.";
+
+function isAutomaticYoutubeLiveBanner(banner) {
+  return banner?.is_youtube_live_banner === true;
+}
+
 function getAutomaticBannerMessage(slide = {}, source = {}) {
   return String(source.live_banner_message || slide.live_banner_message || '').trim();
 }
@@ -909,7 +915,19 @@ export default function AdminPage() {
       await Promise.allSettled(timedBibleStudyBanners.map((banner) => HomeBannerMessages.delete(banner.id)));
     }
 
-    setBanners(data.filter((banner) => !isTimedBibleStudyBanner(banner)));
+    data = data.filter((banner) => !isTimedBibleStudyBanner(banner));
+
+    if (!data.some(isAutomaticYoutubeLiveBanner)) {
+      const youtubeLiveBanner = await HomeBannerMessages.create({
+        message: DEFAULT_YOUTUBE_LIVE_BANNER_MESSAGE,
+        status: 'active',
+        is_youtube_live_banner: true,
+        order: 0,
+      });
+      data = [youtubeLiveBanner, ...data];
+    }
+
+    setBanners(data);
   };
 
   const loadHeroSlides = async () => {
@@ -1619,6 +1637,7 @@ export default function AdminPage() {
             duplicatedItem.message = `[COPY] ${item.message}`;
             duplicatedItem.status = 'inactive';
             delete duplicatedItem.is_bible_study_live_banner;
+            delete duplicatedItem.is_youtube_live_banner;
       } else if (item.title) {
           duplicatedItem.title = `[COPY] ${item.title}`;
       }
@@ -2327,7 +2346,25 @@ export default function AdminPage() {
     if (!announcement?.id) return null;
     return heroSlides.find((slide) => String(slide.announcement_id) === String(announcement.id)) || null;
   };
-  const automaticHomepageBanners = heroSlides
+  const manualHomepageBanners = banners.filter((banner) => !isAutomaticYoutubeLiveBanner(banner));
+  const youtubeAutomaticBanner = banners.find(isAutomaticYoutubeLiveBanner);
+  const youtubeAutomaticHomepageBanner = youtubeAutomaticBanner
+    ? {
+        id: `youtube-live-${youtubeAutomaticBanner.id}`,
+        homeBanner: youtubeAutomaticBanner,
+        source: youtubeAutomaticBanner,
+        sourceTitle: 'YouTube Live Service',
+        sourceLabel: 'Automatic YouTube live detection',
+        message: youtubeAutomaticBanner.message || DEFAULT_YOUTUBE_LIVE_BANNER_MESSAGE,
+        scheduleLabel: 'Shows only while the YouTube channel is live',
+        isEnabled: !['inactive', 'hidden', 'draft'].includes(String(youtubeAutomaticBanner.status || 'active').toLowerCase()),
+        isLiveNow: false,
+        isYoutubeLiveBanner: true,
+      }
+    : null;
+  const automaticHomepageBanners = [
+    youtubeAutomaticHomepageBanner,
+    ...heroSlides
     .map((slide) => {
       const announcement = getLinkedAnnouncementForSlide(slide);
       const source = announcement || slide;
@@ -2351,8 +2388,11 @@ export default function AdminPage() {
       };
     })
     .filter(Boolean)
-    .sort((a, b) => (Number(a.slide.order) || 0) - (Number(b.slide.order) || 0));
+    .sort((a, b) => (Number(a.slide.order) || 0) - (Number(b.slide.order) || 0)),
+  ].filter(Boolean);
   const handleEditAutomaticBanner = (banner) => {
+    if (banner?.isYoutubeLiveBanner) return;
+
     if (banner?.slide) {
       handleEdit(banner.slide, 'heroSlide');
       return;
@@ -2370,7 +2410,15 @@ export default function AdminPage() {
       live_banner_message: nextMessage,
     };
 
-    if (banner.announcement?.id) {
+    if (banner.homeBanner?.id) {
+      const { id: _id, ...bannerData } = banner.homeBanner;
+      await HomeBannerMessages.update(banner.homeBanner.id, {
+        ...bannerData,
+        message: nextMessage,
+        status: updateData.status || banner.homeBanner.status || 'active',
+        is_youtube_live_banner: true,
+      });
+    } else if (banner.announcement?.id) {
       const { id: _id, ...announcementData } = banner.announcement;
       await AnnouncementsEvents.update(banner.announcement.id, {
         ...announcementData,
@@ -2390,11 +2438,11 @@ export default function AdminPage() {
       action: 'updated',
       section: 'Homepage Banner',
       itemType: 'automatic live banner message',
-      itemId: banner.announcement?.id || banner.slide?.id || '',
+      itemId: banner.homeBanner?.id || banner.announcement?.id || banner.slide?.id || '',
       itemLabel: banner.sourceTitle || nextMessage,
       details: preparedUpdates,
     });
-    await Promise.all([loadHeroSlides(), loadAnnouncements()]);
+    await Promise.all([loadBanners(), loadHeroSlides(), loadAnnouncements()]);
   };
   const HeroAnnouncementSectionHeader = ({
     title,
@@ -2577,7 +2625,7 @@ export default function AdminPage() {
         />;
       case 'banners':
         return <BannerList
-          banners={banners}
+          banners={manualHomepageBanners}
           automaticBanners={automaticHomepageBanners}
           onEdit={(item) => handleEdit(item, 'banner')}
           onDelete={(id) => handleDelete(id, 'banner')}

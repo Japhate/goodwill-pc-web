@@ -10,6 +10,8 @@ import { format } from "date-fns";
 import { createSpecialServiceHeroSlide, getActiveSpecialServiceNotice } from "@/lib/specialServiceNotice";
 
 const SLIDE_INTERVAL = 10000;
+const YOUTUBE_LIVE_STATUS_POLL_MS = 60 * 1000;
+const DEFAULT_YOUTUBE_LIVE_BANNER_MESSAGE = "📺 We’re Live! Come share this moment with us. Click the LIVE button to join.";
 
 // Bible Study: pin the Zoom slide every Wednesday from 6:00 PM to 7:00 PM.
 const BIBLE_STUDY_ZOOM = "https://us06web.zoom.us/j/82013337566?pwd=mULnQC1Zjg5GWkoTTKGvx3PyAFaCeZ.1";
@@ -55,6 +57,10 @@ function isZoomBibleStudySlide(slide) {
 
 function isTimedBibleStudyBanner(banner) {
   return banner?.is_bible_study_live_banner === true;
+}
+
+function isAutomaticYoutubeLiveBanner(banner) {
+  return banner?.is_youtube_live_banner === true;
 }
 
 function getLiveScheduledBannerMessage(slide = {}, event = {}) {
@@ -321,6 +327,12 @@ export default function HeroSlideshow({ onReady }) {
   const [failedAnnouncementImageIds, setFailedAnnouncementImageIds] = useState(() => new Set());
   const [imageAspectRatios, setImageAspectRatios] = useState({});
   const [managedBanners, setManagedBanners] = useState(null);
+  const [youtubeLiveStatus, setYoutubeLiveStatus] = useState({
+    configured: false,
+    isLive: false,
+    title: "",
+    url: "",
+  });
   const [current, setCurrent] = useState(0);
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
   const [isTickerClosed, setIsTickerClosed] = useState(false);
@@ -391,7 +403,7 @@ export default function HeroSlideshow({ onReady }) {
 
     if (Array.isArray(managedBanners)) {
       const messages = managedBanners
-        .filter((banner) => !isTimedBibleStudyBanner(banner) && isActiveManagedBanner(banner, now))
+        .filter((banner) => !isTimedBibleStudyBanner(banner) && !isAutomaticYoutubeLiveBanner(banner) && isActiveManagedBanner(banner, now))
         .map((banner) => banner.message)
         .filter(Boolean);
 
@@ -401,12 +413,33 @@ export default function HeroSlideshow({ onReady }) {
     return [];
   }, [activeSpecialServiceNotice, liveScheduledSlides, managedBanners, now]);
 
+  const youtubeLiveBannerMessage = useMemo(() => {
+    if (!youtubeLiveStatus.isLive) return "";
+    if (managedBanners === null) return "";
+
+    const managedYoutubeBanner = Array.isArray(managedBanners)
+      ? managedBanners.find((banner) => isAutomaticYoutubeLiveBanner(banner))
+      : null;
+    const status = String(managedYoutubeBanner?.status || "active").toLowerCase();
+    if (["inactive", "hidden", "draft"].includes(status)) return "";
+
+    return String(managedYoutubeBanner?.message || "").trim() || DEFAULT_YOUTUBE_LIVE_BANNER_MESSAGE;
+  }, [managedBanners, youtubeLiveStatus.isLive]);
+
+  const displayBannerMessages = useMemo(() => {
+    if (!youtubeLiveBannerMessage) return bannerMessages;
+
+    return [youtubeLiveBannerMessage];
+  }, [bannerMessages, youtubeLiveBannerMessage]);
+
   const hasActiveSpecialServiceBanner = Boolean(activeSpecialServiceNotice) && Array.isArray(managedBanners)
     && managedBanners
       .filter((banner) => banner?.is_special_service_banner === true)
       .some((banner) => isActiveManagedBanner(banner, now));
-  const isLiveTicker = hasActiveSpecialServiceBanner || isLiveBanner;
-  const currentBannerMessage = bannerMessages[currentBannerIndex] || bannerMessages[0];
+  const isYoutubeLiveBanner = Boolean(youtubeLiveBannerMessage && youtubeLiveStatus.url);
+  const isLiveTicker = hasActiveSpecialServiceBanner || isLiveBanner || Boolean(youtubeLiveBannerMessage);
+  const currentBannerMessage = displayBannerMessages[currentBannerIndex] || displayBannerMessages[0];
+  const currentBannerIsYoutubeLive = isYoutubeLiveBanner && currentBannerMessage === youtubeLiveBannerMessage;
 
   useEffect(() => {
     const loadSlides = async () => {
@@ -453,6 +486,41 @@ export default function HeroSlideshow({ onReady }) {
       }
     };
     loadBanners();
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadYoutubeLiveStatus = async () => {
+      try {
+        const response = await fetch('/api/youtube/live-status', {
+          headers: { Accept: 'application/json' },
+        });
+        if (!response.ok) throw new Error(`Live status request failed with ${response.status}`);
+
+        const data = await response.json();
+        if (!isMounted) return;
+
+        setYoutubeLiveStatus({
+          configured: Boolean(data?.configured),
+          isLive: Boolean(data?.isLive),
+          title: String(data?.title || ""),
+          url: String(data?.url || ""),
+        });
+      } catch (error) {
+        if (isMounted) {
+          console.warn('YouTube live status check failed', error?.message || error);
+        }
+      }
+    };
+
+    loadYoutubeLiveStatus();
+    const interval = setInterval(loadYoutubeLiveStatus, YOUTUBE_LIVE_STATUS_POLL_MS);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
   }, []);
 
   useEffect(() => {
@@ -598,11 +666,11 @@ export default function HeroSlideshow({ onReady }) {
 
   useEffect(() => {
     setCurrentBannerIndex(0);
-  }, [bannerMessages.length]);
+  }, [displayBannerMessages.length]);
 
   const handleBannerCycle = () => {
-    if (bannerMessages.length <= 1) return;
-    setCurrentBannerIndex(prev => (prev + 1) % bannerMessages.length);
+    if (displayBannerMessages.length <= 1) return;
+    setCurrentBannerIndex(prev => (prev + 1) % displayBannerMessages.length);
   };
 
   const resetTimer = () => {
@@ -814,16 +882,32 @@ export default function HeroSlideshow({ onReady }) {
         `}
       </style>
 
-      {!isTickerClosed && bannerMessages.length > 0 && (
+      {!isTickerClosed && displayBannerMessages.length > 0 && (
         <div className={`homepage-ticker relative text-white border-y ${isLiveTicker ? 'bg-red-700 border-red-200/40' : 'bg-[#3f2a1f] border-amber-300/30'}`}>
           <div className="homepage-ticker__track h-6 pr-12">
-            <span
-              key={`${currentBannerMessage}-${currentBannerIndex}`}
-              className="homepage-ticker__message inline-flex h-full items-center whitespace-nowrap text-[11px] font-bold tracking-wide md:text-sm"
-              onAnimationIteration={handleBannerCycle}
-            >
-              {currentBannerMessage}
-            </span>
+            {currentBannerIsYoutubeLive ? (
+              <a
+                key={`${currentBannerMessage}-${currentBannerIndex}`}
+                href={youtubeLiveStatus.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="homepage-ticker__message inline-flex h-full items-center gap-3 whitespace-nowrap text-[11px] font-bold tracking-wide underline-offset-4 hover:underline md:text-sm"
+                onAnimationIteration={handleBannerCycle}
+              >
+                <span>{currentBannerMessage}</span>
+                <span className="rounded-sm bg-white px-2 py-0.5 text-[10px] font-black tracking-wide text-red-700 shadow-sm md:text-xs">
+                  LIVE
+                </span>
+              </a>
+            ) : (
+              <span
+                key={`${currentBannerMessage}-${currentBannerIndex}`}
+                className="homepage-ticker__message inline-flex h-full items-center whitespace-nowrap text-[11px] font-bold tracking-wide md:text-sm"
+                onAnimationIteration={handleBannerCycle}
+              >
+                {currentBannerMessage}
+              </span>
+            )}
           </div>
           <button
             type="button"
