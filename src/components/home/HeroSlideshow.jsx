@@ -767,8 +767,19 @@ export default function HeroSlideshow({ onReady }) {
             to { transform: scale(1.1); }
           }
 
+          @keyframes heroSlideImageSlowZoom {
+            from { transform: scale(1); }
+            to { transform: scale(1.045); }
+          }
+
           .welcome-hero-image {
             animation: welcomeHeroImageZoom 16s ease-out forwards;
+            transform-origin: center center;
+            will-change: transform;
+          }
+
+          .hero-slide-image-slow-zoom {
+            animation: heroSlideImageSlowZoom 28s ease-out forwards;
             transform-origin: center center;
             will-change: transform;
           }
@@ -854,7 +865,7 @@ export default function HeroSlideshow({ onReady }) {
               <img
                 src={currentImageUrl}
                 alt={currentSlide.alt_text || "Slide"}
-                className={`block h-full w-full ${showWelcomeHeroIntro ? "object-cover welcome-hero-image" : "object-contain"}`}
+                className={`block h-full w-full ${showWelcomeHeroIntro ? "object-cover welcome-hero-image" : "object-contain hero-slide-image-slow-zoom"}`}
                 draggable={false}
                 decoding="async"
                 fetchPriority="high"
