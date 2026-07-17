@@ -10,6 +10,7 @@ import { getResponsiveImage, getResponsiveImageProps } from "@/lib/responsiveIma
 import { format } from "date-fns";
 import { createSpecialServiceHeroSlide, getActiveSpecialServiceNotice } from "@/lib/specialServiceNotice";
 import { normalizeInternalLinkUrl } from "@/lib/seo";
+import { isVirtualJoinAvailable } from "@/lib/virtualEventAccess";
 
 const SLIDE_INTERVAL = 10000;
 const YOUTUBE_LIVE_STATUS_POLL_MS = 60 * 1000;
@@ -711,6 +712,8 @@ export default function HeroSlideshow({ onReady }) {
     ? getVirtualEventTiming(linkedVirtualEvent, now)
     : { countdown: "", isLive: false, start: null, end: null };
   const virtualEventIsLive = linkedVirtualTiming.isLive;
+  const virtualJoinAvailable = isVirtualJoinAvailable(linkedVirtualEvent, now)
+    || (isZoomBibleStudySlide(currentSlide) && isBibleStudyPinnedTime);
   const virtualCountdownEvent = linkedVirtualEvent?.date ? linkedVirtualEvent : currentSlide;
   const showVirtualCountdownOverlay = SHOW_BIBLE_STUDY_COUNTDOWN_OVERLAY
     && !showWelcomeHeroIntro
@@ -727,21 +730,21 @@ export default function HeroSlideshow({ onReady }) {
           label: "Get Directions",
           type: "directions",
         },
-        virtualSlideUrl && {
+        virtualSlideUrl && virtualJoinAvailable && {
           url: virtualSlideUrl,
           label: getVirtualJoinLabel(linkedVirtualPlatform),
           type: "virtual",
           countdown: "",
           isLive: virtualEventIsLive,
         },
-        isExplicitExternalUrl && {
+        isExplicitExternalUrl && (!isZoomBibleStudySlide(currentSlide) || virtualJoinAvailable) && {
           url: explicitSlideUrl,
           label: currentSlide.link_label || (isZoomBibleStudySlide(currentSlide) ? "Join Zoom" : "More"),
           type: isZoomBibleStudySlide(currentSlide) ? "virtual" : "external",
           countdown: "",
           isLive: isZoomBibleStudySlide(currentSlide) ? virtualEventIsLive : false,
         },
-        !isExplicitExternalUrl && !directionsSlideUrl && !virtualSlideUrl && isZoomBibleStudySlide(currentSlide) && {
+        !isExplicitExternalUrl && !directionsSlideUrl && !virtualSlideUrl && isZoomBibleStudySlide(currentSlide) && virtualJoinAvailable && {
           url: BIBLE_STUDY_ZOOM,
           label: "Join Zoom",
           type: "virtual",

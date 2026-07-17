@@ -53,6 +53,7 @@ export const WEEKLY_GATHERINGS = [
   {
     day: 'Wednesday',
     time: '6:30 PM',
+    endTime: '7:00 PM',
     name: 'Bible Study',
     zoomLink: 'https://us02web.zoom.us/j/82827270338?pwd=9JhQLcH0WjX6Xvy7LqvNtZUE3UBr9C.1',
   },

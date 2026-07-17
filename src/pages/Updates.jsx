@@ -3,7 +3,7 @@ import { useLocation } from "react-router-dom";
 import { AnnouncementsEvents } from "@/entities/AnnouncementsEvents";
 import { HeroSlide } from "@/entities/HeroSlide";
 import { WorshipEvent } from "@/entities/WorshipEvent";
-import { Calendar, Check, Clock, Copy, Mail, MapPin, Image, CheckCircle, ExternalLink, FileText, MessageCircle, Phone } from "lucide-react";
+import { Calendar, Check, ChevronDown, Clock, Copy, Mail, MapPin, Image, CheckCircle, ExternalLink, FileText, MessageCircle, Phone } from "lucide-react";
 import { format, isBefore, startOfDay, parseISO, isValid } from "date-fns";
 import { Button } from "@/components/ui/button";
 import ReactMarkdown from "react-markdown";
@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { getActiveSpecialServiceNotice } from "@/lib/specialServiceNotice";
 import PageLoadingScreen from "@/components/PageLoadingScreen";
 import { getPublicAnnouncements } from "@/lib/publicAnnouncements";
+import { isVirtualJoinAvailable } from "@/lib/virtualEventAccess";
 
 function getScrollBehavior() {
   return window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ? "auto" : "smooth";
@@ -163,11 +164,58 @@ const getGoogleCalendarUrl = (item) => {
 
 const SHOW_PAST_EVENTS_GALLERY = false;
 
+function ScrollableAnnouncementDetails({ title, children }) {
+  const scrollRef = useRef(null);
+  const [showScrollHint, setShowScrollHint] = useState(false);
+
+  useEffect(() => {
+    const scrollElement = scrollRef.current;
+    if (!scrollElement) return undefined;
+
+    const updateScrollHint = () => {
+      const hasMoreBelow = scrollElement.scrollHeight - scrollElement.scrollTop > scrollElement.clientHeight + 8;
+      setShowScrollHint(hasMoreBelow);
+    };
+
+    updateScrollHint();
+    scrollElement.addEventListener("scroll", updateScrollHint, { passive: true });
+    window.addEventListener("resize", updateScrollHint);
+    const resizeObserver = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(updateScrollHint);
+    resizeObserver?.observe(scrollElement);
+
+    return () => {
+      scrollElement.removeEventListener("scroll", updateScrollHint);
+      window.removeEventListener("resize", updateScrollHint);
+      resizeObserver?.disconnect();
+    };
+  }, []);
+
+  return (
+    <div className="relative min-h-0 md:h-full">
+      <div
+        ref={scrollRef}
+        className="min-h-0 md:h-full md:overflow-y-auto md:pr-2"
+        tabIndex={0}
+        aria-label={`Scrollable details for ${title}`}
+      >
+        {children}
+      </div>
+      {showScrollHint && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 hidden bg-gradient-to-t from-white via-white/95 to-transparent px-2 pb-1 pt-8 md:flex md:justify-center">
+          <span className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-bold text-amber-900 shadow-sm">
+            Scroll to read more
+            <ChevronDown className="h-3.5 w-3.5 animate-bounce motion-reduce:animate-none" aria-hidden="true" />
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Updates() {
   const [feedItems, setFeedItems] = useState([]);
   const [worshipEvents, setWorshipEvents] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeCategory, setActiveCategory] = useState("all");
   const [activeSection, setActiveSection] = useState("");
   const [now, setNow] = useState(new Date());
   const [copiedContactId, setCopiedContactId] = useState("");
@@ -193,7 +241,7 @@ export default function Updates() {
   }, []);
 
   useEffect(() => {
-    const interval = window.setInterval(() => setNow(new Date()), 30000);
+    const interval = window.setInterval(() => setNow(new Date()), 1000);
     return () => window.clearInterval(interval);
   }, []);
 
@@ -314,12 +362,6 @@ export default function Updates() {
       return bDate.getTime() - aDate.getTime();
     });
   }, [feedItems, today]);
-
-  const filteredFeed = useMemo(() => {
-    return activeCategory === 'all'
-      ? upcomingAndUndatedEvents
-      : upcomingAndUndatedEvents.filter(item => (item.category || 'church_wide') === activeCategory);
-  }, [upcomingAndUndatedEvents, activeCategory]);
 
   const categories = {
     church_wide: "Church-Wide",
@@ -500,10 +542,6 @@ export default function Updates() {
   };
 
 
-  const handleCategoryChange = (category) => {
-    setActiveCategory(category);
-  };
-
   if (loading) {
     return (
       <PageLoadingScreen backgroundClassName="bg-[#fdf8f0]" />
@@ -586,48 +624,16 @@ export default function Updates() {
               </div>
             )}
 
-            <div className="mb-5 flex justify-center">
-              <div className="flex max-w-full flex-wrap items-center justify-center gap-1 rounded-lg bg-gray-200 p-1">
-                <button
-                  type="button"
-                  onClick={() => handleCategoryChange('all')}
-                  aria-pressed={activeCategory === 'all'}
-                  className={`h-8 rounded-md px-3 text-xs font-semibold transition-colors ${
-                    activeCategory === 'all'
-                      ? 'bg-white text-amber-800 shadow'
-                      : 'text-gray-600 hover:bg-white/70 hover:text-gray-800'
-                  }`}
-                >
-                  All
-                </button>
-                {Object.entries(categories).map(([key, value]) => (
-                <button
-                  type="button"
-                  key={key}
-                  onClick={() => handleCategoryChange(key)}
-                  aria-pressed={activeCategory === key}
-                  className={`h-8 rounded-md px-3 text-xs font-semibold transition-colors ${
-                    activeCategory === key
-                      ? 'bg-white text-amber-800 shadow'
-                      : 'text-gray-600 hover:bg-white/70 hover:text-gray-800'
-                  }`}
-                >
-                  {value}
-                </button>
-              ))}
-              </div>
-            </div>
-
-
             <div className="relative left-1/2 grid w-[calc(100vw-1rem)] -translate-x-1/2 grid-cols-1 gap-6 sm:w-[calc(100vw-1.5rem)] lg:w-[calc(100vw-2rem)]">
-              {filteredFeed.length > 0 ? (
-                filteredFeed.map((item) => {
+              {upcomingAndUndatedEvents.length > 0 ? (
+                upcomingAndUndatedEvents.map((item) => {
                   const itemDate = parseDateAsLocal(item.date);
                   const itemEndDate = parseDateAsLocal(item.end_date);
                   const isFarFuture = itemDate && itemDate.getFullYear() > 2090;
                   const dateLabel = !isFarFuture ? formatDateRange(itemDate, itemEndDate) : "";
                   const timeLabel = formatTimeRange(item.time, item.end_time);
                   const calendarUrl = getGoogleCalendarUrl(item);
+                  const virtualJoinAvailable = isVirtualJoinAvailable(item, now);
                   return (
                   <div
                     id={`announcement-${item.id}`}
@@ -642,7 +648,7 @@ export default function Updates() {
                       </div>
                     ) : null}
                     <div className="flex min-h-0 flex-grow flex-col p-4 md:max-h-[calc((100vw-1.5rem)*0.32*9/16)] md:overflow-hidden md:py-2 md:pl-2 md:pr-4 lg:max-h-[calc((100vw-2rem)*0.32*9/16)] xl:max-h-[calc((100vw-2rem)*0.30*9/16)] xl:py-2 xl:pl-2 xl:pr-5">
-                      <div className="min-h-0 md:h-full md:overflow-y-auto md:pr-2" tabIndex={0} aria-label={`Scrollable details for ${item.title}`}>
+                      <ScrollableAnnouncementDetails title={item.title}>
                       <div className="mb-2 flex items-start justify-between gap-2">
                           <h3 className="text-xl font-bold text-gray-800">{item.title}</h3>
                           <Badge variant="outline" className="shrink-0 border-amber-500 px-2 py-0.5 text-[10px] font-semibold leading-tight text-amber-700">
@@ -705,9 +711,9 @@ export default function Updates() {
                             </span>
                           </div>
                         )}
-                        {(item.zoom_link || item.chat_link || item.directions_url || item.file_upload) && (
+                        {((item.zoom_link && virtualJoinAvailable) || item.chat_link || item.directions_url || item.file_upload) && (
                           <div className="flex flex-wrap gap-2 pt-2 sm:col-span-2">
-                            {hasVirtualLocation(item) && item.zoom_link && (
+                            {hasVirtualLocation(item) && item.zoom_link && virtualJoinAvailable && (
                               <a href={item.zoom_link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-1.5 rounded-md bg-blue-600 px-2.5 py-1 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700">
                                 <ExternalLink className="h-3.5 w-3.5" />
                                 {getVirtualActionLabel(item.virtual_platform, item.zoom_link)}
@@ -734,7 +740,7 @@ export default function Updates() {
                           </div>
                         )}
                       </div>
-                      </div>
+                      </ScrollableAnnouncementDetails>
                     </div>
                   </div>
                 )})
@@ -742,12 +748,7 @@ export default function Updates() {
                 <div className="col-span-full text-center py-12">
                   <Image className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                   <h3 className="text-xl font-semibold text-gray-900 mb-2">No announcements or events found</h3>
-                  <p className="text-gray-600">
-                    {activeCategory === 'all'
-                      ? "There are currently no active announcements or events. Check back soon!"
-                      : `No items found for the "${categories[activeCategory]}" category.`
-                    }
-                  </p>
+                  <p className="text-gray-600">There are currently no active announcements or events. Check back soon!</p>
                 </div>
               )}
             </div>

@@ -11,6 +11,7 @@ import {
   PRIMARY_WORSHIP_SERVICE,
   WEEKLY_GATHERINGS,
 } from "@/lib/churchIdentity";
+import { isWeeklyVirtualJoinAvailable } from "@/lib/virtualEventAccess";
 
 function getScrollBehavior() {
   return window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ? "auto" : "smooth";
@@ -35,7 +36,7 @@ export default function Connect() {
   ], []);
 
   useEffect(() => {
-    const interval = window.setInterval(() => setNow(new Date()), 30000);
+    const interval = window.setInterval(() => setNow(new Date()), 1000);
     return () => window.clearInterval(interval);
   }, []);
 
@@ -139,6 +140,11 @@ export default function Connect() {
       time: WEEKLY_GATHERINGS[1].time,
       event: WEEKLY_GATHERINGS[1].name,
       zoomLink: WEEKLY_GATHERINGS[1].zoomLink,
+      showZoomLink: isWeeklyVirtualJoinAvailable({
+        day: WEEKLY_GATHERINGS[1].day,
+        time: WEEKLY_GATHERINGS[1].time,
+        endTime: WEEKLY_GATHERINGS[1].endTime,
+      }, now),
     }
   ];
   
@@ -500,7 +506,7 @@ export default function Connect() {
                                 </a>
                               </Button>
                             )}
-                            {service.zoomLink && (
+                            {service.zoomLink && service.showZoomLink && (
                               <Button asChild size="sm" className="h-auto rounded-md bg-blue-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-blue-700">
                                 <a href={service.zoomLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1">
                                   <Video className="w-4 h-4" />
