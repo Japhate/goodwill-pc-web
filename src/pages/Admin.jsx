@@ -394,9 +394,11 @@ export default function AdminPage() {
   const [uploadingAdminPhoto, setUploadingAdminPhoto] = useState(false);
   const inactivityTimerRef = useRef(null);
   const privacyNoticeRef = useRef(null);
+  const privacyNoticeAfterNameRef = useRef(false);
   const adminInstructionRef = useRef(null);
   const adminContentTopRef = useRef(null);
   const confirmationResolverRef = useRef(null);
+  const hasCurrentAdmin = Boolean(currentAdmin);
   const canViewDeveloperPanel = isSiteDeveloperAdmin(currentAdmin);
   const canManageSiteAdmins = isRootSiteDeveloper(currentAdmin);
   const adminRoleLabel = canManageSiteAdmins ? 'Site Developer' : 'Site Admin';
@@ -622,7 +624,7 @@ export default function AdminPage() {
     }
   };
 
-  const loadAdminProfiles = async (user) => {
+  const loadAdminProfiles = async (user, { showPrivacyOnSignIn = false } = {}) => {
     if (!firebaseEnabled || !firestore) {
       const profile = deriveAdminProfile(user);
       setCurrentAdmin(profile);
@@ -630,7 +632,8 @@ export default function AdminPage() {
       setAdminLastNameInput(profile.last_name || '');
       setShowAdminNamePrompt(!profile.has_saved_name);
       setAdminProfiles([profile]);
-      setShowPrivacyNotice(Boolean(profile.has_saved_name));
+      privacyNoticeAfterNameRef.current = showPrivacyOnSignIn && !profile.has_saved_name;
+      setShowPrivacyNotice(showPrivacyOnSignIn && Boolean(profile.has_saved_name));
       return;
     }
 
@@ -666,7 +669,8 @@ export default function AdminPage() {
           .filter((profile) => profile.id !== normalizedCurrentAdmin.id)
           .map((profile) => deriveAdminProfile({}, profile)),
       ]);
-      setShowPrivacyNotice(Boolean(normalizedCurrentAdmin.has_saved_name));
+      privacyNoticeAfterNameRef.current = showPrivacyOnSignIn && !normalizedCurrentAdmin.has_saved_name;
+      setShowPrivacyNotice(showPrivacyOnSignIn && Boolean(normalizedCurrentAdmin.has_saved_name));
     } catch (error) {
       console.error('Unable to load admin profiles:', error);
       const profile = deriveAdminProfile(user);
@@ -675,7 +679,8 @@ export default function AdminPage() {
       setAdminLastNameInput(profile.last_name || '');
       setShowAdminNamePrompt(!profile.has_saved_name);
       setAdminProfiles([profile]);
-      setShowPrivacyNotice(Boolean(profile.has_saved_name));
+      privacyNoticeAfterNameRef.current = showPrivacyOnSignIn && !profile.has_saved_name;
+      setShowPrivacyNotice(showPrivacyOnSignIn && Boolean(profile.has_saved_name));
     }
   };
 
@@ -712,14 +717,14 @@ export default function AdminPage() {
     )));
   };
 
-  const checkUserAndLoadData = async () => {
+  const checkUserAndLoadData = async ({ showPrivacyOnSignIn = false } = {}) => {
       setLoading(true);
       try {
         const user = await User.me();
         if (user && user.role === 'admin') {
           setIsAdmin(true);
           setLoginNotice('');
-          await loadAdminProfiles(user);
+          await loadAdminProfiles(user, { showPrivacyOnSignIn });
           try {
             await loadServerAccessProfile(user);
           } catch (accessError) {
@@ -729,6 +734,7 @@ export default function AdminPage() {
           setPrivacyNoticeRead(false);
           await loadAdminData();
         } else {
+          privacyNoticeAfterNameRef.current = false;
           setIsAdmin(false);
           setCurrentAdmin(null);
           setAdminProfiles([]);
@@ -737,6 +743,7 @@ export default function AdminPage() {
           setAdminLoadError('');
         }
       } catch (error) {
+        privacyNoticeAfterNameRef.current = false;
         setIsAdmin(false);
         setCurrentAdmin(null);
         setAdminProfiles([]);
@@ -763,6 +770,7 @@ export default function AdminPage() {
       setIsAdmin(false);
       setCurrentAdmin(null);
       setAdminProfiles([]);
+      privacyNoticeAfterNameRef.current = false;
       setShowPrivacyNotice(false);
       setShowAdminNamePrompt(false);
       setEditingItem(null);
@@ -857,6 +865,7 @@ export default function AdminPage() {
       } catch (error) {
         console.error('Unable to auto logout inactive admin session:', error);
       } finally {
+        privacyNoticeAfterNameRef.current = false;
         setIsAdmin(false);
         setCurrentAdmin(null);
         setAdminProfiles([]);
@@ -935,6 +944,8 @@ export default function AdminPage() {
   }, [showPrivacyNotice, showAdminNamePrompt]);
 
   useEffect(() => {
+    if (!isAdmin || !hasCurrentAdmin) return;
+
     if (canViewDeveloperPanel) {
       loadAdminActivityLogs();
       loadSiteAdminComparison();
@@ -947,7 +958,7 @@ export default function AdminPage() {
     if (view === 'developer') {
       setView('heroSlides');
     }
-  }, [canViewDeveloperPanel, view]);
+  }, [isAdmin, hasCurrentAdmin, canViewDeveloperPanel, view]);
 
   const loadAnnouncements = async () => {
     // Fetch with a default sort, will be re-sorted in the component
@@ -2064,7 +2075,7 @@ export default function AdminPage() {
         itemLabel: String(loginEmail || signedInUser?.email || '').trim().toLowerCase(),
         actor: signedInUser,
       });
-      await checkUserAndLoadData();
+      await checkUserAndLoadData({ showPrivacyOnSignIn: true });
     } catch (error) {
       setLoginError(error.message || 'Unable to sign in.');
     } finally {
@@ -2106,6 +2117,7 @@ export default function AdminPage() {
       itemLabel: currentAdmin?.email || '',
     });
     await User.logout();
+    privacyNoticeAfterNameRef.current = false;
     setIsAdmin(false);
     setCurrentAdmin(null);
     setAdminProfiles([]);
@@ -2314,7 +2326,8 @@ export default function AdminPage() {
       )));
       setShowAdminNamePrompt(false);
       setPrivacyNoticeRead(false);
-      setShowPrivacyNotice(true);
+      setShowPrivacyNotice(privacyNoticeAfterNameRef.current);
+      privacyNoticeAfterNameRef.current = false;
       await logAdminActivity({
         action: 'updated',
         section: 'Admin Profile',
