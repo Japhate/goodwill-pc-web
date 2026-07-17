@@ -38,12 +38,15 @@ function FieldLabel({ children, required = false }) {
 export default function DeveloperPanel({
   logs = [],
   admins = [],
+  invitations = [],
   adminLoadError = "",
   loading = false,
   onRefresh,
   onCreateAdmin,
   onDeleteAdmin,
   onUpdateAdminRole,
+  onApproveInvitation,
+  onRevokeInvitation,
   canManageAdmins = false,
   currentAdminEmail = "",
   onConfirm,
@@ -51,12 +54,14 @@ export default function DeveloperPanel({
   onError,
 }) {
   const [email, setEmail] = useState("");
+  const [confirmedEmail, setConfirmedEmail] = useState("");
   const [errors, setErrors] = useState({});
   const [inviteStatus, setInviteStatus] = useState("");
   const [adminStatus, setAdminStatus] = useState("");
   const [sendingInvite, setSendingInvite] = useState(false);
   const [deletingAdminUid, setDeletingAdminUid] = useState("");
   const [updatingAdminUid, setUpdatingAdminUid] = useState("");
+  const [updatingInvitationId, setUpdatingInvitationId] = useState("");
   const latestLog = logs[0];
   const loginCount = logs.filter((log) => log.action === "signed_in").length;
   const contentCount = logs.filter((log) => ["created", "updated", "deleted", "duplicated"].includes(log.action)).length;
@@ -73,6 +78,8 @@ export default function DeveloperPanel({
     const nextErrors = {};
     if (!normalizedEmail) nextErrors.email = "Enter the email address.";
     if (normalizedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) nextErrors.email = "Enter a valid email address.";
+    if (!confirmedEmail.trim()) nextErrors.confirmedEmail = "Re-enter the email address to confirm it.";
+    if (normalizedEmail && confirmedEmail.trim().toLowerCase() !== normalizedEmail) nextErrors.confirmedEmail = "The email addresses do not match.";
 
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) {
@@ -80,15 +87,24 @@ export default function DeveloperPanel({
       return;
     }
 
+    if (!await onConfirm?.({
+      title: "Send administrator invitation?",
+      description: `Carefully verify this recipient: ${normalizedEmail}. A wrong recipient can create a password, but they will not receive Admin access unless you later approve them in the security review.`,
+      confirmLabel: "Email this invitation",
+      tone: "warning",
+    })) return;
+
     setSendingInvite(true);
     setInviteStatus("");
     try {
       await onCreateAdmin({
         email: normalizedEmail,
+        confirmedEmail: confirmedEmail.trim().toLowerCase(),
       });
       setInviteStatus(`Site Admin invitation sent to ${normalizedEmail}.`);
       onSuccess?.(`A site administrator invitation was sent to ${normalizedEmail}.`);
       setEmail("");
+      setConfirmedEmail("");
       setErrors({});
     } catch (error) {
       const message = error.message || "Unable to send the admin invitation.";
@@ -96,6 +112,44 @@ export default function DeveloperPanel({
       onError?.(message);
     } finally {
       setSendingInvite(false);
+    }
+  };
+
+  const handleApproveInvitation = async (invitation) => {
+    if (!await onConfirm?.({
+      title: "Approve administrator access?",
+      description: `Confirm that ${invitation.email} is the intended person. Approval creates their active Site Admin record and allows them to sign in.`,
+      confirmLabel: "Approve access",
+    })) return;
+
+    setUpdatingInvitationId(invitation.id);
+    try {
+      await onApproveInvitation(invitation);
+      onSuccess?.(`${invitation.email} was approved as a Site Admin.`);
+    } catch (error) {
+      onError?.(error.message || "Unable to approve this administrator request.");
+    } finally {
+      setUpdatingInvitationId("");
+    }
+  };
+
+  const handleRevokeInvitation = async (invitation) => {
+    const awaitingApproval = invitation.status === "awaiting_approval";
+    if (!await onConfirm?.({
+      title: awaitingApproval ? "Reject administrator request?" : "Revoke administrator invitation?",
+      description: `${invitation.email} will receive no administrator access. The invitation link will be permanently disabled.`,
+      confirmLabel: awaitingApproval ? "Reject request" : "Revoke invitation",
+      tone: "danger",
+    })) return;
+
+    setUpdatingInvitationId(invitation.id);
+    try {
+      await onRevokeInvitation(invitation);
+      onSuccess?.(`${invitation.email}'s invitation was revoked.`);
+    } catch (error) {
+      onError?.(error.message || "Unable to revoke this invitation.");
+    } finally {
+      setUpdatingInvitationId("");
     }
   };
 
@@ -296,6 +350,72 @@ export default function DeveloperPanel({
       </div>
 
       {canManageAdmins && (
+        <div className="rounded-lg bg-white p-4 shadow-md">
+          <div className="mb-4 flex items-start gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-800">
+              <ShieldCheck className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-gray-950">Invitation Security Review</h3>
+              <p className="mt-1 text-sm text-gray-600">Revoke an incorrect pending email, or verify the address and approve a completed setup request.</p>
+            </div>
+          </div>
+
+          {invitations.length === 0 ? (
+            <p className="rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm font-semibold text-green-800">No active or awaiting-approval invitations.</p>
+          ) : (
+            <div className="overflow-x-auto rounded-md border">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-gray-50 text-xs uppercase text-gray-600">
+                  <tr>
+                    <th className="px-4 py-3">Recipient</th>
+                    <th className="px-4 py-3">Security status</th>
+                    <th className="px-4 py-3">Timing</th>
+                    <th className="px-4 py-3 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {invitations.map((invitation) => {
+                    const awaitingApproval = invitation.status === "awaiting_approval";
+                    const displayName = [invitation.first_name, invitation.last_name].filter(Boolean).join(" ");
+                    return (
+                      <tr key={invitation.id} className="border-t">
+                        <td className="px-4 py-4">
+                          <p className="font-semibold text-gray-900">{invitation.email}</p>
+                          {displayName && <p className="text-xs text-gray-500">{displayName}</p>}
+                        </td>
+                        <td className="px-4 py-4">
+                          <Badge className={awaitingApproval ? "bg-orange-600" : invitation.status === "processing" ? "bg-purple-600" : "bg-blue-600"}>
+                            {awaitingApproval ? "Approval required" : invitation.status === "processing" ? "Processing" : "Invitation pending"}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-4 text-xs text-gray-600">
+                          <p>Sent: {formatDate(invitation.created_date)}</p>
+                          <p>{awaitingApproval ? `Completed: ${formatDate(invitation.setup_completed_date)}` : `Expires: ${formatDate(invitation.expires_at)}`}</p>
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="flex flex-wrap justify-end gap-2">
+                            {awaitingApproval && (
+                              <Button type="button" size="sm" className="bg-green-700 hover:bg-green-800" disabled={updatingInvitationId === invitation.id} onClick={() => handleApproveInvitation(invitation)}>
+                                Approve Access
+                              </Button>
+                            )}
+                            <Button type="button" variant="outline" size="sm" className="border-red-200 text-red-700 hover:bg-red-50" disabled={updatingInvitationId === invitation.id} onClick={() => handleRevokeInvitation(invitation)}>
+                              {awaitingApproval ? "Reject" : "Revoke"}
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {canManageAdmins && (
       <div className="rounded-lg bg-white p-4 shadow-md">
         <div className="mb-5 flex items-start gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100 text-amber-800">
@@ -303,7 +423,7 @@ export default function DeveloperPanel({
           </div>
           <div>
             <h3 className="text-xl font-bold text-gray-950">Add Site Admin</h3>
-            <p className="mt-1 text-sm text-gray-600">Add the email and send a one-time setup link. Promote Site Admins to Site Developer after setup.</p>
+            <p className="mt-1 text-sm text-gray-600">Enter the intended email twice. The link has a short expiration window, works once, and still requires your approval after password setup.</p>
           </div>
         </div>
 
@@ -338,9 +458,29 @@ export default function DeveloperPanel({
             </div>
           </div>
 
+          <div className="max-w-xl">
+            <FieldLabel required>Confirm Email Address</FieldLabel>
+            <div className="relative">
+              <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <Input
+                type="email"
+                value={confirmedEmail}
+                onChange={(event) => {
+                  setConfirmedEmail(event.target.value);
+                  clearError("confirmedEmail");
+                }}
+                className={`pl-9 ${errors.confirmedEmail ? "border-red-500 focus-visible:ring-red-500" : ""}`}
+                autoComplete="off"
+                onPaste={(event) => event.preventDefault()}
+              />
+            </div>
+            <p className="mt-1 text-xs text-gray-500">For typo protection, retype the address; pasting is disabled in this confirmation field.</p>
+            {errors.confirmedEmail && <p className="mt-1 text-xs font-semibold text-red-600">{errors.confirmedEmail}</p>}
+          </div>
+
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-amber-200 bg-amber-50 px-4 py-3">
             <p className="text-xs text-amber-950">
-              The new user will receive a secure setup link as a Site Admin. The root Site Developer can promote them later without sending another email.
+              The recipient receives a one-time security link. Completing setup creates a pending request only; return here to verify the address and approve access.
             </p>
             <Button type="submit" className="bg-amber-600 hover:bg-amber-700" disabled={sendingInvite}>
               {sendingInvite ? "Sending Invite..." : "Create Site Admin and Send Email"}

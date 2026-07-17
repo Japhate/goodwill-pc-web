@@ -16,6 +16,7 @@ import Unsubscribe from './pages/Unsubscribe';
 import AdminSetup from './pages/AdminSetup';
 import HeritageSealLoader from '@/components/HeritageSealLoader';
 import PageLoadingScreen from '@/components/PageLoadingScreen';
+import { applySeoMetadata } from '@/lib/applySeoMetadata';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -25,6 +26,16 @@ const MainPage = mainPageKey ? Pages[mainPageKey] : EmptyPage;
 const LayoutWrapper = ({ children, currentPageName }) => Layout ?
   <Layout currentPageName={currentPageName}>{children}</Layout>
   : <>{children}</>;
+
+function SeoMetadataUpdater() {
+  const location = useLocation();
+
+  useEffect(() => {
+    applySeoMetadata(location.pathname);
+  }, [location.pathname]);
+
+  return null;
+}
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, isAuthenticated, navigateToLogin } = useAuth();
@@ -104,6 +115,7 @@ function App() {
       <QueryClientProvider client={queryClientInstance}>
         <Router>
           <ErrorBoundary>
+            <SeoMetadataUpdater />
             <NavigationTracker />
             <AuthenticatedApp />
           </ErrorBoundary>

@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -69,10 +68,6 @@ const privacySections = [
 ];
 
 export default function Privacy() {
-  useEffect(() => {
-    document.title = `Privacy Policy | ${CHURCH_IDENTITY.shortName}`;
-  }, []);
-
   return (
     <div className="min-h-screen bg-[#f8f1e5]">
       <section className="bg-gradient-to-br from-[#3D2519] via-[#5f422f] to-[#A3873E] px-4 py-16 text-white sm:px-6 lg:px-8">

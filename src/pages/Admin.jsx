@@ -261,8 +261,8 @@ function getKnownAdminNameFallback(email = '') {
 function deriveAdminProfile(user = {}, profile = {}) {
   const fallbackName = splitDisplayName(user.full_name || firebaseAuth?.currentUser?.displayName || '');
   const email = profile.email || user.email || firebaseAuth?.currentUser?.email || '';
-  const normalizedEmail = String(email || '').trim().toLowerCase();
-  const role = profile.role || user.admin_role || user.role_key || (normalizedEmail === SITE_DEVELOPER_EMAIL ? ADMIN_ROLES.SITE_DEVELOPER : ADMIN_ROLES.SITE_ADMIN);
+  const suppliedRole = profile.role || user.admin_role || user.role_key;
+  const role = suppliedRole === ADMIN_ROLES.SITE_DEVELOPER ? ADMIN_ROLES.SITE_DEVELOPER : ADMIN_ROLES.SITE_ADMIN;
   const emailName = email ? email.split('@')[0].replace(/[._-]+/g, ' ') : '';
   const emailFallback = splitDisplayName(emailName);
   const knownAdminName = getKnownAdminNameFallback(email);
@@ -279,6 +279,7 @@ function deriveAdminProfile(user = {}, profile = {}) {
     email,
     role,
     role_label: role === ADMIN_ROLES.SITE_DEVELOPER ? 'Site Developer' : 'Site Admin',
+    root_site_developer: profile.root_site_developer === true || user.root_site_developer === true,
     photo_url: profile.photo_url || user.photo_url || '',
   };
 }
@@ -292,12 +293,11 @@ function getInitials(profile = {}) {
 }
 
 function isSiteDeveloperAdmin(admin = {}) {
-  const email = String(admin?.email || '').trim().toLowerCase();
-  return admin?.role === ADMIN_ROLES.SITE_DEVELOPER || email === SITE_DEVELOPER_EMAIL;
+  return admin?.role === ADMIN_ROLES.SITE_DEVELOPER;
 }
 
 function isRootSiteDeveloper(admin = {}) {
-  return String(admin?.email || '').trim().toLowerCase() === SITE_DEVELOPER_EMAIL;
+  return admin?.root_site_developer === true;
 }
 
 function getItemLabel(type, data = {}) {
@@ -351,6 +351,7 @@ export default function AdminPage() {
   const [newsletterBroadcasts, setNewsletterBroadcasts] = useState([]);
   const [adminActivityLogs, setAdminActivityLogs] = useState([]);
   const [siteAdminComparison, setSiteAdminComparison] = useState([]);
+  const [siteAdminInvitations, setSiteAdminInvitations] = useState([]);
   const [siteAdminLoadError, setSiteAdminLoadError] = useState('');
   const [loadingDeveloperLogs, setLoadingDeveloperLogs] = useState(false);
   const [loadingSiteAdmins, setLoadingSiteAdmins] = useState(false);
@@ -376,6 +377,7 @@ export default function AdminPage() {
   const [loginNotice, setLoginNotice] = useState('');
   const [adminLoadError, setAdminLoadError] = useState('');
   const [signingIn, setSigningIn] = useState(false);
+  const [sendingPasswordReset, setSendingPasswordReset] = useState(false);
   const [currentAdmin, setCurrentAdmin] = useState(null);
   const [adminProfiles, setAdminProfiles] = useState([]);
   const [heroFormUnsavedDraft, setHeroFormUnsavedDraft] = useState({ isDirty: false, draft: null });
@@ -531,6 +533,7 @@ export default function AdminPage() {
   const loadSiteAdminComparison = async () => {
     if (!canViewDeveloperPanel) {
       setSiteAdminComparison([]);
+      setSiteAdminInvitations([]);
       setSiteAdminLoadError('');
       return;
     }
@@ -545,6 +548,7 @@ export default function AdminPage() {
       updated_date: currentAdmin.updated_date || '',
       role: ADMIN_ROLES.SITE_DEVELOPER,
       role_label: 'Site Developer',
+      root_site_developer: currentAdmin.root_site_developer === true,
     } : null;
 
     const token = await firebaseAuth?.currentUser?.getIdToken();
@@ -563,6 +567,16 @@ export default function AdminPage() {
       const body = await response.json().catch(() => null);
       if (!response.ok) throw new Error(body?.error || 'Unable to load site administrators.');
       const admins = Array.isArray(body?.admins) ? body.admins : [];
+      const ownServerAdmin = admins.find((admin) => String(admin.uid || '') === String(currentDeveloperAdmin?.uid || ''));
+      if (ownServerAdmin) {
+        setCurrentAdmin((current) => current ? {
+          ...current,
+          role: ownServerAdmin.role,
+          role_label: ownServerAdmin.role_label,
+          root_site_developer: ownServerAdmin.root_site_developer === true,
+        } : current);
+      }
+      setSiteAdminInvitations(Array.isArray(body?.invitations) ? body.invitations : []);
       const hasCurrentDeveloper = currentDeveloperAdmin && admins.some((admin) => (
         String(admin.uid || '') === String(currentDeveloperAdmin.uid || '')
         || String(admin.email || '').trim().toLowerCase() === currentDeveloperAdmin.email
@@ -573,6 +587,7 @@ export default function AdminPage() {
     } catch (error) {
       console.error('Unable to compare site administrators:', error);
       setSiteAdminComparison(currentDeveloperAdmin ? [currentDeveloperAdmin] : []);
+      setSiteAdminInvitations([]);
       setSiteAdminLoadError(error.message || 'Unable to load the full site administrator list.');
     } finally {
       setLoadingSiteAdmins(false);
@@ -1997,6 +2012,31 @@ export default function AdminPage() {
     }
   };
 
+  const handlePasswordReset = async () => {
+    const email = String(loginEmail || '').trim().toLowerCase();
+    setLoginError('');
+    setLoginNotice('');
+
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setLoginError('Enter your administrator email address first, then request a password reset.');
+      return;
+    }
+
+    setSendingPasswordReset(true);
+    try {
+      await User.sendPasswordReset(email);
+      setLoginNotice('If an administrator account exists for that email, Firebase has sent password-reset instructions. Check your inbox and spam folder.');
+    } catch (error) {
+      if (error?.code === 'auth/too-many-requests') {
+        setLoginError('Too many password-reset attempts were made. Please wait a few minutes and try again.');
+      } else {
+        setLoginError('Unable to send password-reset instructions right now. Please try again or contact the Site Developer.');
+      }
+    } finally {
+      setSendingPasswordReset(false);
+    }
+  };
+
   const handleSignOut = async () => {
     window.clearTimeout(inactivityTimerRef.current);
     await logAdminActivity({
@@ -2017,7 +2057,7 @@ export default function AdminPage() {
     setAdminLoadError('');
   };
 
-  const handleCreateSiteAdmin = async ({ email }) => {
+  const handleCreateSiteAdmin = async ({ email, confirmedEmail }) => {
     const token = await firebaseAuth?.currentUser?.getIdToken();
     if (!token) {
       throw new Error('Please sign in again before creating a site administrator.');
@@ -2031,6 +2071,7 @@ export default function AdminPage() {
       },
       body: JSON.stringify({
         email,
+        confirmedEmail,
         host: window.location.host,
         protocol: window.location.protocol.replace(':', ''),
       }),
@@ -2056,6 +2097,50 @@ export default function AdminPage() {
     });
     await loadSiteAdminComparison();
     await loadAdminActivityLogs();
+    return body;
+  };
+
+  const handleApproveAdminInvitation = async (invitation) => {
+    const token = await firebaseAuth?.currentUser?.getIdToken();
+    if (!token) throw new Error('Please sign in again before approving administrator access.');
+    const response = await fetch(`/api/admin/invitations/${encodeURIComponent(invitation.id)}/approve`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const body = await response.json().catch(() => null);
+    if (!response.ok) throw new Error(body?.error || 'Unable to approve this administrator request.');
+
+    await logAdminActivity({
+      action: 'approved_admin_invitation',
+      section: 'Developer Panel',
+      itemType: 'site admin',
+      itemId: body.uid || invitation.id,
+      itemLabel: body.email || invitation.email,
+      details: { invitation_id: invitation.id, two_step_approval: true },
+    });
+    await Promise.all([loadSiteAdminComparison(), loadAdminActivityLogs()]);
+    return body;
+  };
+
+  const handleRevokeAdminInvitation = async (invitation) => {
+    const token = await firebaseAuth?.currentUser?.getIdToken();
+    if (!token) throw new Error('Please sign in again before revoking an invitation.');
+    const response = await fetch(`/api/admin/invitations/${encodeURIComponent(invitation.id)}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const body = await response.json().catch(() => null);
+    if (!response.ok) throw new Error(body?.error || 'Unable to revoke this administrator invitation.');
+
+    await logAdminActivity({
+      action: 'revoked_admin_invitation',
+      section: 'Developer Panel',
+      itemType: 'admin invitation',
+      itemId: invitation.id,
+      itemLabel: body.email || invitation.email,
+      details: { previous_status: invitation.status || '' },
+    });
+    await Promise.all([loadSiteAdminComparison(), loadAdminActivityLogs()]);
     return body;
   };
 
@@ -2249,7 +2334,7 @@ export default function AdminPage() {
               <p className="mt-1 font-semibold text-red-700">Please contact the main web developer for admin sign-in details.</p>
             </div>
             {loginNotice && (
-              <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+              <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900">
                 {loginNotice}
               </div>
             )}
@@ -2265,6 +2350,16 @@ export default function AdminPage() {
             <Button type="submit" className="w-full bg-amber-600 hover:bg-amber-700" disabled={signingIn}>
               {signingIn && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Sign In
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              disabled={sendingPasswordReset}
+              onClick={handlePasswordReset}
+            >
+              {sendingPasswordReset && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Send Password Reset Email
             </Button>
           </form>
         </div>
@@ -2803,6 +2898,7 @@ export default function AdminPage() {
           ? <DeveloperPanel
               logs={adminActivityLogs}
               admins={siteAdminComparison}
+              invitations={siteAdminInvitations}
               adminLoadError={siteAdminLoadError}
               loading={loadingDeveloperLogs || loadingSiteAdmins}
               onRefresh={async () => {
@@ -2811,6 +2907,8 @@ export default function AdminPage() {
               onCreateAdmin={handleCreateSiteAdmin}
               onDeleteAdmin={handleDeleteSiteAdmin}
               onUpdateAdminRole={handleUpdateSiteAdminRole}
+              onApproveInvitation={handleApproveAdminInvitation}
+              onRevokeInvitation={handleRevokeAdminInvitation}
               canManageAdmins={canManageSiteAdmins}
               currentAdminEmail={currentAdmin?.email || ''}
               onConfirm={requestConfirmation}

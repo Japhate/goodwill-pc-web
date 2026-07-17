@@ -14,7 +14,7 @@ const DEFAULT_LANDING_IMAGE = {
   id: LANDING_IMAGE_ID,
   image_url: "/images/hero/goodwill-presbyterian-church-hero.png",
   alt_text: "Welcome to Goodwill Presbyterian Church",
-  link_url: "/About",
+  link_url: "/about",
   link_label: "Learn More",
   is_active: true,
 };
@@ -237,7 +237,7 @@ export default function LandingImageManager({ landingImage, onSaved }) {
               <Input
                 value={formData.link_url || ""}
                 onChange={(event) => setFormData((current) => ({ ...current, link_url: event.target.value }))}
-                placeholder="/About"
+                placeholder="/about"
               />
             </div>
           </div>

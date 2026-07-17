@@ -15,6 +15,13 @@ import {
   NEWSLETTER_TEMPLATE_IDS,
   renderNewsletterTemplateText,
 } from '../src/lib/newsletterTemplates.js';
+import {
+  buildSeoJsonLd,
+  getCanonicalRedirectPath,
+  getSeoMetadata,
+  normalizeInternalLinkUrl,
+  shouldRedirectToCanonicalPath,
+} from '../src/lib/seo.js';
 
 const app = express();
 const __filename = fileURLToPath(import.meta.url);
@@ -23,6 +30,7 @@ const ROOT_DIR = path.resolve(__dirname, '..');
 const DIST_DIR = path.join(ROOT_DIR, 'dist');
 const CANONICAL_HOST = 'www.goodwillpresch1867.com';
 const SITE_DEVELOPER_EMAIL = 'nebajaphate@gmail.com';
+const ROOT_SITE_DEVELOPER_UID = String(process.env.ROOT_SITE_DEVELOPER_UID || '').trim();
 const PUBLIC_EMAIL_RATE_LIMITS = {
   ip: { windowMs: 15 * 60 * 1000, max: 10 },
   email: { windowMs: 60 * 60 * 1000, max: 3 },
@@ -34,6 +42,16 @@ const WEB_VITALS_RATE_LIMIT = {
 const CLIENT_ERROR_RATE_LIMIT = {
   windowMs: 60 * 60 * 1000,
   max: 60,
+};
+const ADMIN_INVITATION_TTL_HOURS = Math.min(72, Math.max(
+  1,
+  Number.parseInt(process.env.ADMIN_INVITATION_TTL_HOURS || '24', 10) || 24,
+));
+const ADMIN_INVITATION_PROCESSING_TIMEOUT_MS = 10 * 60 * 1000;
+const ADMIN_INVITATION_RATE_LIMITS = {
+  inspect: { windowMs: 15 * 60 * 1000, max: 60 },
+  complete: { windowMs: 15 * 60 * 1000, max: 10 },
+  decline: { windowMs: 15 * 60 * 1000, max: 10 },
 };
 const YOUTUBE_LIVE_CACHE_TTL_MS = Math.max(
   30 * 1000,
@@ -48,11 +66,12 @@ const LANDING_IMAGE_PRELOAD_RENDER_WAIT_MS = Math.max(
   Number(process.env.LANDING_IMAGE_PRELOAD_RENDER_WAIT_MS || 1200),
 );
 const LANDING_IMAGE_PRELOAD_BLOCK_PATTERN = /<!-- GOODWILL_LANDING_IMAGE_PRELOAD_START -->[\s\S]*?<!-- GOODWILL_LANDING_IMAGE_PRELOAD_END -->/;
+const SEO_BLOCK_PATTERN = /<!-- GOODWILL_SEO_START -->[\s\S]*?<!-- GOODWILL_SEO_END -->/;
 const DEFAULT_LANDING_IMAGE_RECORD = {
   id: 'landing-image',
   image_url: '/images/hero/goodwill-presbyterian-church-hero.png',
   alt_text: 'Welcome to Goodwill Presbyterian Church',
-  link_url: '/About',
+  link_url: '/about',
   link_label: 'Learn More',
   is_active: true,
 };
@@ -161,6 +180,18 @@ function applySecurityHeaders(req, res, next) {
 }
 
 app.use(applySecurityHeaders);
+
+app.use((req, res, next) => {
+  if (req.path.toLowerCase() === '/adminsetup' || req.path.startsWith('/api/admin/')) {
+    res.set({
+      'Cache-Control': 'no-store, max-age=0',
+      'Pragma': 'no-cache',
+      'Referrer-Policy': 'no-referrer',
+      'X-Robots-Tag': 'noindex, nofollow, noarchive',
+    });
+  }
+  next();
+});
 
 app.use((req, res, next) => {
   const host = req.hostname?.toLowerCase();
@@ -390,6 +421,25 @@ function checkPublicEmailRateLimit(req, email, purpose) {
   return checks.find((result) => !result.allowed) || { allowed: true };
 }
 
+function checkAdminInvitationRateLimit(req, purpose) {
+  prunePublicEmailRateLimits();
+  return takeRateLimitSlot(
+    `admin-invitation:${purpose}:ip:${getClientIp(req)}`,
+    ADMIN_INVITATION_RATE_LIMITS[purpose],
+  );
+}
+
+function enforceAdminInvitationRateLimit(req, res, purpose) {
+  const result = checkAdminInvitationRateLimit(req, purpose);
+  if (result.allowed) return true;
+  res.set('Retry-After', String(result.retryAfterSeconds));
+  res.status(429).json({
+    code: 'invitation_rate_limited',
+    error: 'Too many invitation requests were made. Please wait and try again.',
+  });
+  return false;
+}
+
 function getPublicSiteOrigin(req) {
   if (process.env.LOCAL_VITE_DEV === 'true') {
     const host = String(req.body?.host || req.headers.host || '').trim().toLowerCase();
@@ -542,10 +592,9 @@ function validatePublicEmailRecipient(body, { requireUnsubscribeToken = false } 
   };
 }
 
-function normalizeAdminRole(role, email = '') {
+function normalizeAdminRole(role) {
   const normalizedRole = String(role || '').trim().toLowerCase();
   if (normalizedRole === ADMIN_ROLES.SITE_DEVELOPER) return ADMIN_ROLES.SITE_DEVELOPER;
-  if (normalizeEmail(email) === SITE_DEVELOPER_EMAIL) return ADMIN_ROLES.SITE_DEVELOPER;
   return ADMIN_ROLES.SITE_ADMIN;
 }
 
@@ -554,15 +603,55 @@ function getAdminRoleLabel(role) {
 }
 
 function isRootSiteDeveloper(admin = {}) {
-  return normalizeEmail(admin.email) === SITE_DEVELOPER_EMAIL;
+  return Boolean(ROOT_SITE_DEVELOPER_UID) && String(admin.uid || '') === ROOT_SITE_DEVELOPER_UID;
 }
 
 function assertRootSiteDeveloper(admin = {}) {
+  if (!ROOT_SITE_DEVELOPER_UID) {
+    const error = new Error('ROOT_SITE_DEVELOPER_UID is not configured on the server. Root administrator management is locked.');
+    error.status = 503;
+    throw error;
+  }
   if (!isRootSiteDeveloper(admin)) {
     const error = new Error('Only the permanent root Site Developer can add, remove, promote, or demote administrators.');
     error.status = 403;
     throw error;
   }
+}
+
+async function setServerManagedAdminClaims(auth, userRecord, role) {
+  const existingClaims = userRecord?.customClaims || {};
+  await auth.setCustomUserClaims(userRecord.uid, {
+    ...existingClaims,
+    admin: true,
+    admin_role: normalizeAdminRole(role),
+    root_site_developer: userRecord.uid === ROOT_SITE_DEVELOPER_UID,
+  });
+}
+
+async function clearServerManagedAdminClaims(auth, userRecord) {
+  const existingClaims = { ...(userRecord?.customClaims || {}) };
+  delete existingClaims.admin;
+  delete existingClaims.admin_role;
+  delete existingClaims.root_site_developer;
+  await auth.setCustomUserClaims(userRecord.uid, existingClaims);
+}
+
+async function removeOrRestorePendingAuthAccount(app, invitation = {}) {
+  const uid = String(invitation.completed_uid || '').trim();
+  if (!uid) return;
+  const auth = getAdminAuth(app);
+  if (invitation.existing_user === false) {
+    await auth.deleteUser(uid).catch((error) => {
+      if (error?.code !== 'auth/user-not-found') throw error;
+    });
+    return;
+  }
+  await auth.updateUser(uid, {
+    disabled: Boolean(invitation.existing_user_was_disabled),
+  }).catch((error) => {
+    if (error?.code !== 'auth/user-not-found') throw error;
+  });
 }
 
 function createInvitationToken() {
@@ -573,8 +662,12 @@ function hashInvitationToken(token) {
   return crypto.createHash('sha256').update(String(token || '')).digest('hex');
 }
 
+function isValidInvitationToken(token) {
+  return /^[A-Za-z0-9_-]{43}$/.test(String(token || ''));
+}
+
 function passwordMeetsAdminRules(password) {
-  return String(password || '').length >= 6
+  return String(password || '').length >= 12
     && /[a-z]/.test(password)
     && /[A-Z]/.test(password)
     && /\d/.test(password)
@@ -792,6 +885,7 @@ function buildLandingImagePreloadLink(imageUrl) {
 
 function buildLandingImagePreloadHead(record = DEFAULT_LANDING_IMAGE_RECORD) {
   const imageUrl = getPreloadableImageUrl(record.image_url) || DEFAULT_LANDING_IMAGE_RECORD.image_url;
+  const linkUrl = normalizeInternalLinkUrl(record.link_url || DEFAULT_LANDING_IMAGE_RECORD.link_url);
   const preloadTags = [];
 
   try {
@@ -804,7 +898,7 @@ function buildLandingImagePreloadHead(record = DEFAULT_LANDING_IMAGE_RECORD) {
   preloadTags.push(buildLandingImagePreloadLink(imageUrl));
   preloadTags.push(`<meta name="goodwill:landing-image-url" content="${escapeHtml(imageUrl)}" />`);
   preloadTags.push(`<meta name="goodwill:landing-image-alt" content="${escapeHtml(record.alt_text || DEFAULT_LANDING_IMAGE_RECORD.alt_text)}" />`);
-  preloadTags.push(`<meta name="goodwill:landing-image-link-url" content="${escapeHtml(record.link_url || DEFAULT_LANDING_IMAGE_RECORD.link_url)}" />`);
+  preloadTags.push(`<meta name="goodwill:landing-image-link-url" content="${escapeHtml(linkUrl)}" />`);
   preloadTags.push(`<meta name="goodwill:landing-image-link-label" content="${escapeHtml(record.link_label || DEFAULT_LANDING_IMAGE_RECORD.link_label)}" />`);
 
   return [
@@ -822,11 +916,55 @@ function getDistIndexHtml() {
   return distIndexHtmlCache;
 }
 
-async function renderIndexHtmlWithLandingImagePreload() {
-  const html = getDistIndexHtml();
+function serializeJsonForHtml(value) {
+  return JSON.stringify(value, null, 2).replaceAll('<', '\\u003c');
+}
+
+function buildSeoHead(route) {
+  const metaTags = [
+    `<title>${escapeHtml(route.title)}</title>`,
+    `<meta name="description" content="${escapeHtml(route.description)}" />`,
+    '<meta name="author" content="Goodwill Presbyterian Church, USA" />',
+    `<meta name="robots" content="${escapeHtml(route.robots)}" />`,
+    '<meta name="geo.region" content="US-SC" />',
+    '<meta name="geo.placename" content="Mayesville" />',
+    `<link rel="canonical" href="${escapeHtml(route.canonicalUrl)}" />`,
+    '<meta property="og:type" content="website" />',
+    '<meta property="og:locale" content="en_US" />',
+    `<meta property="og:url" content="${escapeHtml(route.canonicalUrl)}" />`,
+    '<meta property="og:site_name" content="Goodwill Presbyterian Church" />',
+    `<meta property="og:title" content="${escapeHtml(route.title)}" />`,
+    `<meta property="og:description" content="${escapeHtml(route.description)}" />`,
+    `<meta property="og:image" content="${escapeHtml(route.image)}" />`,
+    `<meta property="og:image:alt" content="${escapeHtml(route.imageAlt)}" />`,
+    '<meta name="twitter:card" content="summary_large_image" />',
+    `<meta name="twitter:title" content="${escapeHtml(route.title)}" />`,
+    `<meta name="twitter:description" content="${escapeHtml(route.description)}" />`,
+    `<meta name="twitter:image" content="${escapeHtml(route.image)}" />`,
+    `<meta name="twitter:image:alt" content="${escapeHtml(route.imageAlt)}" />`,
+    `<script type="application/ld+json" id="goodwill-route-schema">${serializeJsonForHtml(buildSeoJsonLd(route))}</script>`,
+  ];
+
+  return [
+    '<!-- GOODWILL_SEO_START -->',
+    ...metaTags,
+    '<!-- GOODWILL_SEO_END -->',
+  ].join('\n    ');
+}
+
+async function renderIndexHtmlWithDynamicHead(html, pathname) {
   const landingImageRecord = await getLandingImagePreloadRecordForRender();
   const landingImageHead = buildLandingImagePreloadHead(landingImageRecord);
-  return html.replace(LANDING_IMAGE_PRELOAD_BLOCK_PATTERN, landingImageHead);
+  const route = getSeoMetadata(pathname);
+  const seoHead = buildSeoHead(route);
+
+  return html
+    .replace(LANDING_IMAGE_PRELOAD_BLOCK_PATTERN, landingImageHead)
+    .replace(SEO_BLOCK_PATTERN, seoHead);
+}
+
+async function renderDistIndexHtml(pathname) {
+  return renderIndexHtmlWithDynamicHead(getDistIndexHtml(), pathname);
 }
 
 function getFirebaseAdminConfig() {
@@ -956,17 +1094,37 @@ async function assertDeveloperAdminRequest(req) {
 
   const adminData = adminSnapshot.data() || {};
   const email = normalizeEmail(adminData.email || decoded.email);
-  const role = normalizeAdminRole(adminData.role, email);
+  const rootSiteDeveloper = uid === ROOT_SITE_DEVELOPER_UID && Boolean(ROOT_SITE_DEVELOPER_UID);
+  const role = rootSiteDeveloper ? ADMIN_ROLES.SITE_DEVELOPER : normalizeAdminRole(adminData.role);
   if (role !== ADMIN_ROLES.SITE_DEVELOPER) {
     const error = new Error('This action is limited to developer administrators.');
     error.status = 403;
     throw error;
   }
 
+  if (rootSiteDeveloper && adminData.role !== ADMIN_ROLES.SITE_DEVELOPER) {
+    await adminSnapshot.ref.update({
+      role: ADMIN_ROLES.SITE_DEVELOPER,
+      role_label: getAdminRoleLabel(ADMIN_ROLES.SITE_DEVELOPER),
+      root_site_developer: true,
+      updated_date: new Date().toISOString(),
+    });
+  } else if (rootSiteDeveloper && adminData.root_site_developer !== true) {
+    await adminSnapshot.ref.update({ root_site_developer: true, updated_date: new Date().toISOString() });
+  }
+
+  const userRecord = await getAdminAuth(app).getUser(uid);
+  if (userRecord.customClaims?.admin !== true
+    || userRecord.customClaims?.admin_role !== role
+    || Boolean(userRecord.customClaims?.root_site_developer) !== rootSiteDeveloper) {
+    await setServerManagedAdminClaims(getAdminAuth(app), userRecord, role);
+  }
+
   return {
     uid,
     email,
     role,
+    rootSiteDeveloper,
     firstName: normalizePersonName(adminData.first_name),
     lastName: normalizePersonName(adminData.last_name),
   };
@@ -1172,9 +1330,10 @@ function buildAdminBroadcastNotificationEmail({ admin, subject, sent, failed, re
   };
 }
 
-function buildAdminInvitationEmail({ email, setupLink, expiresAt, role = ADMIN_ROLES.SITE_ADMIN }) {
+function buildAdminInvitationEmail({ email, setupLink, declineLink, expiresAt, role = ADMIN_ROLES.SITE_ADMIN }) {
   const escapedEmail = escapeHtml(email);
   const escapedSetupLink = escapeHtml(setupLink);
+  const escapedDeclineLink = escapeHtml(declineLink);
   const roleLabel = getAdminRoleLabel(role);
   const escapedRoleLabel = escapeHtml(roleLabel);
   const expiresText = expiresAt ? new Date(expiresAt).toLocaleString('en-US', {
@@ -1192,7 +1351,7 @@ function buildAdminInvitationEmail({ email, setupLink, expiresAt, role = ADMIN_R
       'Hello Brethren,',
       '',
       `You have been invited to act as ${roleLabel} for the Goodwill Presbyterian Church website.`,
-      'Please use the secure one-time setup link below to create your password.',
+      'Use the secure one-time setup link below to create your password. Completing setup does not grant access immediately; the Site Developer must approve the account first.',
       '',
       `Email: ${email}`,
       `Role: ${roleLabel}`,
@@ -1204,7 +1363,16 @@ function buildAdminInvitationEmail({ email, setupLink, expiresAt, role = ADMIN_R
       'Use the button above or copy and paste the following link in your browser:',
       setupLink,
       '',
-      'If you did not expect this message, please ignore it.',
+      'SECURITY INFORMATION',
+      `- This invitation is intended only for ${email}.`,
+      '- The setup link works once and expires automatically.',
+      `- The link expires after ${ADMIN_INVITATION_TTL_HOURS} hours if setup is not completed.`,
+      '- Do not forward, share, or post the setup link.',
+      '- Goodwill Presbyterian Church will never ask you to send your password by email.',
+      '- After you finish setup, the Site Developer must review and approve the account before it can access the Admin panel.',
+      '',
+      'Wrong recipient or unexpected invitation? Decline and report it here:',
+      declineLink,
     ].join('\n'),
     html: `
       <div style="margin:0;padding:0;background:#f8f3ea;font-family:Arial,Helvetica,sans-serif;color:#2f241c;">
@@ -1217,7 +1385,7 @@ function buildAdminInvitationEmail({ email, setupLink, expiresAt, role = ADMIN_R
             <div style="padding:28px;font-size:16px;line-height:1.6;">
               <p style="margin:0 0 16px;">Hello Brethren,</p>
               <p style="margin:0 0 16px;">You have been invited to act as ${escapedRoleLabel} for the Goodwill Presbyterian Church website.</p>
-              <p style="margin:0 0 16px;">Please use the secure one-time setup link below to create your password.</p>
+              <p style="margin:0 0 16px;">Use the secure one-time setup link below to create your password. Completing setup does not grant access immediately; the Site Developer must approve the account first.</p>
               <div style="background:#fbf7f0;border:1px solid #eadcc7;border-radius:10px;padding:16px;margin:18px 0;">
                 <p style="margin:0 0 8px;"><strong>Email:</strong> ${escapedEmail}</p>
                 <p style="margin:0 0 8px;"><strong>Role:</strong> ${escapedRoleLabel}</p>
@@ -1230,10 +1398,42 @@ function buildAdminInvitationEmail({ email, setupLink, expiresAt, role = ADMIN_R
                 <p style="margin:0 0 8px;font-size:13px;font-weight:bold;color:#5f4735;">Use the button above or copy and paste the following link in your browser:</p>
                 <a href="${escapedSetupLink}" style="color:#8a4b05;font-size:13px;line-height:1.5;word-break:break-all;">${escapedSetupLink}</a>
               </div>
+              <div style="background:#fff7ed;border:1px solid #fdba74;border-radius:10px;padding:16px;margin:18px 0 0;">
+                <p style="margin:0 0 8px;font-weight:bold;color:#9a3412;">Security information</p>
+                <ul style="margin:0;padding-left:20px;color:#7c2d12;font-size:14px;line-height:1.6;">
+                  <li>This invitation is intended only for <strong>${escapedEmail}</strong>.</li>
+                  <li>The setup link works once and expires after ${ADMIN_INVITATION_TTL_HOURS} hours.</li>
+                  <li>Do not forward, share, or post the setup link.</li>
+                  <li>We will never ask you to send your password by email.</li>
+                  <li>The Site Developer must approve the account after setup before Admin access is granted.</li>
+                </ul>
+              </div>
             </div>
             <div style="border-top:1px solid #eadcc7;background:#fbf7f0;padding:18px 28px;color:#6f6258;font-size:12px;line-height:1.5;">
-              If you did not expect this message, please ignore it.
+              <strong>Was this sent to the wrong person?</strong> Do not use or forward the setup link.
+              <a href="${escapedDeclineLink}" style="color:#9a3412;font-weight:bold;">Decline and report this invitation</a> so the Site Developer can correct the address.
             </div>
+          </div>
+        </div>
+      </div>
+    `,
+  };
+}
+
+function buildAdminSecurityNotificationEmail({ subject, heading, message, details = [] }) {
+  const detailLines = details.filter(Boolean);
+  return {
+    subject,
+    text: [heading, '', message, '', ...detailLines].join('\n'),
+    html: `
+      <div style="margin:0;padding:24px;background:#f8f3ea;font-family:Arial,Helvetica,sans-serif;color:#2f241c;">
+        <div style="max-width:640px;margin:0 auto;background:#ffffff;border:1px solid #eadcc7;border-radius:12px;overflow:hidden;">
+          <div style="background:#4b342a;color:#ffffff;padding:22px 26px;">
+            <h1 style="margin:0;font-size:22px;line-height:1.3;">${escapeHtml(heading)}</h1>
+          </div>
+          <div style="padding:24px;font-size:15px;line-height:1.6;">
+            <p style="margin:0 0 16px;">${escapeHtml(message)}</p>
+            ${detailLines.length > 0 ? `<ul style="margin:0;padding-left:20px;">${detailLines.map((line) => `<li>${escapeHtml(line)}</li>`).join('')}</ul>` : ''}
           </div>
         </div>
       </div>
@@ -1589,46 +1789,56 @@ app.post('/api/admin/create-site-admin', async (req, res) => {
   }
 
   const email = normalizeEmail(req.body?.email);
+  const confirmedEmail = normalizeEmail(req.body?.confirmedEmail || req.body?.confirmed_email);
   const role = ADMIN_ROLES.SITE_ADMIN;
-  const siteProtocol = req.body?.protocol || 'https';
-  const siteHost = req.body?.host || CANONICAL_HOST;
-  const siteUrl = `${siteProtocol}://${siteHost}`;
+  const siteUrl = getPublicSiteOrigin(req);
 
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'A valid email address is required.' });
+  if (confirmedEmail !== email) return res.status(400).json({ error: 'The confirmation email must exactly match the invitation email.' });
 
   try {
     const db = getAdminFirestore(getFirebaseAdminApp());
     const now = new Date().toISOString();
-    const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
+    const expiresAt = new Date(Date.now() + ADMIN_INVITATION_TTL_HOURS * 60 * 60 * 1000).toISOString();
     const token = createInvitationToken();
     const tokenHash = hashInvitationToken(token);
+
+    const existingAdmins = await db.collection('admins').where('email', '==', email).limit(1).get();
+    if (!existingAdmins.empty) {
+      return res.status(409).json({ error: 'That email address already has administrator access.' });
+    }
 
     const existingInvitations = await db.collection('AdminInvitations')
       .where('email', '==', email)
       .get();
+    const setupInProgress = existingInvitations.docs.find((entry) => ['processing', 'awaiting_approval'].includes(entry.data()?.status));
+    if (setupInProgress) {
+      return res.status(409).json({ error: 'That email already has an administrator setup in progress. Review or revoke it in Invitation Security Review.' });
+    }
     const existingPending = existingInvitations.docs.filter((entry) => entry.data()?.status === 'pending');
-    await Promise.all(existingPending.map((entry) => entry.ref.update({
-      status: 'expired',
-      expired_date: now,
-      updated_date: now,
-    })));
 
     const invitationRef = await db.collection('AdminInvitations').add({
       email,
       role,
       token_hash: tokenHash,
-      status: 'pending',
+      status: 'issuing',
       invited_by_uid: developerAdmin.uid,
       invited_by_email: developerAdmin.email,
       expires_at: expiresAt,
       created_date: now,
       updated_date: now,
+      expires_after_hours: ADMIN_INVITATION_TTL_HOURS,
+      max_uses: 1,
+      use_count: 0,
+      email_confirmed_by_developer: true,
     });
 
     const setupLink = `${siteUrl}/AdminSetup?token=${encodeURIComponent(token)}`;
+    const declineLink = `${siteUrl}/AdminSetup?token=${encodeURIComponent(token)}&action=decline`;
     const invitation = buildAdminInvitationEmail({
       email,
       setupLink,
+      declineLink,
       expiresAt,
       role,
     });
@@ -1642,6 +1852,11 @@ app.post('/api/admin/create-site-admin', async (req, res) => {
     });
 
     if (!emailResponse.ok) {
+      await invitationRef.update({
+        status: 'delivery_failed',
+        delivery_failed_date: new Date().toISOString(),
+        updated_date: new Date().toISOString(),
+      });
       console.error('Admin invitation email error', emailResponse.body);
       return res.status(502).json({
         error: 'The administrator invitation was created, but the invitation email was not sent.',
@@ -1649,6 +1864,20 @@ app.post('/api/admin/create-site-admin', async (req, res) => {
         invitationId: invitationRef.id,
       });
     }
+
+    const activatedAt = new Date().toISOString();
+    const activationBatch = db.batch();
+    activationBatch.update(invitationRef, {
+      status: 'pending',
+      delivered_date: activatedAt,
+      updated_date: activatedAt,
+    });
+    existingPending.forEach((entry) => activationBatch.update(entry.ref, {
+      status: 'replaced',
+      replaced_date: activatedAt,
+      updated_date: activatedAt,
+    }));
+    await activationBatch.commit();
 
     res.json({
       success: true,
@@ -1663,7 +1892,7 @@ app.post('/api/admin/create-site-admin', async (req, res) => {
   }
 });
 
-async function getPendingInvitationByToken(token) {
+async function getInvitationByToken(token) {
   const tokenHash = hashInvitationToken(token);
   const db = getAdminFirestore(getFirebaseAdminApp());
   const snapshot = await db.collection('AdminInvitations')
@@ -1673,27 +1902,176 @@ async function getPendingInvitationByToken(token) {
 
   if (snapshot.empty) return null;
   const entry = snapshot.docs[0];
-  const invitation = { id: entry.id, ref: entry.ref, ...entry.data() };
-  if (invitation.status !== 'pending') return null;
+  let invitation = { id: entry.id, ref: entry.ref, ...entry.data() };
+  if (invitation.status === 'processing') {
+    const processingStartedAt = new Date(invitation.processing_started_at || '').getTime();
+    if (Number.isFinite(processingStartedAt) && Date.now() - processingStartedAt > ADMIN_INVITATION_PROCESSING_TIMEOUT_MS) {
+      const now = new Date().toISOString();
+      await entry.ref.update({
+        status: 'pending',
+        processing_claim_id: null,
+        processing_started_at: null,
+        processing_recovered_date: now,
+        updated_date: now,
+      });
+      invitation = { ...invitation, status: 'pending', processing_claim_id: null, processing_started_at: null };
+    }
+  }
+  if (invitation.status !== 'pending') return invitation;
   const expiresAt = new Date(invitation.expires_at || '');
   if (Number.isNaN(expiresAt.getTime()) || expiresAt <= new Date()) {
+    const now = new Date().toISOString();
     await entry.ref.update({
       status: 'expired',
-      expired_date: new Date().toISOString(),
-      updated_date: new Date().toISOString(),
+      expired_date: now,
+      updated_date: now,
     });
-    return null;
+    return {
+      ...invitation,
+      status: 'expired',
+      expired_date: now,
+      updated_date: now,
+    };
   }
 
   return invitation;
 }
 
+async function claimInvitationForCompletion(invitation) {
+  const db = getAdminFirestore(getFirebaseAdminApp());
+  const claimId = crypto.randomBytes(16).toString('hex');
+  return db.runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(invitation.ref);
+    if (!snapshot.exists) return null;
+    const current = { id: snapshot.id, ref: snapshot.ref, ...snapshot.data() };
+    if (current.status !== 'pending') return current;
+
+    const expiresAt = new Date(current.expires_at || '');
+    if (Number.isNaN(expiresAt.getTime()) || expiresAt <= new Date()) {
+      const now = new Date().toISOString();
+      transaction.update(snapshot.ref, {
+        status: 'expired',
+        expired_date: now,
+        updated_date: now,
+      });
+      return { ...current, status: 'expired', expired_date: now };
+    }
+
+    const now = new Date().toISOString();
+    transaction.update(snapshot.ref, {
+      status: 'processing',
+      processing_claim_id: claimId,
+      processing_started_at: now,
+      updated_date: now,
+    });
+    return { ...current, status: 'processing', processing_claim_id: claimId, processing_started_at: now };
+  });
+}
+
+async function releaseInvitationClaim(invitation, claimId) {
+  const db = getAdminFirestore(getFirebaseAdminApp());
+  await db.runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(invitation.ref);
+    if (!snapshot.exists) return;
+    const current = snapshot.data() || {};
+    if (current.status !== 'processing' || current.processing_claim_id !== claimId) return;
+    const expiresAt = new Date(current.expires_at || '');
+    const expired = Number.isNaN(expiresAt.getTime()) || expiresAt <= new Date();
+    const now = new Date().toISOString();
+    transaction.update(snapshot.ref, {
+      status: expired ? 'expired' : 'pending',
+      ...(expired ? { expired_date: now } : {}),
+      processing_claim_id: null,
+      processing_started_at: null,
+      updated_date: now,
+    });
+  });
+}
+
+async function sendAdminSecurityEmailBestEffort({ to, subject, heading, message, details }) {
+  if (!to) return;
+  const content = buildAdminSecurityNotificationEmail({ subject, heading, message, details });
+  const from = process.env.RESEND_FROM_EMAIL || 'Goodwill Presbyterian Church <onboarding@resend.dev>';
+  try {
+    const response = await sendResendEmail({ from, to, ...content });
+    if (!response.ok) console.error('Admin security notification email error', response.body);
+  } catch (error) {
+    console.error('Admin security notification email error', error?.message || error);
+  }
+}
+
+function sendUnavailableInvitationResponse(res, invitation) {
+  if (invitation?.status === 'used' || invitation?.status === 'approved') {
+    return res.status(410).json({
+      code: invitation.status === 'approved' ? 'invitation_approved' : 'invitation_used',
+      error: 'This one-time invitation has already been completed. You can sign in with the password you created.',
+      email: invitation.email || '',
+      contactEmail: invitation.invited_by_email || SITE_DEVELOPER_EMAIL,
+    });
+  }
+
+  if (invitation?.status === 'awaiting_approval') {
+    return res.status(409).json({
+      code: 'invitation_awaiting_approval',
+      error: 'Your password setup is complete and this one-time link has been consumed. The Site Developer must approve your account before you can sign in.',
+      email: invitation.email || '',
+      contactEmail: invitation.invited_by_email || SITE_DEVELOPER_EMAIL,
+    });
+  }
+
+  if (invitation?.status === 'processing') {
+    return res.status(409).json({
+      code: 'invitation_processing',
+      error: 'This invitation setup is currently being processed. Wait a moment, then check the link again.',
+      email: invitation.email || '',
+      contactEmail: invitation.invited_by_email || SITE_DEVELOPER_EMAIL,
+    });
+  }
+
+  if (invitation?.status === 'expired') {
+    return res.status(410).json({
+      code: 'invitation_expired',
+      error: 'This invitation link has expired. Please ask the Site Developer to send a new invitation.',
+      email: invitation.email || '',
+      contactEmail: invitation.invited_by_email || SITE_DEVELOPER_EMAIL,
+    });
+  }
+
+  if (invitation?.status === 'replaced') {
+    return res.status(410).json({
+      code: 'invitation_replaced',
+      error: 'A newer administrator invitation was sent to you. Please use the setup link in the most recent invitation email.',
+      email: invitation.email || '',
+      contactEmail: invitation.invited_by_email || SITE_DEVELOPER_EMAIL,
+    });
+  }
+
+  if (invitation?.status === 'declined' || invitation?.status === 'revoked') {
+    return res.status(410).json({
+      code: invitation.status === 'declined' ? 'invitation_declined' : 'invitation_revoked',
+      error: invitation.status === 'declined'
+        ? 'This invitation was declined and can no longer be used.'
+        : 'The Site Developer revoked this invitation. Request a new invitation if you still need access.',
+      email: invitation.email || '',
+      contactEmail: invitation.invited_by_email || SITE_DEVELOPER_EMAIL,
+    });
+  }
+
+  return res.status(404).json({
+    code: 'invitation_invalid',
+    error: 'This invitation link is invalid. Please ask the Site Developer to send a new invitation.',
+  });
+}
+
 app.get('/api/admin/setup-invitation', async (req, res) => {
+  if (!enforceAdminInvitationRateLimit(req, res, 'inspect')) return;
   try {
     const token = String(req.query.token || '').trim();
-    if (!token) return res.status(400).json({ error: 'Invitation token is required.' });
-    const invitation = await getPendingInvitationByToken(token);
-    if (!invitation) return res.status(404).json({ error: 'This invitation is invalid or has expired.' });
+    if (!isValidInvitationToken(token)) return res.status(400).json({ code: 'invitation_invalid', error: 'This invitation link is invalid.' });
+    const invitation = await getInvitationByToken(token);
+    if (!invitation || invitation.status !== 'pending') {
+      return sendUnavailableInvitationResponse(res, invitation);
+    }
     res.json({
       email: invitation.email,
       role: normalizeAdminRole(invitation.role, invitation.email),
@@ -1707,21 +2085,30 @@ app.get('/api/admin/setup-invitation', async (req, res) => {
 });
 
 app.post('/api/admin/complete-invitation', async (req, res) => {
+  if (!enforceAdminInvitationRateLimit(req, res, 'complete')) return;
   const token = String(req.body?.token || '').trim();
   const firstName = normalizePersonName(req.body?.firstName || req.body?.first_name);
   const lastName = normalizePersonName(req.body?.lastName || req.body?.last_name);
   const password = String(req.body?.password || '');
 
-  if (!token) return res.status(400).json({ error: 'Invitation token is required.' });
+  if (!isValidInvitationToken(token)) return res.status(400).json({ code: 'invitation_invalid', error: 'This invitation link is invalid.' });
   if (!firstName) return res.status(400).json({ error: 'First name is required.' });
   if (!lastName) return res.status(400).json({ error: 'Last name is required.' });
   if (!passwordMeetsAdminRules(password)) {
-    return res.status(400).json({ error: 'Password must be at least 6 characters with uppercase, lowercase, a number, and a special character.' });
+    return res.status(400).json({ error: 'Password must be at least 12 characters with uppercase, lowercase, a number, and a special character.' });
   }
 
+  let claimedInvitation;
+  let invitationAuthState = null;
   try {
-    const invitation = await getPendingInvitationByToken(token);
-    if (!invitation) return res.status(404).json({ error: 'This invitation is invalid or has expired.' });
+    const invitation = await getInvitationByToken(token);
+    if (!invitation || invitation.status !== 'pending') {
+      return sendUnavailableInvitationResponse(res, invitation);
+    }
+    claimedInvitation = await claimInvitationForCompletion(invitation);
+    if (!claimedInvitation || claimedInvitation.status !== 'processing' || !claimedInvitation.processing_claim_id) {
+      return sendUnavailableInvitationResponse(res, claimedInvitation);
+    }
 
     const app = getFirebaseAdminApp();
     const auth = getAdminAuth(app);
@@ -1731,14 +2118,17 @@ app.post('/api/admin/complete-invitation', async (req, res) => {
     const displayName = `${firstName} ${lastName}`.trim();
     let userRecord;
     let existingUser = false;
+    let existingUserWasDisabled = false;
 
     try {
       userRecord = await auth.getUserByEmail(email);
       existingUser = true;
+      existingUserWasDisabled = Boolean(userRecord.disabled);
       userRecord = await auth.updateUser(userRecord.uid, {
         displayName,
         password,
-        disabled: false,
+        emailVerified: true,
+        disabled: true,
       });
     } catch (error) {
       if (error?.code !== 'auth/user-not-found') throw error;
@@ -1746,36 +2136,51 @@ app.post('/api/admin/complete-invitation', async (req, res) => {
         email,
         password,
         displayName,
-        emailVerified: false,
-        disabled: false,
+        emailVerified: true,
+        disabled: true,
       });
     }
+    invitationAuthState = {
+      uid: userRecord.uid,
+      existingUser,
+      existingUserWasDisabled,
+    };
 
     const now = new Date().toISOString();
-    await db.collection('admins').doc(userRecord.uid).set({
-      first_name: firstName,
-      last_name: lastName,
-      email,
-      role,
-      role_label: getAdminRoleLabel(role),
-      photo_url: '',
-      has_saved_name: true,
-      invited_by_uid: invitation.invited_by_uid || '',
-      invited_by_email: invitation.invited_by_email || '',
-      invitation_id: invitation.id,
-      created_date: now,
-      updated_date: now,
-    }, { merge: true });
+    await db.runTransaction(async (transaction) => {
+      const snapshot = await transaction.get(claimedInvitation.ref);
+      const current = snapshot.data() || {};
+      if (current.status !== 'processing' || current.processing_claim_id !== claimedInvitation.processing_claim_id) {
+        const error = new Error('The invitation is no longer available for completion.');
+        error.status = 409;
+        throw error;
+      }
+      transaction.update(claimedInvitation.ref, {
+        status: 'awaiting_approval',
+        setup_completed_date: now,
+        completed_uid: userRecord.uid,
+        proposed_first_name: firstName,
+        proposed_last_name: lastName,
+        existing_user: existingUser,
+        existing_user_was_disabled: existingUserWasDisabled,
+        processing_claim_id: null,
+        processing_started_at: null,
+        use_count: 1,
+        updated_date: now,
+      });
+    });
 
-    await invitation.ref.update({
-      status: 'used',
-      used_date: now,
-      completed_uid: userRecord.uid,
-      updated_date: now,
+    await sendAdminSecurityEmailBestEffort({
+      to: invitation.invited_by_email || SITE_DEVELOPER_EMAIL,
+      subject: `Admin approval required: ${email}`,
+      heading: 'Administrator setup requires your approval',
+      message: 'The invitation recipient completed password setup, but they do not have Admin access yet. Review the email address in the Developer Panel and approve or reject the request.',
+      details: [`Email: ${email}`, `Name: ${displayName}`, `Invitation ID: ${invitation.id}`],
     });
 
     res.json({
       success: true,
+      requiresApproval: true,
       email,
       role,
       roleLabel: getAdminRoleLabel(role),
@@ -1783,8 +2188,74 @@ app.post('/api/admin/complete-invitation', async (req, res) => {
       existingUser,
     });
   } catch (error) {
+    if (invitationAuthState?.uid) {
+      const auth = getAdminAuth(getFirebaseAdminApp());
+      if (invitationAuthState.existingUser) {
+        await auth.updateUser(invitationAuthState.uid, {
+          disabled: invitationAuthState.existingUserWasDisabled,
+        }).catch((rollbackError) => {
+          console.error('Restore existing invitation account state error', rollbackError?.message || rollbackError);
+        });
+      } else {
+        await auth.deleteUser(invitationAuthState.uid).catch((rollbackError) => {
+          if (rollbackError?.code !== 'auth/user-not-found') {
+            console.error('Delete incomplete invitation account error', rollbackError?.message || rollbackError);
+          }
+        });
+      }
+    }
+    if (claimedInvitation?.processing_claim_id) {
+      await releaseInvitationClaim(claimedInvitation, claimedInvitation.processing_claim_id).catch((releaseError) => {
+        console.error('Release admin invitation claim error', releaseError?.message || releaseError);
+      });
+    }
     console.error('Complete admin invitation error', error?.message || error);
     res.status(error.status || 500).json({ error: error?.message || 'Unable to complete the administrator invitation.' });
+  }
+});
+
+app.post('/api/admin/decline-invitation', async (req, res) => {
+  if (!enforceAdminInvitationRateLimit(req, res, 'decline')) return;
+  const token = String(req.body?.token || '').trim();
+  if (!isValidInvitationToken(token)) return res.status(400).json({ code: 'invitation_invalid', error: 'This invitation link is invalid.' });
+
+  try {
+    const invitation = await getInvitationByToken(token);
+    if (!invitation || !['pending', 'awaiting_approval'].includes(invitation.status)) {
+      return sendUnavailableInvitationResponse(res, invitation);
+    }
+
+    const db = getAdminFirestore(getFirebaseAdminApp());
+    const now = new Date().toISOString();
+    const declinedInvitation = await db.runTransaction(async (transaction) => {
+      const snapshot = await transaction.get(invitation.ref);
+      const current = snapshot.data() || {};
+      if (!['pending', 'awaiting_approval'].includes(current.status)) return null;
+      transaction.update(invitation.ref, {
+        status: 'declined',
+        declined_date: now,
+        updated_date: now,
+      });
+      return current;
+    });
+    if (!declinedInvitation) return sendUnavailableInvitationResponse(res, await getInvitationByToken(token));
+
+    if (declinedInvitation.status === 'awaiting_approval') {
+      await removeOrRestorePendingAuthAccount(getFirebaseAdminApp(), declinedInvitation);
+    }
+
+    await sendAdminSecurityEmailBestEffort({
+      to: invitation.invited_by_email || SITE_DEVELOPER_EMAIL,
+      subject: `Security alert: admin invitation declined by ${invitation.email}`,
+      heading: 'Administrator invitation declined',
+      message: 'The recipient reported that the invitation was unexpected or sent to the wrong address. The link has been disabled and cannot be used.',
+      details: [`Email: ${invitation.email}`, `Invitation ID: ${invitation.id}`],
+    });
+
+    res.json({ success: true, code: 'invitation_declined' });
+  } catch (error) {
+    console.error('Decline admin invitation error', error?.message || error);
+    res.status(error.status || 500).json({ error: error?.message || 'Unable to decline this invitation.' });
   }
 });
 
@@ -1808,6 +2279,7 @@ app.get('/api/admin/site-admins', async (req, res) => {
         created_date: data.created_date || '',
         updated_date: data.updated_date || '',
         role_label: getAdminRoleLabel(role),
+        root_site_developer: entry.id === ROOT_SITE_DEVELOPER_UID,
         };
       })
       .filter((admin) => admin.uid || admin.email);
@@ -1827,15 +2299,223 @@ app.get('/api/admin/site-admins', async (req, res) => {
         created_date: '',
         updated_date: '',
         role_label: 'Site Developer',
+        root_site_developer: developerAdmin.uid === ROOT_SITE_DEVELOPER_UID,
       });
     }
 
     rows.sort((a, b) => a.email.localeCompare(b.email));
 
-    res.json({ admins: rows });
+    const invitationSnapshot = await db.collection('AdminInvitations').get();
+    const invitationEntries = await Promise.all(invitationSnapshot.docs.map(async (entry) => {
+      const invitation = { id: entry.id, ...entry.data() };
+      const expiresAt = new Date(invitation.expires_at || '');
+      if (invitation.status === 'pending' && (!Number.isFinite(expiresAt.getTime()) || expiresAt <= new Date())) {
+        const now = new Date().toISOString();
+        await entry.ref.update({ status: 'expired', expired_date: now, updated_date: now });
+        return { ...invitation, status: 'expired', expired_date: now };
+      }
+      return invitation;
+    }));
+    const invitations = invitationEntries
+      .filter((invitation) => ['pending', 'processing', 'awaiting_approval'].includes(invitation.status))
+      .map((invitation) => ({
+        id: invitation.id,
+        email: normalizeEmail(invitation.email),
+        role: normalizeAdminRole(invitation.role, invitation.email),
+        role_label: getAdminRoleLabel(normalizeAdminRole(invitation.role, invitation.email)),
+        status: invitation.status,
+        created_date: invitation.created_date || '',
+        expires_at: invitation.expires_at || '',
+        setup_completed_date: invitation.setup_completed_date || '',
+        first_name: normalizePersonName(invitation.proposed_first_name),
+        last_name: normalizePersonName(invitation.proposed_last_name),
+        invited_by_email: normalizeEmail(invitation.invited_by_email),
+      }))
+      .sort((a, b) => String(b.created_date).localeCompare(String(a.created_date)));
+
+    res.json({ admins: rows, invitations });
   } catch (error) {
     console.error('List site admins error', error?.message || error);
     res.status(error.status || 500).json({ error: error?.message || 'Unable to load site administrators.' });
+  }
+});
+
+app.post('/api/admin/invitations/:invitationId/approve', async (req, res) => {
+  let developerAdmin;
+  try {
+    developerAdmin = await assertDeveloperAdminRequest(req);
+    assertRootSiteDeveloper(developerAdmin);
+  } catch (error) {
+    return res.status(error.status || 401).json({ error: error.message });
+  }
+
+  const invitationId = String(req.params.invitationId || '').trim();
+  if (!invitationId) return res.status(400).json({ error: 'Invitation ID is required.' });
+
+  try {
+    const app = getFirebaseAdminApp();
+    const db = getAdminFirestore(app);
+    const invitationRef = db.collection('AdminInvitations').doc(invitationId);
+    const snapshot = await invitationRef.get();
+    if (!snapshot.exists) return res.status(404).json({ error: 'Invitation not found.' });
+    const invitation = snapshot.data() || {};
+    if (invitation.status !== 'awaiting_approval') {
+      return res.status(409).json({ error: 'Only a completed invitation awaiting approval can be approved.' });
+    }
+
+    const uid = String(invitation.completed_uid || '').trim();
+    const email = normalizeEmail(invitation.email);
+    if (!uid || !email) return res.status(409).json({ error: 'The completed invitation is missing its account details.' });
+
+    const auth = getAdminAuth(app);
+    const userRecord = await auth.getUser(uid);
+    if (normalizeEmail(userRecord.email) !== email) {
+      return res.status(409).json({ error: 'The Firebase account email does not match the invited email.' });
+    }
+
+    const now = new Date().toISOString();
+    const role = normalizeAdminRole(invitation.role, email);
+    const adminRef = db.collection('admins').doc(uid);
+    await db.runTransaction(async (transaction) => {
+      const currentSnapshot = await transaction.get(invitationRef);
+      const currentAdminSnapshot = await transaction.get(adminRef);
+      const current = currentSnapshot.data() || {};
+      if (current.status !== 'awaiting_approval' || String(current.completed_uid || '') !== uid) {
+        const conflict = new Error('This invitation is no longer awaiting approval. Refresh the security review before trying again.');
+        conflict.status = 409;
+        throw conflict;
+      }
+      if (currentAdminSnapshot.exists) {
+        const conflict = new Error('This Firebase account already has an administrator record and cannot be activated through another invitation.');
+        conflict.status = 409;
+        throw conflict;
+      }
+      transaction.set(adminRef, {
+        first_name: normalizePersonName(current.proposed_first_name),
+        last_name: normalizePersonName(current.proposed_last_name),
+        email,
+        role,
+        role_label: getAdminRoleLabel(role),
+        photo_url: '',
+        has_saved_name: true,
+        invited_by_uid: current.invited_by_uid || '',
+        invited_by_email: current.invited_by_email || '',
+        invitation_id: invitationId,
+        access_status: 'active',
+        root_site_developer: false,
+        approved_by_uid: developerAdmin.uid,
+        approved_by_email: developerAdmin.email,
+        approved_date: now,
+        created_date: now,
+        updated_date: now,
+      }, { merge: true });
+      transaction.update(invitationRef, {
+        status: 'approved',
+        approved_date: now,
+        approved_by_uid: developerAdmin.uid,
+        approved_by_email: developerAdmin.email,
+        updated_date: now,
+      });
+    });
+
+    try {
+      const currentUserRecord = await auth.getUser(uid);
+      await setServerManagedAdminClaims(auth, currentUserRecord, role);
+      await auth.updateUser(uid, { disabled: false });
+      await auth.revokeRefreshTokens(uid);
+    } catch (activationError) {
+      const failedAt = new Date().toISOString();
+      await auth.updateUser(uid, { disabled: true }).catch(() => {});
+      const currentUserRecord = await auth.getUser(uid).catch(() => null);
+      if (currentUserRecord) await clearServerManagedAdminClaims(auth, currentUserRecord).catch(() => {});
+      await db.runTransaction(async (transaction) => {
+        const currentInvitationSnapshot = await transaction.get(invitationRef);
+        const current = currentInvitationSnapshot.data() || {};
+        if (current.status !== 'approved' || current.approved_by_uid !== developerAdmin.uid) return;
+        transaction.delete(adminRef);
+        transaction.update(invitationRef, {
+          status: 'awaiting_approval',
+          activation_failed_date: failedAt,
+          activation_error: String(activationError?.message || 'Unable to activate Firebase account').slice(0, 300),
+          updated_date: failedAt,
+        });
+      });
+      throw activationError;
+    }
+
+    await sendAdminSecurityEmailBestEffort({
+      to: email,
+      subject: 'Your Goodwill website administrator access is approved',
+      heading: 'Administrator access approved',
+      message: 'The Site Developer reviewed and approved your account. You can now sign in to the Goodwill Presbyterian Church Admin panel with the password you created.',
+      details: [`Email: ${email}`, `Role: ${getAdminRoleLabel(role)}`, `Sign in: https://${CANONICAL_HOST}/Admin`],
+    });
+
+    res.json({ success: true, invitationId, uid, email, role, roleLabel: getAdminRoleLabel(role) });
+  } catch (error) {
+    console.error('Approve admin invitation error', error?.message || error);
+    res.status(error.status || 500).json({ error: error?.message || 'Unable to approve this administrator request.' });
+  }
+});
+
+app.delete('/api/admin/invitations/:invitationId', async (req, res) => {
+  let developerAdmin;
+  try {
+    developerAdmin = await assertDeveloperAdminRequest(req);
+    assertRootSiteDeveloper(developerAdmin);
+  } catch (error) {
+    return res.status(error.status || 401).json({ error: error.message });
+  }
+
+  const invitationId = String(req.params.invitationId || '').trim();
+  if (!invitationId) return res.status(400).json({ error: 'Invitation ID is required.' });
+
+  try {
+    const app = getFirebaseAdminApp();
+    const db = getAdminFirestore(app);
+    const invitationRef = db.collection('AdminInvitations').doc(invitationId);
+    const snapshot = await invitationRef.get();
+    if (!snapshot.exists) return res.status(404).json({ error: 'Invitation not found.' });
+    const invitation = snapshot.data() || {};
+    if (!['pending', 'processing', 'awaiting_approval'].includes(invitation.status)) {
+      return res.status(409).json({ error: 'This invitation is no longer active and cannot be revoked.' });
+    }
+
+    const now = new Date().toISOString();
+    const revokedInvitation = await db.runTransaction(async (transaction) => {
+      const currentSnapshot = await transaction.get(invitationRef);
+      const current = currentSnapshot.data() || {};
+      if (!['pending', 'processing', 'awaiting_approval'].includes(current.status)) {
+        const conflict = new Error('This invitation is no longer active. Refresh the security review before trying again.');
+        conflict.status = 409;
+        throw conflict;
+      }
+      transaction.update(invitationRef, {
+        status: 'revoked',
+        revoked_date: now,
+        revoked_by_uid: developerAdmin.uid,
+        revoked_by_email: developerAdmin.email,
+        updated_date: now,
+      });
+      return current;
+    });
+
+    if (revokedInvitation.status === 'awaiting_approval') {
+      await removeOrRestorePendingAuthAccount(app, revokedInvitation);
+    }
+
+    await sendAdminSecurityEmailBestEffort({
+      to: normalizeEmail(revokedInvitation.email),
+      subject: 'Your Goodwill website administrator invitation was revoked',
+      heading: 'Administrator invitation revoked',
+      message: 'The Site Developer revoked this invitation. Its setup link no longer works and no administrator access was granted.',
+      details: ['If you still need access, contact the Site Developer and request a new invitation.'],
+    });
+
+    res.json({ success: true, invitationId, email: normalizeEmail(revokedInvitation.email) });
+  } catch (error) {
+    console.error('Revoke admin invitation error', error?.message || error);
+    res.status(error.status || 500).json({ error: error?.message || 'Unable to revoke this invitation.' });
   }
 });
 
@@ -1850,8 +2530,8 @@ app.delete('/api/admin/site-admins/:uid', async (req, res) => {
 
   const uid = String(req.params.uid || '').trim();
   if (!uid) return res.status(400).json({ error: 'Administrator UID is required.' });
-  if (uid === developerAdmin.uid) {
-    return res.status(400).json({ error: 'The permanent root Site Developer account cannot delete itself.' });
+  if (uid === ROOT_SITE_DEVELOPER_UID) {
+    return res.status(400).json({ error: 'The permanent root Site Developer account cannot be removed.' });
   }
 
   try {
@@ -1863,10 +2543,16 @@ app.delete('/api/admin/site-admins/:uid', async (req, res) => {
     }
 
     const adminData = snapshot.data() || {};
-    if (normalizeEmail(adminData.email) === SITE_DEVELOPER_EMAIL) {
-      return res.status(400).json({ error: 'The permanent root Site Developer cannot be removed.' });
-    }
     await adminRef.delete();
+    const auth = getAdminAuth(getFirebaseAdminApp());
+    const userRecord = await auth.getUser(uid).catch((error) => {
+      if (error?.code === 'auth/user-not-found') return null;
+      throw error;
+    });
+    if (userRecord) {
+      await clearServerManagedAdminClaims(auth, userRecord);
+      await auth.revokeRefreshTokens(uid);
+    }
     res.json({
       success: true,
       uid,
@@ -1905,15 +2591,21 @@ app.patch('/api/admin/site-admins/:uid/role', async (req, res) => {
 
     const adminData = snapshot.data() || {};
     const email = normalizeEmail(adminData.email);
-    if (email === SITE_DEVELOPER_EMAIL && role !== ADMIN_ROLES.SITE_DEVELOPER) {
+    if (uid === ROOT_SITE_DEVELOPER_UID && role !== ADMIN_ROLES.SITE_DEVELOPER) {
       return res.status(400).json({ error: 'The permanent root Site Developer cannot be demoted.' });
     }
 
     await adminRef.update({
       role,
       role_label: getAdminRoleLabel(role),
+      root_site_developer: uid === ROOT_SITE_DEVELOPER_UID,
       updated_date: new Date().toISOString(),
     });
+
+    const auth = getAdminAuth(getFirebaseAdminApp());
+    const userRecord = await auth.getUser(uid);
+    await setServerManagedAdminClaims(auth, userRecord, role);
+    await auth.revokeRefreshTokens(uid);
 
     res.json({
       success: true,
@@ -2080,6 +2772,32 @@ const useLocalViteServer = process.env.LOCAL_VITE_DEV === 'true';
 
 refreshLandingImagePreloadCache().catch(() => {});
 
+function getRequestSearch(req) {
+  const queryIndex = req.originalUrl.indexOf('?');
+  return queryIndex === -1 ? '' : req.originalUrl.slice(queryIndex);
+}
+
+function setRobotsHeaderForRoute(res, route) {
+  if (route.robots !== 'index, follow') {
+    res.set('X-Robots-Tag', route.robots);
+  }
+}
+
+function shouldReturnPlainNotFound(req, route) {
+  return route.statusCode === 404 && Boolean(path.extname(req.path));
+}
+
+function prepareSeoPageResponse(req, res) {
+  if (shouldRedirectToCanonicalPath(req.path)) {
+    res.redirect(301, getCanonicalRedirectPath(req.path, getRequestSearch(req)));
+    return null;
+  }
+
+  const route = getSeoMetadata(req.path);
+  setRobotsHeaderForRoute(res, route);
+  return route;
+}
+
 if (useLocalViteServer) {
   if (!globalThis.crypto?.getRandomValues && crypto.webcrypto) {
     globalThis.crypto = crypto.webcrypto;
@@ -2106,10 +2824,17 @@ if (useLocalViteServer) {
       return next();
     }
 
+    const route = prepareSeoPageResponse(req, res);
+    if (!route) return;
+    if (shouldReturnPlainNotFound(req, route)) {
+      return res.status(404).type('text/plain').send('Not found');
+    }
+
     try {
       const template = fs.readFileSync(path.join(ROOT_DIR, 'index.html'), 'utf8');
-      const html = await vite.transformIndexHtml(req.originalUrl, template);
-      res.status(200).set({ 'Content-Type': 'text/html' }).end(html);
+      const transformedHtml = await vite.transformIndexHtml(req.originalUrl, template);
+      const html = await renderIndexHtmlWithDynamicHead(transformedHtml, req.path);
+      res.status(route.statusCode || 200).set({ 'Content-Type': 'text/html' }).end(html);
     } catch (error) {
       vite.ssrFixStacktrace(error);
       next(error);
@@ -2123,8 +2848,14 @@ if (useLocalViteServer) {
       return res.status(404).json({ error: 'API route not found' });
     }
 
+    const route = prepareSeoPageResponse(req, res);
+    if (!route) return;
+    if (shouldReturnPlainNotFound(req, route)) {
+      return res.status(404).type('text/plain').send('Not found');
+    }
+
     try {
-      res.status(200).type('html').send(await renderIndexHtmlWithLandingImagePreload());
+      res.status(route.statusCode || 200).type('html').send(await renderDistIndexHtml(req.path));
     } catch (error) {
       next(error);
     }

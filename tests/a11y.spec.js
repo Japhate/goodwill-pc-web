@@ -3,13 +3,13 @@ import AxeBuilder from '@axe-core/playwright';
 
 const publicRoutes = [
   { path: '/', name: 'Home' },
-  { path: '/About', name: 'About' },
-  { path: '/Updates', name: 'Updates' },
-  { path: '/Resources', name: 'Resources' },
-  { path: '/Prayer', name: 'Prayer' },
-  { path: '/Connect', name: 'Connect' },
-  { path: '/Give', name: 'Give' },
-  { path: '/Privacy', name: 'Privacy' },
+  { path: '/about', name: 'About' },
+  { path: '/updates', name: 'Updates' },
+  { path: '/resources', name: 'Resources' },
+  { path: '/prayer', name: 'Prayer' },
+  { path: '/connect', name: 'Connect' },
+  { path: '/give', name: 'Give' },
+  { path: '/privacy', name: 'Privacy' },
 ];
 
 for (const route of publicRoutes) {

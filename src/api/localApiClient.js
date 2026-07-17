@@ -25,7 +25,7 @@ const seedData = {
       is_active: true,
       image_url: '/images/hero/goodwill-presbyterian-church-hero.png',
       alt_text: 'Welcome to Goodwill Presbyterian Church',
-      link_url: '/About',
+      link_url: '/about',
       link_label: 'Learn More',
     },
     {
@@ -206,7 +206,7 @@ const seedData = {
       id: 'landing-image',
       image_url: '/images/hero/goodwill-presbyterian-church-hero.png',
       alt_text: 'Welcome to Goodwill Presbyterian Church',
-      link_url: '/About',
+      link_url: '/about',
       link_label: 'Learn More',
       is_active: true,
       created_date: '2026-06-16T00:00:00.000Z',
@@ -507,6 +507,7 @@ const developmentApi = {
   }),
   auth: {
     me: async () => ({ id: 'local-user', full_name: 'Local Editor', role: 'admin' }),
+    sendPasswordReset: async () => ({ success: true }),
     logout: () => {},
     redirectToLogin: () => {},
   },

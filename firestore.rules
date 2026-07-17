@@ -9,10 +9,7 @@ service cloud.firestore {
 
     function isDeveloperAdmin() {
       return isAdmin()
-        && (
-          get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == 'site_developer'
-          || get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.email == 'nebajaphate@gmail.com'
-        );
+        && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == 'site_developer';
     }
 
     match /admins/{userId} {
@@ -21,7 +18,7 @@ service cloud.firestore {
       allow update: if request.auth != null
         && request.auth.uid == userId
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'first_name', 'last_name', 'email', 'photo_url', 'updated_date'
+          'first_name', 'last_name', 'photo_url', 'updated_date'
         ])
         && (
           !('first_name' in request.resource.data)
@@ -32,11 +29,6 @@ service cloud.firestore {
           !('last_name' in request.resource.data)
           || request.resource.data.last_name is string
           && request.resource.data.last_name.size() <= 80
-        )
-        && (
-          !('email' in request.resource.data)
-          || request.resource.data.email is string
-          && request.resource.data.email.size() <= 320
         )
         && (
           !('photo_url' in request.resource.data)

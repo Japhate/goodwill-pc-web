@@ -83,6 +83,8 @@ VITE_FIREBASE_MESSAGING_SENDER_ID
 VITE_FIREBASE_APP_ID
 RESEND_API_KEY
 RESEND_FROM_EMAIL
+ADMIN_INVITATION_TTL_HOURS
+ROOT_SITE_DEVELOPER_UID
 YOUTUBE_API_KEY
 YOUTUBE_CHANNEL_ID
 VITE_GA_MEASUREMENT_ID
@@ -92,6 +94,8 @@ VITE_ENABLE_CLIENT_ERROR_REPORTING
 ```
 
 `RESEND_FROM_EMAIL` should be a verified sender in Resend, for example `Goodwill Presbyterian Church <news@goodwillpresch1867.com>`.
+`ADMIN_INVITATION_TTL_HOURS` controls the one-time administrator setup window. It defaults to `24` hours and is constrained to a minimum of 1 hour and a maximum of 72 hours. Completing setup consumes the link, but access remains blocked until the root Site Developer approves the request in the Developer Panel.
+`ROOT_SITE_DEVELOPER_UID` must be the permanent Site Developer account's Firebase Authentication UID. Root administrator creation, approval, removal, promotion, and demotion operations remain locked when it is missing. Do not use an email address for this value.
 `YOUTUBE_API_KEY` and `YOUTUBE_CHANNEL_ID` power the homepage live banner. If they are not configured, the site keeps the normal banner behavior and skips the YouTube live check.
 
 `VITE_GA_MEASUREMENT_ID` enables Google Analytics 4 pageview tracking. Analytics does not send form field values, prayer request text, email addresses, or giving details. Logged-in administrator sessions are skipped so routine admin work is not counted. You can also opt a browser out by running `localStorage.setItem('goodwill:analytics-opt-out', 'true')` in that browser's console, and opt back in with `localStorage.setItem('goodwill:analytics-opt-out', 'false')`.

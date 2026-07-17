@@ -9,6 +9,7 @@ import { getPublicAnnouncements, getPublicHeroSlides } from "@/lib/publicAnnounc
 import { getResponsiveImage, getResponsiveImageProps } from "@/lib/responsiveImages";
 import { format } from "date-fns";
 import { createSpecialServiceHeroSlide, getActiveSpecialServiceNotice } from "@/lib/specialServiceNotice";
+import { normalizeInternalLinkUrl } from "@/lib/seo";
 
 const SLIDE_INTERVAL = 10000;
 const YOUTUBE_LIVE_STATUS_POLL_MS = 60 * 1000;
@@ -24,7 +25,7 @@ const SHOW_HERO_EXTERNAL_ACTION_BUTTON = true;
 const SHOW_BIBLE_STUDY_COUNTDOWN_OVERLAY = true;
 const PERMANENT_WELCOME_HERO_ID = "hero-1";
 const PERMANENT_WELCOME_HERO_IMAGE = "/images/hero/goodwill-presbyterian-church-hero.png";
-const ABOUT_PAGE_URL = "/About";
+const ABOUT_PAGE_URL = "/about";
 const DEFAULT_LANDING_IMAGE = {
   id: "landing-image",
   image_url: PERMANENT_WELCOME_HERO_IMAGE,
@@ -48,7 +49,7 @@ function getInitialLandingImage() {
     ...DEFAULT_LANDING_IMAGE,
     image_url: imageUrl,
     alt_text: readDocumentMeta("goodwill:landing-image-alt") || DEFAULT_LANDING_IMAGE.alt_text,
-    link_url: readDocumentMeta("goodwill:landing-image-link-url") || DEFAULT_LANDING_IMAGE.link_url,
+    link_url: normalizeInternalLinkUrl(readDocumentMeta("goodwill:landing-image-link-url") || DEFAULT_LANDING_IMAGE.link_url),
     link_label: readDocumentMeta("goodwill:landing-image-link-label") || DEFAULT_LANDING_IMAGE.link_label,
     is_landing_image: true,
   };
@@ -508,7 +509,7 @@ export default function HeroSlideshow({ onReady }) {
           ...activeLandingImage,
           id: activeLandingImage.id || DEFAULT_LANDING_IMAGE.id,
           is_landing_image: true,
-          link_url: activeLandingImage.link_url || ABOUT_PAGE_URL,
+          link_url: normalizeInternalLinkUrl(activeLandingImage.link_url || ABOUT_PAGE_URL),
           link_label: activeLandingImage.link_label || "Learn More",
         });
       } catch {
@@ -692,7 +693,7 @@ export default function HeroSlideshow({ onReady }) {
   const welcomeHeroUrl = isPermanentWelcomeHero ? ABOUT_PAGE_URL : "";
   const relatedAnnouncementId = currentSlide?.announcement_id || linkedAnnouncement?.id || "";
   const relatedAnnouncementUrl = !isPermanentWelcomeHero && relatedAnnouncementId
-    ? `/Updates#announcement-${relatedAnnouncementId}`
+    ? `/updates#announcement-${relatedAnnouncementId}`
     : "";
   const linkedLocationType = currentSlide?.location_type || linkedAnnouncement?.location_type || "physical";
   const linkedDirectionsUrl = String(currentSlide?.directions_url || linkedAnnouncement?.directions_url || "").trim();

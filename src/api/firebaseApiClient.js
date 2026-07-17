@@ -10,6 +10,7 @@ import {
 } from "firebase/firestore";
 import {
   onAuthStateChanged,
+  sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signOut,
 } from "firebase/auth";
@@ -321,9 +322,9 @@ async function firebaseUser() {
   if (!user) throw new Error("Not authenticated");
 
   const adminRecord = await getDoc(doc(firestore, "admins", user.uid));
-  if (!adminRecord.exists()) throw new Error("This account is not an administrator.");
+  if (!adminRecord.exists()) throw new Error("This account does not have active administrator access. If you just completed an invitation, wait for the Site Developer's approval email.");
   const adminData = adminRecord.data() || {};
-  const role = adminData.role || (String(adminData.email || user.email || "").trim().toLowerCase() === "nebajaphate@gmail.com" ? "site_developer" : "site_admin");
+  const role = adminData.role === "site_developer" ? "site_developer" : "site_admin";
 
   return {
     id: user.uid,
@@ -335,6 +336,7 @@ async function firebaseUser() {
     admin_role: role,
     role_key: role,
     role: "admin",
+    root_site_developer: adminData.root_site_developer === true,
   };
 }
 
@@ -365,6 +367,7 @@ export const firebaseApi = {
       await signInWithEmailAndPassword(firebaseAuth, email, password);
       return firebaseUser();
     },
+    sendPasswordReset: (email) => sendPasswordResetEmail(firebaseAuth, email),
     logout: () => signOut(firebaseAuth),
     redirectToLogin: () => {},
   },

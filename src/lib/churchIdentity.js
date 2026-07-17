@@ -5,7 +5,7 @@ export const CHURCH_IDENTITY = {
   foundingYear: '1867',
   slogan: 'A sanctuary of love, hope and peace for all.',
   website: 'https://www.goodwillpresch1867.com/',
-  privacyUrl: 'https://www.goodwillpresch1867.com/Privacy',
+  privacyUrl: 'https://www.goodwillpresch1867.com/privacy',
 };
 
 export const CHURCH_CONTACT = {

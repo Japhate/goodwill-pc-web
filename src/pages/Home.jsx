@@ -899,7 +899,7 @@ export default function Home() {
                             </Button>
                             <Button asChild className="bg-white/20 hover:bg-white/40 text-white font-semibold px-6 py-2 rounded-md shadow transition-all hover:shadow-lg border border-white/40 hover:border-white/60 flex items-center gap-2">
                                 <a 
-                                    href="/Connect#visit"
+                                    href="/connect#visit"
                                     className="flex items-center gap-2"
                                 >
                                     <Map className="w-4 h-4" />
@@ -1271,7 +1271,7 @@ export default function Home() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <a 
-              href="/Connect#visit"
+              href="/connect#visit"
               className="bg-yellow-500 hover:bg-yellow-600 text-black font-semibold px-4 py-3 rounded-md inline-flex items-center justify-center transition-colors glow-effect"
             >
               Visit Us
