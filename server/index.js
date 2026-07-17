@@ -1130,6 +1130,21 @@ async function assertDeveloperAdminRequest(req) {
   };
 }
 
+app.get('/api/admin/access-profile', async (req, res) => {
+  try {
+    const admin = await assertDeveloperAdminRequest(req);
+    res.json({
+      uid: admin.uid,
+      email: admin.email,
+      role: admin.role,
+      roleLabel: getAdminRoleLabel(admin.role),
+      rootSiteDeveloper: admin.rootSiteDeveloper,
+    });
+  } catch (error) {
+    res.status(error.status || 401).json({ error: error.message });
+  }
+});
+
 async function readEmailTemplate(templateId) {
   const defaultTemplate = getDefaultEmailTemplate(templateId);
 

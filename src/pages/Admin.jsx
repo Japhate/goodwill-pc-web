@@ -678,6 +678,39 @@ export default function AdminPage() {
     }
   };
 
+  const loadServerAccessProfile = async (user) => {
+    const token = await firebaseAuth?.currentUser?.getIdToken();
+    if (!token) return;
+
+    const response = await fetch('/api/admin/access-profile', {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const body = await response.json().catch(() => null);
+    if (response.status === 403) return;
+    if (!response.ok) {
+      throw new Error(body?.error || 'Unable to verify Site Developer access.');
+    }
+
+    setCurrentAdmin((current) => deriveAdminProfile(user, {
+      ...(current || {}),
+      id: body.uid || current?.id || user.id,
+      email: body.email || current?.email || user.email,
+      role: body.role,
+      role_label: body.roleLabel,
+      root_site_developer: body.rootSiteDeveloper === true,
+    }));
+    setAdminProfiles((profiles) => profiles.map((profile) => (
+      String(profile.id || '') === String(body.uid || user.id || '')
+        ? {
+          ...profile,
+          role: body.role,
+          role_label: body.roleLabel,
+          root_site_developer: body.rootSiteDeveloper === true,
+        }
+        : profile
+    )));
+  };
+
   const checkUserAndLoadData = async () => {
       setLoading(true);
       try {
@@ -686,6 +719,12 @@ export default function AdminPage() {
           setIsAdmin(true);
           setLoginNotice('');
           await loadAdminProfiles(user);
+          try {
+            await loadServerAccessProfile(user);
+          } catch (accessError) {
+            console.error('Unable to verify Site Developer access:', accessError);
+            setLoginNotice(accessError.message || 'Unable to verify Site Developer access.');
+          }
           setPrivacyNoticeRead(false);
           await loadAdminData();
         } else {
