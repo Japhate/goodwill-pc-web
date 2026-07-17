@@ -111,6 +111,17 @@ function optimizedHeroFileName(fileName) {
   return `${baseName}-optimized.jpg`;
 }
 
+function getUploadErrorMessage(error, fallback) {
+  const message = String(error?.message || "").toLowerCase();
+  if (message.includes("not authenticated") || message.includes("auth/user-token-expired")) {
+    return "Your administrator session has ended. Refresh this page, sign in again, and retry the upload.";
+  }
+  if (error?.code === "storage/unauthorized" || message.includes("permission")) {
+    return "Your account does not have permission to upload this file. Sign in again or contact the Site Developer.";
+  }
+  return error?.message || fallback;
+}
+
 async function prepareHeroImageForUpload(file) {
   const image = await loadImageElement(file);
   const imageSize = getScaledImageSize(image.naturalWidth, image.naturalHeight, HERO_IMAGE_MAX_WIDTH, HERO_IMAGE_MAX_HEIGHT);
@@ -231,9 +242,10 @@ export default function HeroSlideForm({ slide, announcement, announcementMode = 
       }));
     } catch (error) {
       console.error("Related announcement attachment upload failed:", error);
-      setUploadError(error?.message || "Attachment upload failed. Please try again.");
+      setUploadError(getUploadErrorMessage(error, "Attachment upload failed. Please try again."));
     } finally {
       setRelatedFileUploading(false);
+      e.target.value = "";
     }
   };
 
@@ -259,9 +271,10 @@ export default function HeroSlideForm({ slide, announcement, announcementMode = 
       });
     } catch (error) {
       console.error("Hero image upload failed:", error);
-      setUploadError(error?.message || "Upload failed. Please try again.");
+      setUploadError(getUploadErrorMessage(error, "Upload failed. Please try again."));
     } finally {
       setUploading(false);
+      e.target.value = "";
     }
   };
 

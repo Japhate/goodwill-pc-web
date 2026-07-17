@@ -33,6 +33,7 @@ import { LandingImage } from '@/entities/LandingImage';
 import { firebaseAuth, firebaseEnabled } from '@/lib/firebase';
 import { localApi } from '@/api/localApiClient';
 import { collection, doc, getDocs, updateDoc } from 'firebase/firestore';
+import { onAuthStateChanged } from 'firebase/auth';
 import { firestore } from '@/lib/firebase';
 import { DEFAULT_EMAIL_TEMPLATES } from '@/lib/newsletterTemplates';
 import { createSpecialServicePopup } from '@/lib/specialServiceNotice';
@@ -751,6 +752,26 @@ export default function AdminPage() {
   useEffect(() => {
     checkUserAndLoadData();
   }, []);
+
+  useEffect(() => {
+    if (!firebaseEnabled || !firebaseAuth || !isAdmin) return undefined;
+
+    return onAuthStateChanged(firebaseAuth, (user) => {
+      if (user) return;
+
+      window.clearTimeout(inactivityTimerRef.current);
+      setIsAdmin(false);
+      setCurrentAdmin(null);
+      setAdminProfiles([]);
+      setShowPrivacyNotice(false);
+      setShowAdminNamePrompt(false);
+      setEditingItem(null);
+      setFormView(null);
+      setHeroFormUnsavedDraft({ isDirty: false, draft: null });
+      setLoginNotice('Your administrator session ended. Sign in again to continue.');
+      setAdminLoadError('');
+    });
+  }, [isAdmin]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
