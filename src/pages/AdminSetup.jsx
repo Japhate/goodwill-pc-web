@@ -20,7 +20,7 @@ const INVITATION_STATE_BY_CODE = {
 };
 
 function passwordMeetsRules(password) {
-  return password.length >= 12
+  return password.length >= 6
     && /[a-z]/.test(password)
     && /[A-Z]/.test(password)
     && /\d/.test(password)
@@ -110,7 +110,7 @@ export default function AdminSetup() {
     if (!lastName.trim()) nextErrors.lastName = "Enter your last name.";
     if (!newPassword) nextErrors.newPassword = "Create your new password.";
     if (newPassword && !passwordMeetsRules(newPassword)) {
-      nextErrors.newPassword = "Use at least 12 characters with uppercase, lowercase, a number, and a special character.";
+      nextErrors.newPassword = "Use at least 6 characters with uppercase, lowercase, a number, and a special character.";
     }
     if (!confirmPassword) nextErrors.confirmPassword = "Confirm your new password.";
     if (newPassword && confirmPassword && newPassword !== confirmPassword) {
@@ -383,7 +383,7 @@ export default function AdminSetup() {
             <div className="rounded-md border border-amber-200 bg-amber-50 p-4 text-xs text-amber-950">
               <p className="flex items-center gap-2 font-semibold">
                 <CheckCircle2 className="h-4 w-4 text-amber-700" />
-                Use at least 12 characters with uppercase and lowercase letters, at least one number, and a special character.
+                Use at least 6 characters with uppercase and lowercase letters, at least one number, and a special character.
               </p>
             </div>
 

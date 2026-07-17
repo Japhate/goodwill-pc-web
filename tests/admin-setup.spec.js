@@ -123,8 +123,8 @@ test('a completed setup consumes the link and waits for developer approval', asy
   await page.goto('/AdminSetup?token=approval-invitation-token');
   await page.getByLabel('First Name').fill('Grace');
   await page.getByLabel('Last Name').fill('Example');
-  await page.getByLabel(/^New Password/).fill('StrongPassword!42');
-  await page.getByLabel(/^Confirm New Password/).fill('StrongPassword!42');
+  await page.getByLabel(/^New Password/).fill('Aa1!aa');
+  await page.getByLabel(/^Confirm New Password/).fill('Aa1!aa');
   await page.getByRole('button', { name: 'Create Password and Request Approval' }).click();
 
   await expect(page.getByRole('heading', { name: 'Waiting for Developer Approval' })).toBeVisible();

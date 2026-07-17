@@ -667,7 +667,7 @@ function isValidInvitationToken(token) {
 }
 
 function passwordMeetsAdminRules(password) {
-  return String(password || '').length >= 12
+  return String(password || '').length >= 6
     && /[a-z]/.test(password)
     && /[A-Z]/.test(password)
     && /\d/.test(password)
@@ -2110,7 +2110,7 @@ app.post('/api/admin/complete-invitation', async (req, res) => {
   if (!firstName) return res.status(400).json({ error: 'First name is required.' });
   if (!lastName) return res.status(400).json({ error: 'Last name is required.' });
   if (!passwordMeetsAdminRules(password)) {
-    return res.status(400).json({ error: 'Password must be at least 12 characters with uppercase, lowercase, a number, and a special character.' });
+    return res.status(400).json({ error: 'Password must be at least 6 characters with uppercase, lowercase, a number, and a special character.' });
   }
 
   let claimedInvitation;
